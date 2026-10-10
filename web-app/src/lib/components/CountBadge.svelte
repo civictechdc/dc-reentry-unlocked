@@ -2,4 +2,4 @@
   let { count }: { count: number } = $props()
 </script>
 
-<p class="count-badge" aria-live="polite">{count} {count === 1 ? 'house' : 'houses'}</p>
+<p class="count-badge" aria-live="polite">{count} {count === 1 ? 'program' : 'programs'}</p>

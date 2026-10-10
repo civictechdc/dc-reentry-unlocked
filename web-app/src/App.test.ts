@@ -1,17 +1,20 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { generateHouses } from './lib/data/generate'
+import type { HousingProgram } from './lib/types'
+import { FIXTURE_PROGRAMS } from './lib/test-fixtures/programs'
 import App from './App.svelte'
 
 /**
  * Leaflet mock — same shape as the MapView unit-test mock. Records maps,
- * tile layers and markers so the parity test can compare the marker set
- * against the table rows without any network access.
+ * tile layers and markers (including their popup content) so the parity
+ * test can compare the marker set against the table rows without any
+ * network access.
  */
 const leaflet = vi.hoisted(() => {
   type MockMarker = {
     latlng: [number, number]
+    popup: unknown
     onMap: unknown
     removed: boolean
     addTo: (map: unknown) => MockMarker
@@ -28,13 +31,15 @@ const leaflet = vi.hoisted(() => {
   function createMarker(latlng: [number, number]): MockMarker {
     const marker: MockMarker = {
       latlng,
+      popup: null,
       onMap: null,
       removed: false,
       addTo(map: unknown) {
         marker.onMap = map
         return marker
       },
-      bindPopup() {
+      bindPopup(content: unknown) {
+        marker.popup = content
         return marker
       },
       remove() {
@@ -78,66 +83,74 @@ const leaflet = vi.hoisted(() => {
 
 vi.mock('leaflet', () => ({ default: leaflet.L }))
 
-const allHouses = generateHouses(42)
+/**
+ * The generator is mocked so App renders the handwritten deterministic
+ * fixtures instead of Faker output — the parity assertions below can then
+ * name exact program ids.
+ */
+vi.mock('./lib/data/generate', async () => {
+  const { FIXTURE_PROGRAMS } = await import('./lib/test-fixtures/programs')
+  return {
+    generateHousingPrograms: () => [...FIXTURE_PROGRAMS],
+  }
+})
 
-/** Live markers on the current map, keyed by "lat,lon". */
-function liveMarkerKeys(): Set<string> {
+const allPrograms = FIXTURE_PROGRAMS
+
+/**
+ * Live markers on the current map, resolved back to program ids through
+ * their popup text (the program name). Ids — never coordinates — are the
+ * identity channel: the fixtures deliberately include coincident points,
+ * so a lat/lng key would be ambiguous.
+ */
+function liveMarkerIds(): string[] {
   const map = leaflet.state.maps.at(-1)
-  return new Set(
-    leaflet.state.markers
-      .filter((m) => m.onMap === map && !m.removed)
-      .map((m) => m.latlng.join(',')),
-  )
+  const nameToId = new Map(allPrograms.map((p) => [p.programName, p.id]))
+  return leaflet.state.markers
+    .filter((m) => m.onMap === map && !m.removed)
+    .map((m) => {
+      const popup = m.popup as HTMLElement | null
+      const name = popup?.querySelector('strong')?.textContent ?? ''
+      const id = nameToId.get(name)
+      if (id === undefined) {
+        throw new Error(`Marker popup does not match any fixture program: "${name}"`)
+      }
+      return id
+    })
 }
 
-/** House rows in the table body (excludes the empty-state row), keyed by address. */
-function tableRowAddresses(): string[] {
+/** Program rows in the table body (the empty-state row carries no data-id). */
+function tableRowIds(): string[] {
   const table = screen.getByRole('table')
-  const rows = within(table).getAllByRole('row').slice(1)
-  return rows
-    .filter((row) => !row.classList.contains('empty-row'))
-    .map((row) => within(row).queryAllByRole('cell')[0]?.textContent ?? '')
-    .filter((address) => address !== '')
+  return within(table)
+    .getAllByRole('row')
+    .map((row) => row.getAttribute('data-id'))
+    .filter((id): id is string => id !== null)
 }
 
 function badgeCount(): number {
-  const badge = screen.getByText(/\d+ houses?/)
+  const badge = screen.getByText(/\d+ programs?/)
   return Number(badge.textContent!.match(/\d+/)![0])
 }
 
 /**
  * THE parity assertion: marker id set === table row id set === badge count.
- * Ids are recovered through the generated data (lat/lon and address are
- * unique per generated house).
+ * Ids and counts are compared — never addresses or coordinates.
  */
-function expectParity(expected: typeof allHouses): void {
-  const expectedIds = new Set(expected.map((h) => h.id))
-  const latlngToId = new Map(allHouses.map((h) => [`${h.lat},${h.lon}`, h.id]))
-  const addressToId = new Map(allHouses.map((h) => [h.address, h.id]))
+function expectParity(expected: readonly HousingProgram[]): void {
+  const expectedIds = new Set(expected.map((p) => p.id))
+  const markerIds = liveMarkerIds()
+  const rowIds = tableRowIds()
 
-  const markerIds = new Set(
-    [...liveMarkerKeys()].map((key) => latlngToId.get(key)),
-  )
-  const rowIds = new Set(tableRowAddresses().map((a) => addressToId.get(a)))
-
-  expect(markerIds).toEqual(expectedIds)
-  expect(rowIds).toEqual(expectedIds)
+  expect(new Set(markerIds)).toEqual(expectedIds)
+  expect(markerIds).toHaveLength(expected.length)
+  expect(new Set(rowIds)).toEqual(expectedIds)
+  expect(rowIds).toHaveLength(expected.length)
   expect(badgeCount()).toBe(expected.length)
 }
 
-function expectedFor(f: {
-  minPrice?: number | null
-  maxPrice?: number | null
-  minBedrooms?: number
-  type?: string
-}): typeof allHouses {
-  return allHouses.filter(
-    (h) =>
-      (f.minPrice == null || h.price >= f.minPrice) &&
-      (f.maxPrice == null || h.price <= f.maxPrice) &&
-      (f.minBedrooms == null || h.bedrooms >= f.minBedrooms) &&
-      (f.type == null || f.type === 'all' || h.type === f.type),
-  )
+function checkbox(label: string): HTMLInputElement {
+  return screen.getByRole('checkbox', { name: label }) as HTMLInputElement
 }
 
 /**
@@ -150,6 +163,16 @@ async function typeAndCommit(input: HTMLElement, text: string): Promise<void> {
   await fireEvent.change(input)
 }
 
+/**
+ * jsdom sanitizes number-input values mid-typing, so completed entries are
+ * simulated directly — the same sequence a real blur/Enter produces.
+ */
+async function commitBeds(value: string): Promise<void> {
+  const input = screen.getByLabelText('Minimum beds / units')
+  await fireEvent.input(input, { target: { value } })
+  await fireEvent.change(input)
+}
+
 afterEach(() => {
   leaflet.state.maps.length = 0
   leaflet.state.tileLayers.length = 0
@@ -157,84 +180,111 @@ afterEach(() => {
 })
 
 describe('App integration', () => {
-  it('starts in parity: badge, table rows and markers all show every house', async () => {
+  it('renders the persistent synthetic-data notice', async () => {
     await render(App)
 
-    expectParity(allHouses)
+    expect(
+      screen.getByText(/Synthetic housing-program examples using real provider names\./),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Discovery only — not eligibility determination or verified availability\./),
+    ).toBeInTheDocument()
   })
 
-  it('stays in parity after a price filter', async () => {
+  it('renders the filter panel, count badge, map and program table', async () => {
     await render(App)
 
-    await typeAndCommit(screen.getByLabelText('Min price'), '1000000')
-
-    expectParity(expectedFor({ minPrice: 1_000_000 }))
+    expect(screen.getByRole('group', { name: 'Classification' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Search programs')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText(/\d+ programs?/)).toBeInTheDocument()
+    expect(leaflet.state.maps).toHaveLength(1)
+    expect(leaflet.state.tileLayers[0]!.url).toContain('openstreetmap.org')
   })
 
-  it('stays in parity after a max-price filter', async () => {
+  it('starts in parity: badge, table rows and markers all show every program', async () => {
     await render(App)
 
-    await typeAndCommit(screen.getByLabelText('Max price'), '500000')
-
-    expectParity(expectedFor({ maxPrice: 500_000 }))
+    expectParity(allPrograms)
   })
 
-  it('stays in parity after a bedrooms filter', async () => {
+  it('stays in parity after one classification filter', async () => {
     await render(App)
+    expect(badgeCount()).toBe(allPrograms.length)
 
-    await typeAndCommit(screen.getByLabelText('Min bedrooms'), '3')
+    await userEvent.click(checkbox('Verified reentry housing'))
 
-    expectParity(expectedFor({ minBedrooms: 3 }))
+    // Filter wiring through the real store: panel → state → table, map, badge.
+    const verified = allPrograms.filter((p) => p.classification === 'VERIFIED REENTRY HOUSING')
+    expect(verified.length).toBeGreaterThan(0)
+    expect(verified.length).toBeLessThan(allPrograms.length)
+    expect(badgeCount()).toBe(verified.length)
+    expectParity(verified)
   })
 
-  it('stays in parity after a type filter', async () => {
+  it('stays in parity with combined filters across two dimensions', async () => {
     await render(App)
 
-    await userEvent.selectOptions(screen.getByLabelText('Property type'), 'condo')
+    // AND across dimensions, OR within: 'all-genders' matches a Men
+    // selection and 'both' matches a Families selection, so exactly the
+    // fx-01/fx-04/fx-09/fx-13 fixtures survive.
+    await userEvent.click(checkbox('Men'))
+    await userEvent.click(checkbox('Families'))
 
-    expectParity(expectedFor({ type: 'condo' }))
+    const expected = allPrograms.filter((p) =>
+      ['fx-01', 'fx-04', 'fx-09', 'fx-13'].includes(p.id),
+    )
+    expect(expected).toHaveLength(4)
+    expectParity(expected)
   })
 
-  it('stays in parity with combined filters', async () => {
+  it('stays in parity after a search', async () => {
     await render(App)
 
-    await typeAndCommit(screen.getByLabelText('Min price'), '400000')
-    await typeAndCommit(screen.getByLabelText('Min bedrooms'), '2')
-    await userEvent.selectOptions(screen.getByLabelText('Property type'), 'townhouse')
+    await typeAndCommit(screen.getByLabelText('Search programs'), 'shelter')
 
-    expectParity(expectedFor({ minPrice: 400_000, minBedrooms: 2, type: 'townhouse' }))
+    // Matches fx-03 ('Family Emergency Shelter') and fx-12 ('Shelter &
+    // Transitional Services (SOME)') by program name.
+    const expected = allPrograms.filter((p) => ['fx-03', 'fx-12'].includes(p.id))
+    expect(expected).toHaveLength(2)
+    expectParity(expected)
+  })
+
+  it('keeps previously committed results while the draft is invalid', async () => {
+    await render(App)
+
+    await userEvent.click(checkbox('Verified reentry housing'))
+    const verified = allPrograms.filter((p) => p.classification === 'VERIFIED REENTRY HOUSING')
+    expectParity(verified)
+
+    // A non-integer minimum never commits: the previously committed filter —
+    // and therefore the table, map and badge — stay untouched.
+    await commitBeds('1.5')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expectParity(verified)
   })
 
   it('restores full parity after reset', async () => {
     await render(App)
 
-    await typeAndCommit(screen.getByLabelText('Min price'), '1000000')
-    expectParity(expectedFor({ minPrice: 1_000_000 }))
+    await userEvent.click(checkbox('Verified reentry housing'))
+    expectParity(allPrograms.filter((p) => p.classification === 'VERIFIED REENTRY HOUSING'))
 
     await userEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
 
-    expectParity(allHouses)
+    expectParity(allPrograms)
   })
 
   it('shows a zero-result state: badge 0, empty table row, no markers', async () => {
     await render(App)
 
-    // Generated prices top out at 2,500,000, so this minimum guarantees an
+    // No fixture has 1000 or more beds/units, so this minimum guarantees an
     // empty result set.
-    await typeAndCommit(screen.getByLabelText('Min price'), '2500001')
+    await commitBeds('1000')
 
-    expectParity(expectedFor({ minPrice: 2_500_001 }))
+    expectParity([])
     expect(badgeCount()).toBe(0)
-    expect(screen.getByText('0 houses')).toBeInTheDocument()
-    expect(screen.getByText('No houses match the current filters.')).toBeInTheDocument()
-  })
-
-  it('shows the synthetic-data notice and renders the map and table', async () => {
-    await render(App)
-
-    expect(screen.getByText(/synthetic sample data/i)).toBeInTheDocument()
-    expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(leaflet.state.maps).toHaveLength(1)
-    expect(leaflet.state.tileLayers[0]!.url).toContain('openstreetmap.org')
+    expect(screen.getByText('0 programs')).toBeInTheDocument()
+    expect(screen.getByText('No programs match the current filters.')).toBeInTheDocument()
   })
 })

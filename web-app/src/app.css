@@ -203,6 +203,12 @@ tbody td {
   border-bottom: 1px solid var(--border);
 }
 
+/* Provider sub-line under the bold program name in the first column. */
+.program-provider {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
 tbody tr:last-child td {
   border-bottom: none;
 }

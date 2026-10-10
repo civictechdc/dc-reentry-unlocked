@@ -29,7 +29,7 @@ export const DC_BOUNDARY: Ring = [
  * Whether `(lat, lon)` lies inside the inclusive D.C. sampling rectangle.
  *
  * Note: the rectangle does NOT cover the whole D.C. polygon — it clips off
- * western and northwestern D.C. Generated houses must satisfy BOTH
+ * western and northwestern D.C. Generated programs must satisfy BOTH
  * constraints: inside this rectangle AND inside the boundary polygon
  * (`pointInPolygon`).
  */

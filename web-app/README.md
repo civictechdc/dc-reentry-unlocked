@@ -1,12 +1,14 @@
-# D.C. Reentry Unlocked — Housing Finder
+# D.C. Reentry Unlocked — Housing Program Discovery
 
-A small Svelte 5 + TypeScript + Vite app for exploring housing options in
-Washington, D.C.: filter houses by price, bedrooms and property type, and see
-the results stay in parity across a Leaflet map, a sortable table and a live
-count badge.
+A small Svelte 5 + TypeScript + Vite app for exploring reentry housing
+programs in Washington, D.C.: filter programs by classification, housing
+category, ward, eligibility and cost, and see the results stay in parity
+across a Leaflet map, a table and a live count badge.
 
-> **Synthetic data notice:** all listings are generated sample data — not real
-> listings. Do not rely on them for any housing decision.
+> **Synthetic data notice:** all programs are generated sample data using real
+> provider names — program details, locations, costs, and vacancies are
+> simulated. Discovery only — not eligibility determination or verified
+> availability. Do not rely on them for any housing decision.
 
 ## Setup
 
@@ -36,9 +38,9 @@ npm run build   # build succeeds
 
 ## Data
 
-- **Sample houses** are generated deterministically at startup by
-  `src/lib/data/generate.ts` using a seeded Faker instance — **seed `42`** — so
-  every run produces the exact same 75 houses. Placement uses rejection
+- **Sample programs** are generated deterministically at startup by
+  `src/lib/data/generate.ts` using a seeded Faker instance — **seed `2026`** — so
+  every run produces the exact same 75 programs. Placement uses rejection
   sampling: candidates are drawn from a bounding rectangle and kept only when
   they also fall inside the D.C. boundary polygon.
 - **D.C. boundary** is a simplified DC diamond polygon; synthetic data only.
