@@ -2,9 +2,6 @@
   import { onMount } from 'svelte'
   import L from 'leaflet'
   import 'leaflet/dist/leaflet.css'
-  import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-  import markerIcon from 'leaflet/dist/images/marker-icon.png'
-  import markerShadow from 'leaflet/dist/images/marker-shadow.png'
   import type { HousingProgram } from '../types'
   import { CLASSIFICATION_LABELS, formatBedsUnits } from '../labels'
 
@@ -23,16 +20,20 @@
    * (same lat/lon) each get their own marker. */
   const markers = new Map<string, L.Marker>()
 
+  /** Solid location-pin marker inlined as a red SVG data URI — no image
+   * assets, so bundler URL issues cannot break it. Pin tip sits at (12, 21)
+   * in the 24-unit viewBox, scaled to 32px. */
+  const MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#dc2626" d="M17.8 13.938h-.011a7 7 0 1 0-11.464.144h-.016l.14.171c.1.127.2.251.3.371L12 21l5.13-6.248c.194-.209.374-.429.54-.659l.13-.155Z"/><path fill="#ffffff" d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>`
+
+  const markerIcon = L.icon({
+    iconUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(MARKER_SVG)}`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 28],
+    popupAnchor: [0, -6],
+  })
+
   onMount(() => {
     if (!container) return
-
-    // Bundlers break Leaflet's default relative icon URLs; point them at
-    // Vite-resolved asset URLs instead.
-    L.Icon.Default.mergeOptions({
-      iconUrl: markerIcon,
-      iconRetinaUrl: markerIcon2x,
-      shadowUrl: markerShadow,
-    })
 
     map = L.map(container, { center: DC_CENTER, zoom: DC_ZOOM })
 
@@ -88,7 +89,7 @@
     }
     for (const p of list) {
       if (!markers.has(p.id)) {
-        const marker = L.marker([p.lat, p.lon]).addTo(map)
+        const marker = L.marker([p.lat, p.lon], { icon: markerIcon }).addTo(map)
         marker.bindPopup(popupContent(p))
         markers.set(p.id, marker)
       }

@@ -32,7 +32,6 @@ const leaflet = vi.hoisted(() => {
     fitBoundsCalls: [] as { bounds: unknown; options: unknown }[],
     setViewCalls: [] as { center: unknown; zoom: unknown }[],
     tileErrorCallbacks: [] as (() => void)[],
-    mergedIconOptions: null as Record<string, unknown> | null,
   }
 
   function createMarker(latlng: [number, number], options?: Record<string, unknown>): MockMarker {
@@ -98,13 +97,6 @@ const leaflet = vi.hoisted(() => {
     icon(options: Record<string, unknown>) {
       return options
     },
-    Icon: {
-      Default: {
-        mergeOptions(options: Record<string, unknown>) {
-          state.mergedIconOptions = options
-        },
-      },
-    },
   }
 
   return { L, state }
@@ -157,7 +149,6 @@ afterEach(() => {
   leaflet.state.fitBoundsCalls.length = 0
   leaflet.state.setViewCalls.length = 0
   leaflet.state.tileErrorCallbacks.length = 0
-  leaflet.state.mergedIconOptions = null
 })
 
 describe('MapView', () => {
@@ -178,16 +169,22 @@ describe('MapView', () => {
     )
   })
 
-  it('fixes the default marker icon assets via L.Icon.Default.mergeOptions', async () => {
+  it('renders each marker with the red SVG pin icon', async () => {
     await render(MapView, { props: { programs } })
 
-    expect(leaflet.state.mergedIconOptions).toEqual(
-      expect.objectContaining({
-        iconUrl: expect.any(String),
-        iconRetinaUrl: expect.any(String),
-        shadowUrl: expect.any(String),
-      }),
-    )
+    const markers = liveMarkers()
+    expect(markers).toHaveLength(3)
+    for (const marker of markers) {
+      const icon = marker.options.icon as Record<string, unknown>
+      // Inline SVG data URI — no bundled image assets to break.
+      expect(String(icon.iconUrl)).toMatch(/^data:image\/svg\+xml;charset=utf-8,/)
+      // Solid red pin body (#dc2626) with a white inner dot.
+      const svg = decodeURIComponent(String(icon.iconUrl))
+      expect(svg).toContain('fill="#dc2626"')
+      expect(svg).toContain('fill="#ffffff"')
+      expect(icon.iconSize).toEqual([32, 32])
+      expect(icon.iconAnchor).toEqual([16, 28])
+    }
   })
 
   it('adds one marker per initial program with a text-only popup', async () => {
