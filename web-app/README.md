@@ -70,3 +70,18 @@ project so `.codex/config.toml` loads. Start each client with `web-app/` as the
 project/workspace root (open VS Code on the `web-app` folder; run
 `claude`/`codex`/`opencode` from inside `web-app/`) so these project-scope
 configs load. See https://svelte.dev/docs/ai for the full docs.
+
+### Subagents
+
+The `svelte-file-editor` subagent (creates/edits/reviews `.svelte` and
+`.svelte.ts`/`.svelte.js` files, fetches docs, runs the autofixer) is
+available in:
+
+- **OpenCode** — provided by the `@sveltejs/opencode` plugin
+- **Claude Code, VS Code, Cursor, GitHub Copilot CLI** — via the shared
+  `.claude/agents/svelte-file-editor.md` (Claude agent format, which those
+  clients also read)
+- **Codex** — via `.codex/agents/svelte-file-editor.toml`
+
+Invoke it explicitly ("use the svelte-file-editor agent to …") or let clients
+delegate automatically based on the agent's description.
