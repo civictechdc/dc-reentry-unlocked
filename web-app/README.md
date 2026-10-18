@@ -49,3 +49,24 @@ npm run build   # build succeeds
 
 Map imagery and data © [OpenStreetMap](https://www.openstreetmap.org/copyright)
 contributors, served via the `tile.openstreetmap.org` tile layer.
+
+## AI tooling
+
+The [Svelte MCP server](https://svelte.dev/docs/ai) (docs lookup +
+`svelte-autofixer`) is configured for:
+
+- **OpenCode** — via the `@sveltejs/opencode` plugin in `opencode.jsonc`
+- **VS Code + Claude Code** — via the shared `.mcp.json` at the app root
+- **Codex** — via `.codex/config.toml`
+
+Skills are committed under `.agents/skills/` (installed from `sveltejs/ai-tools`
+via `bunx skills add sveltejs/ai-tools -a universal -s svelte-code-writer
+svelte-core-bestpractices --copy`).
+
+One-time enablement: OpenCode — restart, the plugin auto-loads; VS Code — trust
+the workspace and servers start (manage via `MCP: List Servers`); Claude Code —
+approve the project server when prompted or via `/mcp`; Codex — trust the
+project so `.codex/config.toml` loads. Start each client with `web-app/` as the
+project/workspace root (open VS Code on the `web-app` folder; run
+`claude`/`codex`/`opencode` from inside `web-app/`) so these project-scope
+configs load. See https://svelte.dev/docs/ai for the full docs.

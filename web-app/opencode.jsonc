@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Svelte AI tooling: MCP server, skills, svelte-file-editor subagent and
+  // instructions via the official plugin — https://svelte.dev/docs/ai
+  // OpenCode V2 config; 'plugins' (plural) is the current schema key
+  // (https://opencode.ai/config.json) — older docs show the deprecated singular 'plugin'.
+  "plugins": ["@sveltejs/opencode"]
+}
