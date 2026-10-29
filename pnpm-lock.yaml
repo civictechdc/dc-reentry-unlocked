@@ -238,6 +238,10 @@ importers:
         version: 5.0.5(vite@8.3.5(jiti@2.7.0))
 
   packages/shared:
+    dependencies:
+      typebox:
+        specifier: ^1.4.3
+        version: 1.4.3
     devDependencies:
       '@fast-check/vitest':
         specifier: ^0.5.0
@@ -1715,6 +1719,9 @@ packages:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
 
+  typebox@1.4.3:
+    resolution: {integrity: sha512-u3nyf7ZciAv1GOijVpI0TDt9At5wmEi7lSHSlRrnjuThv1DcB7fgGBqqrz+fGZ54jAfTpOOX0JXwxSIg3pnxQA==}
+
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
@@ -3069,6 +3076,8 @@ snapshots:
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
+
+  typebox@1.4.3: {}
 
   typescript@6.0.3: {}
 
