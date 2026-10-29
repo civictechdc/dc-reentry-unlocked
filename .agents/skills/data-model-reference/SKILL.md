@@ -9,9 +9,11 @@ description: >
 
 # Data-model reference — dc-reentry-unlocked
 
-Sourced from the capability specs in
-`openspec/changes/housing-units-prototype/specs/`. TypeScript schemas land in
-`packages/shared` (task 3.3); until then this skill is the pinned contract.
+Sourced from the capability specs in the machine-local OpenSpec planning
+workspace (container level; this repo carries no spec folder). The
+TypeBox schemas in `packages/shared` are the contract's source of truth
+and their tests assert the full filter set described here; this skill is
+the pinned orientation reference.
 
 ## Three-layer hierarchy
 
@@ -58,13 +60,14 @@ The model is versioned; jurisdiction-specific fields are extension points.
 Additive changes (new fields/enum values) are ignorable by existing
 consumers; breaking changes are versioned.
 
-## The 11 filters (pinned contract — task 3.3 tests assert this set)
+## The 11 filters (pinned contract — the schema's tests assert this set)
 
 Control vocabulary is exactly **boolean, single-select, multi-select**
 (schema-driven; renderers are generic, no filter hardcoded in the frontend;
 unsupported control types degrade gracefully, never crash).
 
-**4 single-select enum filters** (taxonomies as pinned in task 3.3):
+**4 single-select enum filters** (taxonomies exactly as pinned by the
+schema contract):
 
 - **Housing type**: emergency shelter, transitional, permanent supportive
   housing, subsidized rental, market-rate.

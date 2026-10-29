@@ -2,7 +2,7 @@
   "name": "@dc-reentry/web",
   "version": "0.1.0",
   "private": true,
-  "description": "SvelteKit frontend (scaffold placeholder; SvelteKit arrives in block 6)",
+  "description": "SvelteKit frontend (scaffold placeholder; SvelteKit app code planned, not yet landed)",
   "type": "module",
   "scripts": {
     "test": "vitest run",

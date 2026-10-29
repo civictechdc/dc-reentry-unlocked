@@ -40,7 +40,7 @@ pnpm-debug.log*
 .agents/local/
 AGENTS.local.md
 
-# machine-local OpenSpec planning workspace, never committed (user decision 2026-10-29; revisit at task 8.4)
+# machine-local OpenSpec planning workspace, never committed (user decision 2026-10-29)
 /openspec/
 
 # NOTE: data/ (the frozen synthetic dataset, e.g. data/units.v1.json) is

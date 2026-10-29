@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Svelte AI tooling via the official plugin — https://svelte.dev/docs/ai/opencode-plugin
+  // One entry brings the Svelte MCP server, skills, the svelte-file-editor
+  // subagent, and the Svelte agent instructions.
+  // Config key is "plugin" (singular) per both the OpenCode config docs and
+  // the current Svelte plugin docs.
+  // Version pinned (npm-verified latest 2026-10-29) for supply-chain review:
+  // config-listed npm plugins install automatically at OpenCode startup (via
+  // Bun, which resolves standard npm specifiers, so name@version is honored),
+  // and the Svelte plugin's own autoupdate leaves exact-version pins
+  // untouched (per the plugin doc). Autoupdate is additionally disabled in
+  // .opencode/svelte.json. Bump deliberately via review.
+  "plugin": ["@sveltejs/opencode@0.1.17"],
+}

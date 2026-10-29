@@ -10,7 +10,13 @@
     "pnpm-lock.yaml",
     ".superpowers",
     ".agents/local",
-    // frozen generated dataset: byte-identical regeneration is the contract (task 4.3);
+    // Upstream-authored agent skill content (sveltejs/ai-tools) must stay
+    // byte-identical — formatting it would fork it, and oxfmt 0.75.0 cannot
+    // parse the diff-marker snippets it ships anyway. Our own skills
+    // (project-orientation, data-model-reference) remain formatted.
+    ".agents/skills/svelte-code-writer",
+    ".agents/skills/svelte-core-bestpractices",
+    // frozen generated dataset: byte-identical regeneration is the contract;
     // the formatter must not touch it
     "data",
   ],

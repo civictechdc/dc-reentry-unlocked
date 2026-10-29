@@ -10,8 +10,8 @@ planning workspace** — `../../openspec/changes/housing-units-prototype/`
 worktree, is gitignored defensively here, and is never committed. Read it
 before product work; run `openspec` commands from the container directory
 (and `openspec validate` there before claiming any task block complete).
-Task 8.4's CI validate gate is deferred pending that decision being
-revisited.
+The CI validate gate for machine-local spec artifacts is deferred pending
+that decision being revisited.
 
 ## Local overrides first
 
@@ -30,8 +30,8 @@ pnpm monorepo (Node ≥ 22.12, pnpm ≥ 12):
 | `apps/api`              | Fastify backend, TypeBox validation                                                                                               |
 | `packages/shared`       | TypeBox schemas + TS types — THE API CONTRACT (stable seam)                                                                       |
 | `tools/datagen`         | Deterministic synthetic dataset generator (fixed seed)                                                                            |
-| `data/`                 | Frozen generated dataset, lands with task 4.3 — committed, must stay byte-identical. Never hand-edit                              |
-| `docs/`                 | Human-facing docs (glossary now; runbook lands 7.3, architecture notes land 8.3)                                                  |
+| `data/` (planned)       | Frozen generated dataset — committed once the generator lands, must stay byte-identical. Never hand-edit                          |
+| `docs/`                 | Human-facing docs (glossary now; runbook and architecture notes are planned, not yet landed)                                      |
 | `openspec/` (container) | Machine-local OpenSpec planning workspace, two levels above this repo — deliberately not repo content, never committed; see intro |
 
 Seams are executable, not prose — `pnpm arch:check` (dependency-cruiser,
@@ -78,8 +78,8 @@ The task verification for your block's task must pass before you report done.
 - Arrange-Act-Assert bodies. Given/When/Then is philosophical, not literal —
   no keyword ceremony outside the e2e/Gherkin layer.
 - Fluent domain builders (`aUnit().inWard(5).withUnknownSobrietyPolicy()`)
-  live in the test-only `testing` subpath of `packages/shared` (lands with
-  task 3.6). Do not copy builder logic into individual workspaces.
+  live in the test-only `testing` subpath of `packages/shared` (planned, not
+  yet landed). Do not copy builder logic into individual workspaces.
 - Test bodies read as domain language, not as schema plumbing.
 - Gherkin keywords appear only in the acceptance/e2e layer.
 
@@ -126,11 +126,77 @@ stay out of all hook configs.
 ## Security-sensitive agent-surface files
 
 `scripts/agent-hooks/nudge.mjs`, `.claude/settings.json`, `.codex/hooks.json`,
-and `.github/hooks/agent-nudges.json` inject context into every agent session
+`.codex/config.toml`, `.codex/agents/*`, `.mcp.json`, `opencode.jsonc`,
+`.opencode/svelte.json`, `.github/hooks/agent-nudges.json`,
+`.claude/agents/*`, `.agents/skills/**`, and `skills-lock.json` inject
+executable configuration or agent instructions into every agent session
 in this repo. Treat changes to any of them as security-sensitive: review
 them as you would review a shell hook — no input ever reaches the emitted
 context, no executable content, no blocking fields. PRs touching them
 merit extra scrutiny.
+
+## Svelte tooling
+
+Per the Svelte AI docs (https://svelte.dev/docs/ai/instructions) — include
+the following prompt so agents use the Svelte MCP server and skills
+correctly. The Svelte AI tooling is merged from the prior prototype
+(restored 2026-10-29, content kept current with upstream):
+
+```
+You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+
+## Available Svelte MCP Tools:
+
+### 1. list-sections
+
+Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
+When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+
+### 2. get-documentation
+
+Retrieves full documentation content for specific sections. Accepts single or multiple sections.
+After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+
+### 3. svelte-autofixer
+
+Analyzes Svelte code and returns issues and suggestions.
+You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+
+### 4. playground-link
+
+Generates a Svelte Playground link with the provided code.
+After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.
+```
+
+Skills live at `.agents/skills/svelte-code-writer` and
+`.agents/skills/svelte-core-bestpractices` (pinned in `skills-lock.json`).
+The Svelte MCP package and the `@sveltejs/opencode` plugin are version-pinned
+(npm-verified 2026-10-29; `.opencode/svelte.json` additionally disables the
+plugin's auto-update) — bumps are deliberate, reviewed changes.
+Because Svelte file work is atomic, prefer delegating it to the
+`svelte-file-editor` subagent where the harness supports it — the subagent
+fetches docs and iterates with `svelte-autofixer` in its own context window.
+`pnpm dev` for the web app does not exist yet; the MCP autofixer and docs
+server do not depend on it.
+
+Provenance and trust notes:
+
+- `skills-lock.json` hashes are **drift metadata** (content provenance vs
+  upstream), not authenticity guarantees — a malicious commit can swap skill
+  content and recompute hashes. Changes to skill content and to the lock are
+  therefore reviewed **together**, and upstream skill updates go through
+  review (report differences, never auto-trust). The two Svelte skills stay
+  byte-identical upstream content; that content contains its own unpinned
+  npm/CLI invocations (e.g. the `svelte-code-writer` skill's `@sveltejs/mcp`
+  CLI usage) which the repo-level version pins do not cover — the controls
+  for that surface are the byte-identity contract (skills stay
+  upstream-verbatim, drift detected via `skills-lock.json` and an upstream
+  diff on every update) plus review of skill-content changes.
+- The opencode plugin boundary: accepting this repo's `opencode.jsonc`
+  authorizes third-party plugin JS execution at startup with user
+  privileges. The plugin version is pinned and its auto-update disabled
+  here; opening untrusted branches should happen in isolated environments
+  rather than a configured workspace.
 
 Residual cross-tool caveat (documented per current Copilot docs, assessment
 continued here because the docs are ambiguous): Copilot reads repository
@@ -152,6 +218,16 @@ behavior, re-verify against the Copilot hooks reference first.
 
 Final (user confirmed 2026-10-29):
 
+- **Svelte MCP server (local stdio via `@sveltejs/mcp`) — ADOPTED** (user
+  request 2026-10-29, restored from the prior prototype): project dev
+  tooling giving agents Svelte 5/SvelteKit docs lookup and the
+  `svelte-autofixer` code validator. Configured via the root `.mcp.json`
+  (VS Code + Claude Code), `.codex/config.toml` (Codex), and the
+  `@sveltejs/opencode` plugin (`opencode.jsonc`). A `svelte-file-editor`
+  subagent is available to Claude Code (`.claude/agents/`) and Codex
+  (`.codex/agents/`); delegate Svelte component/module edits to it. See the
+  Svelte tooling section above for the usage instructions.
+
 - **Docs-lookup MCP (Context7-style) — ADOPTED.** Library facts (Fastify,
   Svelte 5 runes, MapLibre, TypeBox) drift; fetching current docs beats
   training-memory claims during product blocks. Zero repo config.
@@ -163,9 +239,9 @@ Final (user confirmed 2026-10-29):
 - **Memory/knowledge MCP — REJECTED.** Local lessons live in the
   gitignored `AGENTS.local.md` (mechanism above); a memory DB would fork
   truth and risks committing context meant to stay local.
-- **housing-data MCP — REJECTED as dev tooling.** It is the _product's_
-  future external API surface for case-manager tools, not dev tooling
-  (per design D17). It will appear in the product, not in agent config.
+- **housing-data MCP — REJECTED as dev tooling.** The housing-data web MCP
+  is the product's future external surface for case-manager tools, not
+  agent tooling. It will appear in the product, not in agent config.
 
 ## Docs organization
 
@@ -173,8 +249,8 @@ Final (user confirmed 2026-10-29):
   (two levels above this repo — not in-repo; see intro). Do not edit them
   without an assigned task.
 - `docs/` — human-facing: `docs/glossary.md` (ubiquitous domain language —
-  keep terms consistent with specs; runbook (`docs/runbook.md`) lands task
-  7.3, architecture note (`docs/architecture.md`) lands task 8.3).
+  keep terms consistent with specs; runbook (`docs/runbook.md`) and
+  architecture note (`docs/architecture.md`) are planned, not yet landed).
 - `README.md` — repo overview, current dev-boot status.
 - Human considerations → `docs/`; agent instructions → this file +
   `.agents/skills/`; tool config → tool dirs; local only → `AGENTS.local.md`.
@@ -204,5 +280,39 @@ When reviewing changes (yours or others'):
 - Verify new docs/commands referenced by AGENTS.md, README, or skills still
   run as written — stale commands rot trust in every agent session.
 - Give extra scrutiny to the security-sensitive agent-surface files listed
-  above (nudge script + the three hook configs) — they inject into every
-  agent session.
+  above — they inject context and executable configuration into every agent
+  session in this repo.
+
+### No OpenSpec-internal tracking references in committed files
+
+Committed code/config/docs must read self-contained: flag and require
+removal of any comment or doc text in committed files that references
+OpenSpec-internal tracking — task numbers (e.g. `6.1`, `task 4.3`), block
+numbers (e.g. `block 2`, `blocks 4–5`), design-doc decision IDs (e.g.
+`design D18`, `(D17)`), or the change name (`housing-units-prototype`) —
+anywhere outside openspec folders. Such refs dangle for fresh clones and go
+stale on renumber. Date-based decision provenance (e.g. "user decision
+2026-10-29") is fine; only the internal tracking references go. Exemptions:
+git history/commit messages (immutable) and machine-local files
+(`AGENTS.local.md`, `.agents/local/`). Express future-landing marks
+honestly without numbers ("planned, not yet landed") and state reasons
+inline instead of pointing at decision IDs.
+
+Starter grep (judge false positives by eye — this rule's own text (including
+the grep example), comments about tasks.md workflow rules, the machine-local
+openspec _folder_ path, legitimate version numbers (Svelte 5.x, Git 2.54,
+pinned deps like @0.1.28), and bare `N.N` references like "lands 1.7" — which
+the pattern cannot see — are the named categories; bare `N.N` must be
+eyeballed manually):
+
+```sh
+grep -rIinE "(tasks?|lands?) [0-9]+\.[0-9]+|blocks? [0-9]|design D[0-9]+|\bD1[0-8]\b|housing-units-prototype" \
+  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=openspec \
+  --exclude-dir=data --exclude-dir=.superpowers --exclude=pnpm-lock.yaml \
+  --exclude-dir=packages --exclude-dir=api --exclude-dir=datagen . \
+  | grep -vE "AGENTS\.local\.md|\.agents/local/"
+```
+
+(`-i` catches `Task 8.4` at sentence start; the extended pattern also catches
+bare "lands 1.7" phrasing; partition exclusions for workspaces another agent
+owns are temporary and come off when that block is done.)

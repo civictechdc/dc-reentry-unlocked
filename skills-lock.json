@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "svelte-code-writer": {
+      "source": "sveltejs/ai-tools",
+      "sourceType": "github",
+      "skillPath": "tools/skills/svelte-code-writer/SKILL.md",
+      "computedHash": "aaa5ef9293b156133fedaf1287a914817eda488e9e4b15e5bb20a56b1d348cb4"
+    },
+    "svelte-core-bestpractices": {
+      "source": "sveltejs/ai-tools",
+      "sourceType": "github",
+      "skillPath": "tools/skills/svelte-core-bestpractices/SKILL.md",
+      "computedHash": "96e025333e54533a31d37f70c7094da8df8b89c3c622a70d7edbf6332b84da47"
+    }
+  }
+}

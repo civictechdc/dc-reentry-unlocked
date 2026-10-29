@@ -1,6 +1,6 @@
 #!/bin/sh
 # Pre-push: full typecheck (tsc TS7 for shared/api/datagen, tsc6 for web —
-# web gets svelte-check coverage when its app code lands in block 6)
+# web gets svelte-check coverage once its app code exists)
 # + dependency-cruiser architecture rules.
 
 set -eu

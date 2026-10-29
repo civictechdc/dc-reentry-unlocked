@@ -4,7 +4,7 @@ This project ships its git hooks through a checked-in git config file
 (`gitconfig/hooks.config`) — no hook runner (husky/lefthook) is used.
 
 **Requirement: git >= 2.54** (hooks-in-config support). Check yours with
-`git --version`. CI (arriving in block 8) will use a modern runner and verify
+`git --version`. CI (planned, not yet landed) will use a modern runner and verify
 the version; on older git the hooks silently don't exist — CI will still
 enforce everything the hooks do, but local feedback will skip them.
 

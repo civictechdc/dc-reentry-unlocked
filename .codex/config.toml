@@ -1,0 +1,8 @@
+# Svelte MCP server — local stdio via npx (https://svelte.dev/docs/ai/local-setup)
+# Manual alternative to the Svelte Codex plugin (recommended there); kept as a
+# project-scoped file so the server is available without a global install.
+# Version pinned (npm-verified latest 2026-10-29) for supply-chain review —
+# upstream shows the command unpinned; bump deliberately via review.
+[mcp_servers.svelte]
+command = "npx"
+args = ["-y", "@sveltejs/mcp@0.1.28"]

@@ -1,4 +1,4 @@
-// Conventional Commits enforcement (commit-msg hook, design D8).
+// Conventional Commits enforcement (commit-msg git hook).
 // config-conventional accepts any scope (it constrains TYPES, not scopes:
 // build/chore/ci/docs/feat/fix/perf/refactor/revert/style/test); project docs
 // recommend keeping scopes aligned to the workspace names (api, web, shared,

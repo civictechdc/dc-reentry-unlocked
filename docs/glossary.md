@@ -1,7 +1,8 @@
 # Domain glossary — dc-reentry-unlocked
 
 The ubiquitous language of this project. Definitions are consolidated from
-the capability specs in `openspec/changes/housing-units-prototype/specs/`;
+the capability specs in the machine-local OpenSpec planning workspace
+(container level; run `openspec` commands from there);
 every term must stay consistent with them. Change a definition by changing
 the spec first, then this file.
 

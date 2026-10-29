@@ -11,7 +11,9 @@ description: >
 Display prototype: MapLibre map + card list of available synthetic DC
 reentry-housing units, schema-driven filtering, slide-over detail ending at
 provider contact info. The API boundary is the stable seam. Full product
-truth: `openspec/changes/housing-units-prototype/` (specs, design, tasks).
+truth: the machine-local OpenSpec planning workspace at the container level
+(run `openspec` commands from there — this repo intentionally carries no
+spec folder).
 
 ## Monorepo layout
 
@@ -59,5 +61,5 @@ runs typecheck + arch:check regardless. Conventional Commits only:
   building numbers — no real listing anywhere.
 - TypeScript is dual-version by design (TS 7 standard, TS 6 pinned for
   Svelte tooling) — do not "fix" the split.
-- Dev servers (`pnpm dev`, compose) do not exist yet; they land in later
-  blocks of the OpenSpec change.
+- Dev servers (`pnpm dev`, compose) do not exist yet; they are planned, not
+  yet landed.
