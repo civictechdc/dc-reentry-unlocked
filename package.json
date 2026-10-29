@@ -13,6 +13,7 @@
     "format": "pnpm exec oxfmt .",
     "format:check": "pnpm exec oxfmt --check .",
     "test": "pnpm -r run test && pnpm exec vitest run",
+    "datagen": "pnpm -C tools/datagen generate",
     "typecheck": "pnpm exec tsc -p packages/shared && pnpm exec tsc -p apps/api && pnpm exec tsc -p tools/datagen && pnpm typecheck:web",
     "typecheck:web": "pnpm -C apps/web exec tsc6 --noEmit",
     "arch:check": "pnpm exec dependency-cruiser ."

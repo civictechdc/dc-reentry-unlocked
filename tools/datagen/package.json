@@ -2,17 +2,22 @@
   "name": "@dc-reentry/datagen",
   "version": "0.1.0",
   "private": true,
-  "description": "Deterministic synthetic dataset generator (scaffold placeholder)",
+  "description": "Deterministic synthetic dataset generator (fixed seed, offline corpus)",
   "type": "module",
   "scripts": {
+    "generate": "tsx src/cli.ts",
+    "fetch-corpus": "node scripts/fetch-corpus.mjs",
     "test": "vitest run",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@dc-reentry/shared": "workspace:*"
+    "@dc-reentry/shared": "workspace:*",
+    "@turf/boolean-point-in-polygon": "^7.4.0"
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.5.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }
