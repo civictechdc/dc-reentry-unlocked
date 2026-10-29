@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-hooks/nudge.mjs",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-hooks/nudge.mjs",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
