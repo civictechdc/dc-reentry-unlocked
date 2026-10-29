@@ -1,0 +1,19 @@
+{
+  "name": "@dc-reentry/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared contracts: TypeBox schemas, derived types, API envelopes, test-only domain builders (scaffold placeholder)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@fast-check/vitest": "^0.5.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}

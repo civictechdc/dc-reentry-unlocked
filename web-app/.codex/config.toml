@@ -1,4 +1,0 @@
-# Svelte MCP server — local stdio via npx (https://svelte.dev/docs/ai)
-[mcp_servers.svelte]
-command = "npx"
-args = ["-y", "@sveltejs/mcp"]

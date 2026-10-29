@@ -1,0 +1,33 @@
+#!/bin/sh
+# Pre-commit: oxfmt --check + oxlint on staged files only.
+# Runs with cwd = repository root; pnpm and oxlint/oxfmt must be installed
+# (`pnpm install` once).
+
+set -u
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-commit: pnpm not found on PATH — run 'pnpm install' and fix your environment" >&2
+  exit 1
+fi
+
+# oxfmt formats: js/ts variants, json/jsonc, yaml, toml, markdown, svelte, html, css
+oxfmt_files=$(
+  git diff --cached --no-renames --name-only --diff-filter=ACMR -- \
+    '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' '*.cts' '*.mts' \
+    '*.json' '*.jsonc' '*.yaml' '*.yml' '*.toml' \
+    '*.md' '*.mdx' '*.svelte' '*.html' '*.css'
+)
+if [ -n "$oxfmt_files" ]; then
+  printf '%s' "$oxfmt_files" | tr '\n' '\0' | xargs -0 pnpm exec oxfmt --check || exit 1
+fi
+
+# oxlint lints js/ts/svelte
+oxlint_files=$(
+  git diff --cached --no-renames --name-only --diff-filter=ACMR -- \
+    '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' '*.cts' '*.mts' '*.svelte'
+)
+if [ -n "$oxlint_files" ]; then
+  printf '%s' "$oxlint_files" | tr '\n' '\0' | xargs -0 pnpm exec oxlint || exit 1
+fi
+
+exit 0

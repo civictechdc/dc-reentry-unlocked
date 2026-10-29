@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  // Prettier-compatible formatter (beta — pinned exact in package.json).
+  // Svelte formatting needs the `svelte` package present (it is, root + apps/web).
+  "svelte": true,
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "pnpm-lock.yaml",
+    ".superpowers",
+    ".agents/local",
+    // frozen generated dataset: byte-identical regeneration is the contract (task 4.3);
+    // the formatter must not touch it
+    "data",
+  ],
+}

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-push: full typecheck (tsc TS7 for shared/api/datagen, tsc6 for web —
+# web gets svelte-check coverage when its app code lands in block 6)
+# + dependency-cruiser architecture rules.
+
+set -eu
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm not found on PATH — run 'pnpm install'" >&2
+  exit 1
+fi
+
+pnpm typecheck
+pnpm arch:check

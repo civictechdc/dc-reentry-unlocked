@@ -1,0 +1,12 @@
+#!/bin/sh
+# Commit-msg: enforce Conventional Commits via commitlint.
+# Git >= 2.54 passes the commit-message file path as $1;
+# commitlint also falls back to .git/COMMIT_EDITMSG when it is absent.
+
+set -u
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "commit-msg: pnpm not found on PATH — run 'pnpm install'" >&2
+  exit 1
+fi
+
+pnpm exec commitlint --edit "$1"
