@@ -78,7 +78,8 @@ test("production build serves the app with a hardened CSP", async () => {
   // kit's `mode: "auto"` injects a per-request nonce for the shell's inline
   // bootstrap script — the exact list is [self, one nonce source]
   expect(csp["script-src"]).toEqual(["self", expect.stringMatching(/^nonce-/)]);
-  expect(csp["worker-src"]).toEqual(["self", "blob:"]);
+  // The MapLibre worker is a same-origin bundled asset: bare 'self', no blob:.
+  expect(csp["worker-src"]).toEqual(["self"]);
   expect(csp["style-src"]).toEqual(["self", "unsafe-inline"]);
   expect(csp["img-src"]).toEqual(
     expect.arrayContaining(["self", "data:", "blob:", "https://tile.openstreetmap.org"]),
@@ -133,4 +134,52 @@ test("the production shell's referenced assets are served (static-layer residual
   expect(asset.status).toBe(200);
   // response streams body + content-type; the hook-applied headers apply to
   // the HTML delivery (asserted above), not to the static layer (residual)
+});
+
+/**
+ * Browser-level production probe (the gap that hid the map-worker defect:
+ * header-level CSP assertions alone never exercised the map). Drives a real
+ * browser against the production server: the map canvas mounts, pins render
+ * from the bundled worker (a 200 on `_app/immutable/workers/*`), and the
+ * page runs with zero console errors under the hardened CSP.
+ */
+test("the production build renders the map in a real browser with no console errors", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error.message}`));
+
+  const workerResponses: number[] = [];
+  page.on("response", (response) => {
+    if (response.url().includes("/_app/immutable/workers/"))
+      workerResponses.push(response.status());
+  });
+
+  await page.goto(PROD_URL);
+  await page.getByText("Prototype with synthetic data").waitFor({ timeout: 30_000 });
+  await page.getByTestId("map-view").waitFor();
+
+  // The bundled map worker chunk is a real same-origin asset, fetched with
+  // the tightened worker-src 'self' policy.
+  expect(workerResponses.length, "the map worker chunk was requested").toBeGreaterThan(0);
+  expect(
+    workerResponses.every((status) => status === 200),
+    "the map worker chunk loads (no 404/CSP rejection)",
+  ).toBe(true);
+
+  // The GL map actually painted its canvas and the pins render for units.
+  await expect(page.locator(".map-canvas canvas")).toHaveCount(1);
+  await expect(page.getByTestId("map-pin-list").locator("button").first()).toBeAttached();
+
+  // Give tile/source loading a beat to surface late errors, then assert a
+  // clean console: no worker failures, no CSP rejections, no stack traces.
+  await page.waitForTimeout(3_000);
+  expect(consoleErrors, "the page console is clean").toEqual([]);
+
+  await context.close();
 });

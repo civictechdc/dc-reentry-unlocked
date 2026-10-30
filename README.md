@@ -15,14 +15,14 @@ availability and eligibility with the provider. See
 
 ## Project navigation
 
-| Path              | What lives there                                                                                                                                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/web`        | The map + card-list application (SvelteKit)                                                                                                                                                                        |
-| `apps/api`        | The HTTP API that serves units and the published filter schema                                                                                                                                                     |
-| `packages/shared` | The API contract: schemas and types shared front and back                                                                                                                                                          |
-| `tools/datagen`   | The deterministic synthetic-data generator                                                                                                                                                                         |
-| `data/`           | Frozen generated dataset + the DC geography corpus it generates against                                                                                                                                            |
-| `docs/`           | API notes (`api.md`), contracts (`shared-contracts.md`), synthetic-data policy (`data-synthetic.md`), performance notes (`perf-notes.md`), domain glossary (`glossary.md`), git hooks setup (`git-hooks-setup.md`) |
+| Path              | What lives there                                                                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/web`        | The map + card-list application (SvelteKit)                                                                                                                                                                                                      |
+| `apps/api`        | The HTTP API that serves units and the published filter schema                                                                                                                                                                                   |
+| `packages/shared` | The API contract: schemas and types shared front and back                                                                                                                                                                                        |
+| `tools/datagen`   | The deterministic synthetic-data generator                                                                                                                                                                                                       |
+| `data/`           | Frozen generated dataset + the DC geography corpus it generates against                                                                                                                                                                          |
+| `docs/`           | API notes (`api.md`), contracts (`shared-contracts.md`), synthetic-data policy (`data-synthetic.md`), performance notes (`perf-notes.md`), domain glossary (`glossary.md`), git hooks setup (`git-hooks-setup.md`), the run story (`runbook.md`) |
 
 Contributor and agent conventions (committed conventions, review guidelines,
 Svelte AI tooling) live in [AGENTS.md](AGENTS.md).
@@ -48,18 +48,27 @@ pnpm dev
 `pnpm dev` starts both dev servers: the web app at
 [localhost:5173](http://localhost:5173/) and the API at
 [localhost:3000](http://localhost:3000/) (`/health`, `/units`, `/filters`).
-Dev servers are the only run mode for now; a production release path is
-planned, not yet landed.
+
+The same stack can run from the built images instead of the dev servers:
+
+```sh
+docker compose up -d     # API healthcheck + web healthcheck, then localhost:5173
+```
+
+The full run story — dev boot, the Compose boot (smoke checks, teardown,
+host overrides), and dataset regeneration — lives in
+[docs/runbook.md](docs/runbook.md).
 
 ## Tests
 
-| Command                                            | What it covers                                                |
-| -------------------------------------------------- | ------------------------------------------------------------- |
-| `pnpm test`                                        | Unit and integration tests across all workspaces              |
-| `pnpm -C apps/web e2e`                             | Browser golden paths (map, filters, detail) on the dev server |
-| `pnpm -C apps/web e2e:prod`                        | Probes against the production build (headers, asset serving)  |
-| `pnpm arch:check`                                  | The architecture rules between the workspaces (the seams)     |
-| `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Code quality, formatting, and type gates                      |
+| Command                                            | What it covers                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| `pnpm test`                                        | Unit and integration tests across all workspaces                   |
+| `pnpm -C apps/web e2e`                             | Browser golden paths (map, filters, detail) on the dev server      |
+| `pnpm -C apps/web e2e:bdd`                         | The Gherkin golden paths (`e2e/features`) against the booted stack |
+| `pnpm -C apps/web e2e:prod`                        | Probes against the production build (headers, asset serving)       |
+| `pnpm arch:check`                                  | The architecture rules between the workspaces (the seams)          |
+| `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Code quality, formatting, and type gates                           |
 
 ## Contributing
 

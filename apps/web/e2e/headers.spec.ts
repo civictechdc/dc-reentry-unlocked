@@ -51,8 +51,9 @@ test.describe("security headers (dev server)", () => {
       // inline scripts are a DEV-only need (Vite HMR); no eval anywhere
       expect(csp["script-src"] ?? []).toEqual(["self", "unsafe-inline"]);
       expect(csp["script-src"] ?? []).not.toContain("blob:");
-      // MapLibre workers are created from blob URLs
-      expect(csp["worker-src"]).toEqual(["self", "blob:"]);
+      // The MapLibre worker is a same-origin bundled asset (setWorkerUrl) —
+      // bare 'self', no blob: anywhere in worker-src.
+      expect(csp["worker-src"]).toEqual(["self"]);
       // tiles and the cross-origin housing API stay reachable
       expect(csp["img-src"]).toContain("https://tile.openstreetmap.org");
       expect(csp["connect-src"]).toContain("https://tile.openstreetmap.org");

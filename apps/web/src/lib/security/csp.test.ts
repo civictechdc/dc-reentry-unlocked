@@ -12,8 +12,9 @@ describe("security CSP directives", () => {
     expect(directives["script-src"]).toContain("self");
     expect(directives["img-src"]).toContain(OPENSTREETMAP_TILE_ORIGIN);
     expect(directives["connect-src"]).toContain(OPENSTREETMAP_TILE_ORIGIN);
-    // MapLibre runs its workers from blob URLs.
-    expect(directives["worker-src"]).toContain("blob:");
+    // MapLibre's worker is the same-origin bundled asset (setWorkerUrl) —
+    // no blob: sources remain anywhere in the policy.
+    expect(directives["worker-src"]).toEqual(["self"]);
     // The cross-origin housing API base URL stays reachable.
     expect(directives["connect-src"]).toContain("http://localhost:3000");
     // Objects and frames are fully denied.

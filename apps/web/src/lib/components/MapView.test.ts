@@ -93,7 +93,7 @@ vi.mock("maplibre-gl", () => {
       }
     }
   }
-  return { Map: MockMap };
+  return { Map: MockMap, setWorkerUrl: () => {} };
 });
 
 import MapView from "./MapView.svelte";

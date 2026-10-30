@@ -7,7 +7,9 @@
  *
  * - the OpenStreetMap raster tile server the map pulls tiles from,
  * - the housing API base URL (VITE_API_URL) the SPA talks to cross-origin,
- * - MapLibre GL workers, which are created from blob URLs (`worker-src blob:`).
+ * - the MapLibre GL worker: a same-origin bundled asset (wired through
+ *   `setWorkerUrl` from `?worker&url`) — `worker-src 'self'`, no blob:
+ *   needed with maplibre v6 (per its v5→v6 migration guide).
  *
  * Dev mode additionally needs inline scripts (Vite HMR) and the dev-server
  * websocket, validated only while `allowInlineScripts` is set.
@@ -23,9 +25,9 @@ export interface SecurityCspOptions {
 }
 
 export function securityCspDirectives(options: SecurityCspOptions): Record<string, string[]> {
-  // Danger-free rule: blob: belongs ONLY in worker-src (MapLibre creates its
-  // workers from blob URLs); production script-src stays 'self' — inline
-  // scripts are a dev-only need (Vite HMR).
+  // Production script-src stays 'self' (plus kit's per-request nonce) —
+  // inline scripts are a dev-only need (Vite HMR). The MapLibre worker is a
+  // same-origin bundled asset, so worker-src is bare 'self' — no blob:.
   const scriptSrc = ["self"];
   if (options.allowInlineScripts) scriptSrc.push("unsafe-inline");
 
@@ -41,7 +43,7 @@ export function securityCspDirectives(options: SecurityCspOptions): Record<strin
     "style-src": ["self", "unsafe-inline"],
     "img-src": ["self", "data:", "blob:", OPENSTREETMAP_TILE_ORIGIN],
     "connect-src": connectSrc,
-    "worker-src": ["self", "blob:"],
+    "worker-src": ["self"],
     "font-src": ["self", "data:"],
     "manifest-src": ["self"],
     "object-src": ["none"],

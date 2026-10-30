@@ -1,8 +1,13 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AddLayerObject, FilterSpecification, GeoJSONSource } from "maplibre-gl";
-  import { Map as MapLibreMap } from "maplibre-gl";
+  import { Map as MapLibreMap, setWorkerUrl } from "maplibre-gl";
   import { m } from "#lib/paraglide/messages.js";
+  // Bundler-bundled MapLibre worker: in a bundler build (Vite), the library
+  // cannot auto-detect the worker URL from `import.meta.url` — without this
+  // one-time wiring the production build ships no worker and no tiles render.
+  import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+  setWorkerUrl(mapWorkerUrl);
   import {
     basePinLayerPaint,
     createMapStyle,

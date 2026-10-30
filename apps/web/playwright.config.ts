@@ -20,6 +20,13 @@ export default defineConfig({
       name: "housing-api",
       timeout: 60_000,
       reuseExistingServer: !process.env.CI,
+      // The prod project's browser probe loads the SPA from the adapter-node
+      // server on port 4317 — bless that origin so its cross-origin unit
+      // fetches pass the API's fail-closed CORS allow list.
+      env: {
+        ...process.env,
+        API_CORS_ORIGINS: "http://localhost:5173,http://localhost:4317",
+      },
     },
     {
       command: "pnpm dev",

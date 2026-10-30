@@ -24,12 +24,12 @@
     "ajv-formats": "^3.0.1",
     "fastify": "^5.12.7",
     "pino": "^10.4.0",
+    "tsx": "^4.23.0",
     "typebox": "^1.4.3"
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.5.0",
     "@types/node": "^24.0.0",
-    "tsx": "^4.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }

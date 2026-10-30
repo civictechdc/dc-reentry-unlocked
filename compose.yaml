@@ -1,0 +1,75 @@
+# Compose boot for the display prototype: the housing API plus the
+# production-built web SPA in one stack. Ports match the development
+# parity (API 3000, web 5173) on the loopback interface only — this is a
+# local evaluation prototype, nothing listens on the LAN; publish on other
+# interfaces only in a deliberately hardened deployment (also rebrand the
+# web image with `docker compose build --build-arg VITE_API_URL=<base url>`
+# and align the API's API_CORS_ORIGINS env; see docs/api.md and the runbook).
+name: dc-reentry-unlocked
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: dc-reentry-unlocked/api
+    restart: unless-stopped
+    # tini as PID 1: the fastify graceful-shutdown path runs on SIGTERM
+    init: true
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      # The SPA served on the host at localhost:5173 must be allowed
+      # cross-origin (read-only API; exact origins, never a wildcard).
+      API_CORS_ORIGINS: http://localhost:5173
+    # Modest ceilings for a read-only prototype API. The frozen dataset is
+    # loaded into memory at boot (~1.2MB of JSON); 512m leaves ample headroom.
+    mem_limit: 512m
+    cpus: 1.0
+    healthcheck:
+      # node is the only HTTP client guaranteed present in the slim image.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    image: dc-reentry-unlocked/web
+    restart: unless-stopped
+    # tini as PID 1: clean stop for the adapter-node server
+    init: true
+    ports:
+      - "127.0.0.1:5173:5173"
+    # The web image serves only the static SPA shell (no in-memory dataset).
+    mem_limit: 256m
+    cpus: 0.5
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      # The served SPA shell answers 200 on the root page.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s

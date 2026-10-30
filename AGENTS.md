@@ -31,7 +31,8 @@ pnpm monorepo (Node ≥ 22.12, pnpm ≥ 12):
 | `packages/shared`       | TypeBox schemas + TS types — THE API CONTRACT (stable seam)                                                                       |
 | `tools/datagen`         | Deterministic synthetic dataset generator (fixed seed)                                                                            |
 | `data/` (planned)       | Frozen generated dataset — committed once the generator lands, must stay byte-identical. Never hand-edit                          |
-| `docs/`                 | Human-facing docs (glossary now; runbook and architecture notes are planned, not yet landed)                                      |
+| `compose.yaml`          | The Compose boot: API + production-built web images, healthchecked (build story in `docs/runbook.md`)                             |
+| `docs/`                 | Human-facing docs (glossary, runbook; the architecture note is planned, not yet landed)                                           |
 | `openspec/` (container) | Machine-local OpenSpec planning workspace, two levels above this repo — deliberately not repo content, never committed; see intro |
 
 Seams are executable, not prose — `pnpm arch:check` (dependency-cruiser,
@@ -249,8 +250,9 @@ Final (user confirmed 2026-10-29):
   (two levels above this repo — not in-repo; see intro). Do not edit them
   without an assigned task.
 - `docs/` — human-facing: `docs/glossary.md` (ubiquitous domain language —
-  keep terms consistent with specs; runbook (`docs/runbook.md`) and
-  architecture note (`docs/architecture.md`) are planned, not yet landed).
+  keep terms consistent with specs) and `docs/runbook.md` (dev/Compose/
+  data-regeneration run story). `docs/architecture.md` is planned, not yet
+  landed.
 - `README.md` — repo overview, current dev-boot status.
 - Human considerations → `docs/`; agent instructions → this file +
   `.agents/skills/`; tool config → tool dirs; local only → `AGENTS.local.md`.
