@@ -13,6 +13,7 @@
     "format": "pnpm exec oxfmt .",
     "format:check": "pnpm exec oxfmt --check .",
     "test": "pnpm -r run test && pnpm exec vitest run",
+    "dev": "pnpm -r --parallel run dev",
     "datagen": "pnpm -C tools/datagen generate",
     "typecheck": "pnpm exec tsc -p packages/shared && pnpm exec tsc -p apps/api && pnpm exec tsc -p tools/datagen && pnpm -C apps/web check",
     "typecheck:web": "pnpm -C apps/web check",
