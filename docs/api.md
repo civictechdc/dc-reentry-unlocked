@@ -18,6 +18,17 @@ boot and serves only units whose availability state is `available` — the
 availability gate lives inside the data source module, so unavailable and
 unverified-availability units never leave it.
 
+### Response compression
+
+`@fastify/compress` is registered globally (`global: true`): responses
+negotiate with the client's `accept-encoding` (gzip/brotli — `br` wins for
+the JSON card payload). Replies that already carry a content-encoding are
+never double-compressed, and bodyless replies (CORS preflights, 204s) stay
+untouched. The plugin's request-decompression hook is disabled
+(`globalDecompression: false`): the API is read-only GET and never consumes
+request bodies, so there is no decompression surface (and no
+decompression-bomb surface).
+
 ### Environment
 
 | Variable                        | Default                 | Meaning                                                    |

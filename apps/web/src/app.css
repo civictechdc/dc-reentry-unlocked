@@ -1,0 +1,78 @@
+/**
+ * Civic clean light theme — design tokens.
+ * Text/UI pairings are contrast-checked against WCAG 2.1 AA (minimum 4.5:1
+ * for text, 3:1 for large text and UI borders); the axe-core e2e suite
+ * asserts no serious violations against the rendered app.
+ */
+:root {
+  /* Surfaces */
+  --surface: #f5f7fa;
+  --surface-raised: #ffffff;
+  --surface-warning: #fff8e1;
+  --surface-selected: #e3f0fd;
+
+  /* Ink */
+  --ink: #1b2a34;
+  --ink-muted: #51606b;
+  --ink-on-accent: #ffffff;
+
+  /* Lines */
+  --line: #cbd3d9;
+  --line-strong: #8a97a0;
+
+  /* Accent (primary actions, links) */
+  --accent: #0b5fab;
+  --accent-hover: #094a86;
+  --accent-focus-ring: #1d4ed8;
+
+  /* Map / status colors (data-carrying, notSure text) */
+  --pin-exact: #0b5fab;
+  --pin-approximate: #b45309;
+  --pin-highlight: #d9340f;
+  --pin-highlight-ring: #ffffff;
+
+  /* Badge colors */
+  --badge-confirmed-bg: #d1e7dd;
+  --badge-confirmed-ink: #0f5132;
+  --badge-unverified-bg: #ffe8cc;
+  --badge-unverified-ink: #7c3a00;
+
+  /* Shape & type */
+  --radius: 6px;
+  --shadow: 0 1px 3px rgb(27 42 52 / 0.25);
+  --font-size-base: 1rem;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-size: var(--font-size-base);
+  line-height: 1.45;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Shared focus ring for every interactive element. */
+:focus-visible {
+  outline: 3px solid var(--accent-focus-ring);
+  outline-offset: 2px;
+}

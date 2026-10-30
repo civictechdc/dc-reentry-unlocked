@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
+// Response compression (user decision 2026-10-29): the units payload measured
+// ~984KB per 1,000 unit cards uncompressed — brotli/gzip on the wire keeps the
+// ~500KB/1,000 budget reachable without payload trimming.
+import compress from "@fastify/compress";
 // ajv-formats is not imported by this source tree: it is declared in
 // package.json only to satisfy @fastify/type-provider-typebox's peer
 // dependency (the type provider resolves it lazily for its format helper).
@@ -147,6 +151,17 @@ export async function buildApp(options: HousingApiOptions): Promise<HousingApi> 
     // docs/api.md.
     strictPreflight: true,
   });
+
+  // Compression AFTER helmet (its onSend hook runs in registration order) and
+  // BEFORE routes: responses made by the compress plugin carry content-encoding
+  // itself; CORS-terminated preflights have no body and stay untouched.
+  // `global: true` documents the intent — every route compresses by
+  // accept-encoding preference (no double-compression: the plugin skips
+  // replies that already carry a content-encoding). `globalDecompression:
+  // false` disables the plugin's request-decompression hook per its
+  // documented option — this API is read-only GET, so request bodies are
+  // never consumed (verified against the installed plugin README).
+  await app.register(compress, { global: true, globalDecompression: false });
 
   await app.register(healthRoutes);
   await app.register(unitsRoutes);

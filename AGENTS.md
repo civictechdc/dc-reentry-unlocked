@@ -176,8 +176,8 @@ plugin's auto-update) — bumps are deliberate, reviewed changes.
 Because Svelte file work is atomic, prefer delegating it to the
 `svelte-file-editor` subagent where the harness supports it — the subagent
 fetches docs and iterates with `svelte-autofixer` in its own context window.
-`pnpm dev` for the web app does not exist yet; the MCP autofixer and docs
-server do not depend on it.
+`pnpm -C apps/web dev` boots the SvelteKit dev server (port 5173; the API dev
+server runs on port 3000); the MCP autofixer and docs server do not depend on it.
 
 Provenance and trust notes:
 

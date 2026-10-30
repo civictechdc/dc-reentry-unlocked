@@ -101,7 +101,9 @@ module.exports = {
   options: {
     // catch type-only and unused imports — the contract seams are in types
     tsPreCompilationDeps: true,
-    doNotFollow: { path: "node_modules" },
+    // `build/` covers app build outputs (gitignored; the adapter-node build is
+    // materialized by the production e2e probe and must not be cruised)
+    doNotFollow: { path: "node_modules|(^|.*/)(build|dist|coverage|\\.svelte-kit|test-results)/" },
     enhancedResolveOptions: {
       exportsFields: ["exports"],
     },

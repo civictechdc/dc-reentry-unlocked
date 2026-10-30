@@ -16,3 +16,16 @@ packageExtensions:
   dependency-cruiser:
     optionalDependencies:
       typescript: "npm:@typescript/typescript6@6.0.2"
+
+# Vite/Playwright toolchains ship build scripts (esbuild platform binary,
+# browser binary downloads); the web devDependencies are the only sources.
+allowBuilds:
+  esbuild: true
+
+# Supply-chain release-age policy carve-outs: pnpm's minimumReleaseAge check
+# rejects these two exact pins (published-by-registry timestamps), while the
+# peer graph requires exactly these versions (verified 2026-10-29). Kept
+# narrow: exact name@version pairs only.
+minimumReleaseAgeExclude:
+  - "@inlang/plugin-message-format@4.5.6"
+  - "@inlang/sdk@4.1.0"
