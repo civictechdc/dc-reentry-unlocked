@@ -113,7 +113,9 @@ Value.Check(FilterDefinitionSchema, UNIT_FILTERS[0]!); // true
 
 Typed response envelopes with machine-readable error codes (stable across
 status-code evolution; the API logs internal detail server-side, never in
-the envelope).
+the envelope). The envelope also carries a `correlationId` — the request id
+echoed into structured request logs, so a reported bug lines up with its
+server-side log entries.
 
 ```ts
 import {
@@ -128,6 +130,19 @@ Value.Check(UnitsResponseSchema, payloadFromApi);
 Value.Check(FilterSchemaResponseSchema, schemaPayloadFromApi);
 Value.Check(ErrorEnvelopeSchema, errorFromApi); // code is one of the ERROR_CODES
 ```
+
+The pinned code vocabulary (`ERROR_CODES`, additive-only — new codes must
+never break an existing consumer's `switch`, so unknown codes degrade to a
+generic failure rendering):
+
+| Code                  | Meaning on the wire                                                        |
+| --------------------- | -------------------------------------------------------------------------- |
+| `not-found`           | Unknown route (there is no per-unit detail view on this listing API yet)   |
+| `service-unavailable` | The API cannot serve the data right now — safe to retry later              |
+| `invalid-filter`      | A filter name or value the published filter schema does not define         |
+| `invalid-request`     | A malformed request that is not a filter problem                           |
+| `internal-error`      | Something failed server-side; detail stays in server logs                  |
+| `rate-limited`        | Too many requests — slow down, and honor the `Retry-After` response header |
 
 ## Example 8 — Test-only domain builders
 

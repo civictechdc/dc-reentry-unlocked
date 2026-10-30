@@ -58,6 +58,7 @@ test("only the pinned machine codes are envelope-valid", () => {
     "invalid-filter",
     "invalid-request",
     "internal-error",
+    "rate-limited",
   ]);
 
   expect(Value.Check(ErrorCodeSchema, "not-found")).toBe(true);

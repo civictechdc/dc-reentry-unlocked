@@ -33,6 +33,7 @@ export const ERROR_CODES = [
   "invalid-filter",
   "invalid-request",
   "internal-error",
+  "rate-limited",
 ] as const;
 
 export const ErrorCodeSchema = Type.Enum([...ERROR_CODES]);

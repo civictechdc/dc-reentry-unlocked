@@ -68,7 +68,7 @@ module.exports = {
       name: "api-route-must-not-read-dataset-directly",
       severity: "error",
       comment:
-        "Routes reach data only through the DataSource module; the frozen dataset file is never loaded by route code directly (protects the ingestion-pipeline seam). Forward-looking: active once apps/api has routes and the dataset layer.",
+        "Routes reach data only through the DataSource module (the units decoration is the working seam — production route modules have no other data import). This rule is a static-import backstop: it catches statically or dynamically imported dataset paths; a computed fs pathname string is invisible to dependency analysis (which is also why the DataSource module itself reads the file with fs.readFile rather than an import).",
       from: { path: "^apps/api/", pathNot: "[Dd]ata[Ss]ource" },
       to: { path: "(^|/)data/units\\.v\\d+\\.json$" },
     },
@@ -76,9 +76,13 @@ module.exports = {
       name: "shared-testing-subpath-not-reachable-from-non-test-files",
       severity: "error",
       comment:
-        "The domain builders under packages/shared testing are a test-only export: no non-test file may reach them — directly, or transitively through a test file that re-exports them. Matches both layouts: packages/shared/testing/** and packages/shared/src/testing/**.",
+        "The domain builders under packages/shared testing are a test-only export: no non-test file may reach them — directly, or transitively through a test file that re-exports them. Matches both layouts: packages/shared/testing/** and packages/shared/src/testing/**. Exception: helper modules inside a workspace's test/ directory (fixture builders etc.) take part in the tested suite; they stay unreachable from production code because production modules never live under test/.",
       from: {
-        pathNot: ["\\.(test|spec)\\.(?:[cm]?[jt]s)$", "^packages/shared/(src/)?testing(/|$)"],
+        pathNot: [
+          "\\.(test|spec)\\.(?:[cm]?[jt]s)$",
+          "^packages/shared/(src/)?testing(/|$)",
+          "^apps/api/test/",
+        ],
       },
       to: {
         path: "^packages/shared/(src/)?testing(/|$)",
