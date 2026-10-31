@@ -80,10 +80,10 @@ describe("unit detail slide-over", () => {
     expect(within(detail).getByText("Fresh Start Housing")).toBeInTheDocument();
     expect(within(detail).getByText("(202) 555-0100")).toBeInTheDocument();
     expect(
-      within(detail).getByRole("link", { name: "intake@freshstart.example" }),
+      within(detail).getByRole("link", { name: "intake@freshstart.example.org" }),
     ).toBeInTheDocument();
     expect(
-      within(detail).getByRole("link", { name: "https://freshstart.example" }),
+      within(detail).getByRole("link", { name: "https://freshstart.example.org" }),
     ).toBeInTheDocument();
     expect(
       within(detail).getByText("Referral by phone, then an intake interview."),

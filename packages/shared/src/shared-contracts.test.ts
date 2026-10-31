@@ -109,7 +109,12 @@ test("example 6 compiles: filter definitions validate as data", () => {
 
 // Example 7: API envelopes
 test("example 7 compiles: envelopes validate real payloads", () => {
-  const payloadFromApi = { schemaVersion: "1.0", units: [aUnit().build()] };
+  const payloadFromApi = {
+    schemaVersion: "1.0",
+    synthetic: true as const,
+    disclosure: "Synthetic prototype data — fictional providers. Never contact.",
+    units: [aUnit().build()],
+  };
   const schemaPayloadFromApi = { schemaVersion: "1.0", filters: UNIT_FILTERS };
   const errorFromApi = {
     schemaVersion: "1.0",

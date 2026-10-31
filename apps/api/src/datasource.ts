@@ -35,8 +35,20 @@ export type FilterSelection = Readonly<Record<string, readonly string[]>>;
 /** Single filter value selection — string values, or a selected list. */
 export type SingleFilterSelection = readonly string[];
 
-/** The read interface routes use — no dataset internals leak through it. */
+/**
+ * Synthetic-provenance markers served on every units payload — the same
+ * disclosure sentence the frozen dataset carries in its own header. The
+ * dataset loader pins the file's wording to this constant, so the
+ * generator, the dataset, and the served envelope can never disagree.
+ */
+export const SYNTHETIC_DISCLOSURE =
+  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. Not real housing inventory; never contact these organizations.";
+
 export interface HousingUnitsSource {
+  /** Hard provenance marker for the served envelope (never anything else). */
+  readonly synthetic: true;
+  /** The disclosure sentence carried verbatim on every served payload. */
+  readonly disclosure: string;
   /** The published filter schema (the pinned definitions from the shared contract). */
   readonly filterSchema: readonly FilterDefinition[];
   /** Available units matching the selection; no selection = every available unit. */
@@ -140,8 +152,70 @@ function rejectUnresolvableFilterTargets(): void {
   }
 }
 
-export function createMemoryHousingUnitsSource(cards: readonly UnitCard[]): HousingUnitsSource {
+/**
+ * Boot-time integrity asserts on the contact surface — the dataset is the
+ * trust boundary at serving time as much as at generation time. A
+ * compromised dataset must not boot into clickable real-looking contacts;
+ * every served provider contact carries a fictional-only pattern: DC
+ * fictional phone block, and example.org (or subdomain) email + website
+ * hosts. Violations refuse the whole source with the offending contact.
+ */
+function rejectNonFictionalContact(cards: readonly UnitCard[]): void {
+  const seenProviders = new Set<string>();
+  const fictionalPhone = /^\(202\) 555-01\d\d$/;
+  const fictionalEmailDomain = /^[^@\s]+@([a-z0-9-]+\.)*example\.org$/i;
+  const fictionalWebsiteHost = /^https?:\/\/([a-z0-9-]+\.)*example\.org(?:\/|$)/i;
+
+  for (const card of cards) {
+    const provider = card.provider;
+    if (seenProviders.has(provider.id)) continue;
+    seenProviders.add(provider.id);
+
+    if (provider.phone !== undefined && !fictionalPhone.test(provider.phone)) {
+      throw new Error(
+        `provider contact is not the fictional phone pattern (202) 555-01XX: ${provider.phone} (provider ${provider.id})`,
+      );
+    }
+    if (provider.website !== undefined && !fictionalWebsiteHost.test(provider.website)) {
+      throw new Error(
+        `provider website is not an example.org (or subdomain) host: ${provider.website} (provider ${provider.id})`,
+      );
+    }
+    if (provider.email !== undefined && !fictionalEmailDomain.test(provider.email)) {
+      throw new Error(
+        `provider email is not an example.org (or subdomain) host: ${provider.email} (provider ${provider.id})`,
+      );
+    }
+  }
+}
+
+/**
+ * Boot-time integrity assert: served unit ids become rendering and URL keys
+ * everywhere downstream. One duplicate id in the dataset would silently
+ * collapse or hijack keyed views — refuse the whole source with the id.
+ */
+function rejectDuplicateUnitIds(cards: readonly UnitCard[]): void {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const card of cards) {
+    if (seen.has(card.id) && !duplicates.includes(card.id)) duplicates.push(card.id);
+    seen.add(card.id);
+  }
+  if (duplicates.length > 0) {
+    throw new Error(`dataset carries duplicate unit ids: ${duplicates.join(", ")}`);
+  }
+}
+
+export function createMemoryHousingUnitsSource(
+  cards: readonly UnitCard[],
+  disclosure: string = SYNTHETIC_DISCLOSURE,
+): HousingUnitsSource {
   rejectUnresolvableFilterTargets();
+  rejectDuplicateUnitIds(cards);
+  rejectNonFictionalContact(cards);
+  if (disclosure.trim().length === 0) {
+    throw new Error("the served synthetic disclosure must be a non-empty sentence");
+  }
   // The gate: only available units ever enter the served pool.
   const available: UnitCard[] = cards.filter((card) => card.availabilityState === "available");
   for (const card of available) {
@@ -153,6 +227,8 @@ export function createMemoryHousingUnitsSource(cards: readonly UnitCard[]): Hous
     }
   }
   return {
+    synthetic: true,
+    disclosure,
     filterSchema: UNIT_FILTERS,
     listUnits(selection = {}) {
       return available.filter((card) => matchesFilterSelection(card, selection));
@@ -174,6 +250,22 @@ export async function createDatasetHousingUnitsSource(
       `Dataset ${datasetPath} carries schema version ${dataset.schemaVersion} but the contract pins ${SCHEMA_VERSION}`,
     );
   }
+  // The dataset's own synthetic-provenance header must be intact: it is the
+  // never-mistakable-for-real guarantee at the trust boundary. The header
+  // disclosure becomes the served envelope's disclosure sentence.
+  if (dataset.synthetic !== true) {
+    throw new Error(
+      `Dataset ${datasetPath} does not carry synthetic: true — refuse the whole dataset (missing or false provenance marker)`,
+    );
+  }
+  if (typeof dataset.disclaimer !== "string" || dataset.disclaimer.trim().length === 0) {
+    throw new Error(`Dataset ${datasetPath} carries no synthetic-data disclaimer sentence`);
+  }
+  if (dataset.disclaimer !== SYNTHETIC_DISCLOSURE) {
+    throw new Error(
+      `Dataset ${datasetPath} carries a disclosure that differs from the served synthetic-provenance sentence — regenerate the dataset`,
+    );
+  }
   const cards: UnitCard[] = [];
   for (const provider of dataset.providers) {
     for (const program of provider.programs) {
@@ -188,7 +280,7 @@ export async function createDatasetHousingUnitsSource(
       }
     }
   }
-  return createMemoryHousingUnitsSource(cards);
+  return createMemoryHousingUnitsSource(cards, dataset.disclaimer);
 }
 
 /** Default location of the frozen generated dataset (repo root /data). */
@@ -199,6 +291,8 @@ export function defaultDatasetPath(): string {
 
 interface DatasetFile {
   schemaVersion: string;
+  synthetic: boolean;
+  disclaimer: string;
   providers: Array<Provider & { programs: Array<Program & { units: DatasetUnit[] }> }>;
 }
 type DatasetUnit = Omit<UnitCard, "schemaVersion" | "verificationBadge" | "program" | "provider">;

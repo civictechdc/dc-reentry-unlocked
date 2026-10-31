@@ -85,6 +85,8 @@ test("a server failure answers with the internal-error envelope while the real d
   const captured = captureLogger();
   const app = await buildApp({
     unitSource: {
+      synthetic: true,
+      disclosure: "Scratch disclosure sentence for the error path — fictional data only.",
       filterSchema: [],
       listUnits: () => {
         throw new Error("boom: privileged stack detail");

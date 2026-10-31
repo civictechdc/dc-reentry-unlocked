@@ -9,9 +9,18 @@ import { UnitCardSchema } from "./unit";
  * diagnostic detail is logged server-side, never exposed in the envelope.
  */
 
-/** Successful units listing (only available units reach this envelope). */
+/**
+ * Successful units listing (only available units reach this envelope).
+ * Both synthetic markers are REQUIRED on every payload: the API surface is
+ * read-only and its data must never be mistakable for
+ * real housing inventory, wherever the payload travels after extraction.
+ */
 export const UnitsResponseSchema = Type.Object({
   schemaVersion: SchemaVersionSchema,
+  /** Hard marker: this payload describes fictional data only. */
+  synthetic: Type.Literal(true),
+  /** The one-sentence synthetic-data disclaimer, verbatim from the dataset. */
+  disclosure: Type.String({ minLength: 1 }),
   units: Type.Array(UnitCardSchema),
 });
 export type UnitsResponse = Static<typeof UnitsResponseSchema>;

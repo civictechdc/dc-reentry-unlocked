@@ -56,9 +56,11 @@ mappable (placed within the correct ward), never treated as missing data.
 
 ## Versioned, city-agnostic model
 
-The model is versioned; jurisdiction-specific fields are extension points.
-Additive changes (new fields/enum values) are ignorable by existing
-consumers; breaking changes are versioned.
+The model is versioned and additive-tolerant: new fields and enum values are
+ignorable by existing consumers; breaking changes are versioned. Ward and
+quadrant are core (required DC fields for this prototype); future
+jurisdiction-specific concepts land as additive extension fields, not
+required core changes.
 
 ## The 11 filters (pinned contract — the schema's tests assert this set)
 

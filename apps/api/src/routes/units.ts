@@ -10,7 +10,7 @@ export const unitsRoutes: FastifyPluginAsyncTypebox = async (app) => {
     {
       schema: {
         description:
-          "Currently-available housing units as self-contained cards, optionally filtered. Unknown-at-source policy fields match every enum value selection and boolean no-selections.",
+          "Currently-available housing units as self-contained cards, optionally filtered. Unknown-at-source policy fields match every enum value selection and boolean no-selections. The payload carries the synthetic-provenance markers: fictional data only, with the dataset's disclaimer sentence.",
         querystring: FILTER_QUERY_SCHEMA,
         response: {
           200: UnitsResponseSchema,
@@ -20,6 +20,8 @@ export const unitsRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
     (request) => ({
       schemaVersion: SCHEMA_VERSION,
+      synthetic: true,
+      disclosure: app.units.disclosure,
       units: app.units.listUnits(parseFilterSelection(request.query)),
     }),
   );

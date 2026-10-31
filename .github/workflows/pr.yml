@@ -50,11 +50,12 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      # Production-dependency audit gate: strict — any advisory in the
-      # production graph fails the PR. The full suite (`.github/workflows/
-      # full.yml`, manual dispatch) runs the COMPLETE audit; its tolerated
-      # dev-chain advisories live in the `audit.ignore` list in
-      # pnpm-workspace.yaml.
+      # STRICT AGAINST NEW ADVISORY IDS: any GHSA not in the accepted list
+      # fails the PR. Note the accepted list (pnpm-workspace.yaml
+      # `audit.ignore`) applies to EVERY audit including this one — if one of
+      # those six dev-chain advisories ever appears under a production
+      # dependency, this step would silently pass it; review the ignore
+      # entries whenever adding production dependencies.
       - name: Audit production dependencies
         run: pnpm audit --prod
 

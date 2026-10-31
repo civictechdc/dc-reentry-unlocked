@@ -12,13 +12,53 @@ import {
 import { aUnit } from "./testing";
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value)) as unknown;
+const sampleDisclosure = () =>
+  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. Not real housing inventory; never contact these organizations.";
+
+const validUnitsEnvelope = () => ({
+  schemaVersion: SCHEMA_VERSION,
+  synthetic: true as const,
+  disclosure: sampleDisclosure(),
+  units: [aUnit().inWard(5).build()],
+});
 
 test("an available-units listing is a valid envelope and survives a round-trip", () => {
-  const response = { schemaVersion: SCHEMA_VERSION, units: [aUnit().inWard(5).build()] };
+  const response = validUnitsEnvelope();
 
   expect(Value.Check(UnitsResponseSchema, response)).toBe(true);
   expect(response.units.length).toBe(1);
+  expect(response.synthetic).toBe(true);
   expect(Value.Check(UnitsResponseSchema, roundTrip(response))).toBe(true);
+});
+
+test("an unmarked payload is not a valid units envelope — synthetic provenance is required", () => {
+  const unmarked = {
+    schemaVersion: SCHEMA_VERSION,
+    units: [aUnit().inWard(5).build()],
+  };
+
+  expect(Value.Check(UnitsResponseSchema, unmarked)).toBe(false);
+});
+
+test("the synthetic marker is a literal true, never a false claim", () => {
+  const falseClaim = {
+    schemaVersion: SCHEMA_VERSION,
+    synthetic: false,
+    disclosure: sampleDisclosure(),
+    units: [aUnit().build()],
+  };
+
+  expect(Value.Check(UnitsResponseSchema, falseClaim)).toBe(false);
+});
+
+test("an envelope without the disclosure sentence fails validation", () => {
+  const withoutDisclosure = {
+    schemaVersion: SCHEMA_VERSION,
+    synthetic: true as const,
+    units: [aUnit().build()],
+  };
+
+  expect(Value.Check(UnitsResponseSchema, withoutDisclosure)).toBe(false);
 });
 
 test("a filter-schema response is a valid envelope carrying all 11 definitions", () => {
@@ -77,9 +117,9 @@ test("an envelope without a machine code fails validation", () => {
 test("envelope consumers tolerate future fields", () => {
   const evolved = { futureField: { note: "a contract revision added this" } };
 
-  expect(
-    Value.Check(UnitsResponseSchema, { schemaVersion: SCHEMA_VERSION, units: [], ...evolved }),
-  ).toBe(true);
+  expect(Value.Check(UnitsResponseSchema, { ...validUnitsEnvelope(), units: [], ...evolved })).toBe(
+    true,
+  );
   expect(
     Value.Check(FilterSchemaResponseSchema, {
       schemaVersion: SCHEMA_VERSION,

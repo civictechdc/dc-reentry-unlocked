@@ -126,7 +126,7 @@ import {
   Value,
 } from "@dc-reentry/shared";
 
-Value.Check(UnitsResponseSchema, payloadFromApi);
+Value.Check(UnitsResponseSchema, payloadFromApi); // every payload carries the synthetic markers: `synthetic: true` + the disclosure sentence
 Value.Check(FilterSchemaResponseSchema, schemaPayloadFromApi);
 Value.Check(ErrorEnvelopeSchema, errorFromApi); // code is one of the ERROR_CODES
 ```

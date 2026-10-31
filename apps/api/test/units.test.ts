@@ -215,3 +215,27 @@ test("every boolean filter behaves the same: yes keeps known yes only, no keeps 
   }
   await app.close();
 });
+
+test("the served openapi document carries the provenance marker fields", async () => {
+  const app = await buildApp({
+    logLevel: "error",
+    unitSource: createMemoryHousingUnitsSource(fixtureDataset),
+  });
+
+  const doc = (await app.inject("/openapi.json")).json() as {
+    paths: { "/units"?: { get?: { responses?: Record<string, unknown> } } };
+  };
+  const ok = doc.paths["/units"]?.get?.responses?.[200] as
+    | {
+        content: {
+          "application/json": { schema: { properties: Record<string, unknown> } };
+        };
+      }
+    | undefined;
+  const properties = ok?.content["application/json"].schema.properties ?? {};
+
+  expect(Object.keys(properties)).toContain("synthetic");
+  expect(Object.keys(properties)).toContain("disclosure");
+
+  await app.close();
+});

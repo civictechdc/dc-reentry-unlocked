@@ -32,8 +32,8 @@ export class ProviderBuilder {
     id: "provider-test",
     organization: "Fresh Start Housing",
     phone: "(202) 555-0100",
-    email: "intake@freshstart.example",
-    website: "https://freshstart.example",
+    email: "intake@freshstart.example.org",
+    website: "https://freshstart.example.org",
   };
 
   withOrganization(organization: string): this {
