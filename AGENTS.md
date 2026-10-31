@@ -3,15 +3,16 @@
 The cross-tool agent standard for this repo: opencode, Claude Code, Codex, and
 Copilot all read this file. Tool-specific bits stay in their own config dirs
 (`.vscode/`, `.zed/`, `.claude/`, `.codex/`, `.github/`). Architecture truth
-lives in this repo; **product/spec truth lives in the machine-local OpenSpec
-planning workspace** — `../../openspec/changes/housing-units-prototype/`
-(specs, design, tasks) — which is intentionally **not part of this repo**
-(user decision 2026-10-29): it stays at the container level above the
-worktree, is gitignored defensively here, and is never committed. Read it
-before product work; run `openspec` commands from the container directory
-(and `openspec validate` there before claiming any task block complete).
-The CI validate gate for machine-local spec artifacts is deferred pending
-that decision being revisited.
+lives in this repo; **product/spec truth lives in the in-repo OpenSpec
+planning workspace** — the `openspec/` directory (its `changes/` and
+`specs/` subtrees hold the specs, design, and tasks; the active change is
+listed by `openspec list`, run from the repo root). It is **part of this
+repo** (user decision 2026-10-31, moved from the previously machine-local
+container-level workspace so the CI gate can validate it and archived
+specs stay reviewable). Read it before product work; run `openspec`
+commands from the repo root (and `openspec validate` there before
+claiming any task block complete). The CI validate gate runs on it
+(`.github/workflows/`).
 
 ## Local overrides first
 
@@ -24,16 +25,17 @@ instead of — the rules here.
 
 pnpm monorepo (Node ≥ 22.12, pnpm ≥ 12):
 
-| Path                    | Role                                                                                                                              |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`              | SvelteKit frontend (Svelte 5 runes, SPA mode) — TS via tsc6                                                                       |
-| `apps/api`              | Fastify backend, TypeBox validation                                                                                               |
-| `packages/shared`       | TypeBox schemas + TS types — THE API CONTRACT (stable seam)                                                                       |
-| `tools/datagen`         | Deterministic synthetic dataset generator (fixed seed)                                                                            |
-| `data/` (planned)       | Frozen generated dataset — committed once the generator lands, must stay byte-identical. Never hand-edit                          |
-| `compose.yaml`          | The Compose boot: API + production-built web images, healthchecked (build story in `docs/runbook.md`)                             |
-| `docs/`                 | Human-facing docs (glossary, runbook; the architecture note is planned, not yet landed)                                           |
-| `openspec/` (container) | Machine-local OpenSpec planning workspace, two levels above this repo — deliberately not repo content, never committed; see intro |
+| Path                 | Role                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`           | SvelteKit frontend (Svelte 5 runes, SPA mode) — TS via tsc6                                                                      |
+| `apps/api`           | Fastify backend, TypeBox validation                                                                                              |
+| `packages/shared`    | TypeBox schemas + TS types — THE API CONTRACT (stable seam)                                                                      |
+| `tools/datagen`      | Deterministic synthetic dataset generator (fixed seed)                                                                           |
+| `data/`              | Frozen generated dataset (`data/units.v1.json`, committed) — regeneration must stay byte-identical. Never hand-edit              |
+| `compose.yaml`       | The Compose boot: API + production-built web images, healthchecked (build story in `docs/runbook.md`)                            |
+| `docs/`              | Human-facing docs: glossary, runbook, api, data-synthetic, shared-contracts, `architecture.md` (system diagram + seams)          |
+| `openspec/`          | In-repo OpenSpec planning workspace (`openspec/changes/`, `openspec/specs/`) — validated by the CI `openspec validate` gate      |
+| `.github/workflows/` | CI: PR gate (`pr.yml`), full suite on manual dispatch (`full.yml`) — e2e compose matrix, mutation runs, openspec + diagram gates |
 
 Seams are executable, not prose — `pnpm arch:check` (dependency-cruiser,
 `.dependency-cruiser.cjs`) enforces:
@@ -45,15 +47,28 @@ Seams are executable, not prose — `pnpm arch:check` (dependency-cruiser,
   never the dataset file directly (ingestion-pipeline seam).
 - No cycles.
 
-## Verification commands (run from repo root)
+## Verification commands
 
-| Command             | Checks (use before claiming done)                                       |
-| ------------------- | ----------------------------------------------------------------------- |
-| `pnpm lint`         | oxlint (JS/TS/Svelte) + ESLint (JSON only)                              |
-| `pnpm format:check` | oxfmt formatting (run `pnpm format` to fix)                             |
-| `pnpm test`         | Vitest in every workspace + repo-tool suite (fast-check props included) |
-| `pnpm typecheck`    | tsc for shared/api/datagen + `tsc6` for apps/web                        |
-| `pnpm arch:check`   | dependency-cruiser architecture rules                                   |
+Run from the repo root unless noted. The deterministic repo gates come
+first; e2e commands boot their own servers (stop stray servers first), and
+the `-C apps/web` matrix variants assume a running Compose boot ([runbook
+recipes](docs/runbook.md)).
+
+| Command                                  | Checks (use before claiming done)                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm lint`                              | oxlint (JS/TS/Svelte) + ESLint (JSON only)                                           |
+| `pnpm format:check`                      | oxfmt formatting (run `pnpm format` to fix)                                          |
+| `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)              |
+| `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                     |
+| `pnpm arch:check`                        | dependency-cruiser architecture rules                                                |
+| `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)         |
+| `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                       |
+| `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app) |
+| `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)      |
+| `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty      |
+| `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                    |
+| `node scripts/run-mutation.mjs`          | Stryker mutation runs over shared/api/datagen (report-only; minutes-long)            |
+| `openspec validate --all --strict`       | The OpenSpec gate: all changes + specs, strict mode                                  |
 
 Deterministic commands first — never assert code behavior you have not run.
 The task verification for your block's task must pass before you report done.
@@ -79,8 +94,8 @@ The task verification for your block's task must pass before you report done.
 - Arrange-Act-Assert bodies. Given/When/Then is philosophical, not literal —
   no keyword ceremony outside the e2e/Gherkin layer.
 - Fluent domain builders (`aUnit().inWard(5).withUnknownSobrietyPolicy()`)
-  live in the test-only `testing` subpath of `packages/shared` (planned, not
-  yet landed). Do not copy builder logic into individual workspaces.
+  live in the test-only `testing` subpath of `packages/shared`. Do not copy
+  builder logic into individual workspaces.
 - Test bodies read as domain language, not as schema plumbing.
 - Gherkin keywords appear only in the acceptance/e2e layer.
 
@@ -233,8 +248,8 @@ Final (user confirmed 2026-10-29):
   Svelte 5 runes, MapLibre, TypeBox) drift; fetching current docs beats
   training-memory claims during product blocks. Zero repo config.
 - **OpenSpec tooling — REJECTED as MCP (keep markdown + ad-hoc CLI).**
-  Specs are plain markdown files an agent can read directly (machine-local
-  at the container level — see intro; run `openspec` commands from there);
+  Specs are plain markdown files an agent can read directly (in-repo at
+  `openspec/` — see intro; run `openspec` commands from the repo root);
   no official OpenSpec MCP exists to adopt, and an MCP would add little
   over reading the spec files directly.
 - **Memory/knowledge MCP — REJECTED.** Local lessons live in the
@@ -246,13 +261,13 @@ Final (user confirmed 2026-10-29):
 
 ## Docs organization
 
-- OpenSpec specs/designs live in the machine-local container-level workspace
-  (two levels above this repo — not in-repo; see intro). Do not edit them
+- OpenSpec specs/designs live in the in-repo `openspec/` workspace
+  (see intro). Do not edit them
   without an assigned task.
 - `docs/` — human-facing: `docs/glossary.md` (ubiquitous domain language —
-  keep terms consistent with specs) and `docs/runbook.md` (dev/Compose/
-  data-regeneration run story). `docs/architecture.md` is planned, not yet
-  landed.
+  keep terms consistent with specs), `docs/runbook.md` (dev/Compose/
+  data-regeneration run story), and `docs/architecture.md` (system
+  diagram + seams).
 - `README.md` — repo overview, current dev-boot status.
 - Human considerations → `docs/`; agent instructions → this file +
   `.agents/skills/`; tool config → tool dirs; local only → `AGENTS.local.md`.
@@ -301,8 +316,9 @@ honestly without numbers ("planned, not yet landed") and state reasons
 inline instead of pointing at decision IDs.
 
 Starter grep (judge false positives by eye — this rule's own text (including
-the grep example), comments about tasks.md workflow rules, the machine-local
-openspec _folder_ path, legitimate version numbers (Svelte 5.x, Git 2.54,
+the grep example), comments about tasks.md workflow rules, the in-repo
+openspec folder and its internal paths (excluded by `--exclude-dir=openspec`),
+legitimate version numbers (Svelte 5.x, Git 2.54,
 pinned deps like @0.1.28), and bare `N.N` references like "lands 1.7" — which
 the pattern cannot see — are the named categories; bare `N.N` must be
 eyeballed manually):
@@ -310,11 +326,9 @@ eyeballed manually):
 ```sh
 grep -rIinE "(tasks?|lands?) [0-9]+\.[0-9]+|blocks? [0-9]|design D[0-9]+|\bD1[0-8]\b|housing-units-prototype" \
   --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=openspec \
-  --exclude-dir=data --exclude-dir=.superpowers --exclude=pnpm-lock.yaml \
-  --exclude-dir=packages --exclude-dir=api --exclude-dir=datagen . \
+  --exclude-dir=data --exclude-dir=.superpowers --exclude=pnpm-lock.yaml . \
   | grep -vE "AGENTS\.local\.md|\.agents/local/"
 ```
 
 (`-i` catches `Task 8.4` at sentence start; the extended pattern also catches
-bare "lands 1.7" phrasing; partition exclusions for workspaces another agent
-owns are temporary and come off when that block is done.)
+bare "lands 1.7" phrasing.)

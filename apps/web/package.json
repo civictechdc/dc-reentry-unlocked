@@ -17,7 +17,9 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "e2e": "playwright test --project=desktop-chrome",
     "e2e:prod": "playwright test --project=prod",
-    "e2e:bdd": "bddgen -c playwright-bdd.config.ts && playwright test --config=playwright-bdd.config.ts"
+    "e2e:bdd": "bddgen -c playwright-bdd.config.ts && playwright test --config=playwright-bdd.config.ts",
+    "e2e:ci": "playwright test --config=playwright.ci.config.ts",
+    "e2e:bdd:ci": "bddgen -c playwright-ci-bdd.config.ts && playwright test --config=playwright-ci-bdd.config.ts"
   },
   "dependencies": {
     "@dc-reentry/shared": "workspace:*",

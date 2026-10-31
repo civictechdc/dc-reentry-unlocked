@@ -9,8 +9,8 @@ description: >
 
 # Data-model reference — dc-reentry-unlocked
 
-Sourced from the capability specs in the machine-local OpenSpec planning
-workspace (container level; this repo carries no spec folder). The
+Sourced from the capability specs in the in-repo OpenSpec planning
+workspace (`openspec/`). The
 TypeBox schemas in `packages/shared` are the contract's source of truth
 and their tests assert the full filter set described here; this skill is
 the pinned orientation reference.

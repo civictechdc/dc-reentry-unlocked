@@ -27,7 +27,31 @@ test.describe("a11y baseline", () => {
     await page.getByText("Prototype with synthetic data").first().waitFor({ timeout: 20_000 });
 
     const pinButton = page.getByTestId("map-pin-list").locator("button").first();
+    // Reach the pin with visible feedback in a way that works in every
+    // engine: browsers disagree on whether script focus() matches
+    // :focus-visible (Firefox does not; Chromium + WebKit do). Prefer
+    // programmatic focus — it keeps the desktop dev suite's behavior — and
+    // for engines that don't reveal on it, restart clean and walk Tab from
+    // document start (the honest keyboard-only path).
     await pinButton.focus({ timeout: 10_000 });
+    let revealed = await pinButton.locator(".pin-label").isVisible();
+    if (!revealed) {
+      await page.reload();
+      await page.getByText("Prototype with synthetic data").first().waitFor({ timeout: 20_000 });
+      let reached = false;
+      for (let tabs = 0; tabs < 40 && !reached; tabs += 1) {
+        await page.keyboard.press("Tab");
+        reached = await page.evaluate(async () => {
+          // activeElement inside the sr-pin row (the walk target)
+          return (
+            document
+              .querySelector("[data-testid=map-pin-list]")
+              ?.contains(document.activeElement) ?? false
+          );
+        });
+      }
+      expect(reached, "the first sr-pin is reachable by keyboard alone").toBe(true);
+    }
     // focus reveal carries visible text (keyboard usability beyond a textless box)
     await expect(pinButton.locator(".pin-label")).toBeVisible();
 

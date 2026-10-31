@@ -13,10 +13,25 @@ packages:
 # (overrides cannot express this: dependency-cruiser does not declare
 # `typescript`, so there is no edge to rewrite; packageExtensions adds it.)
 packageExtensions:
+  # Stryker core checks, preprocesses and loads tsconfig files itself via the
+  # TypeScript compiler's programmatic JS API, which TypeScript 7 (Go-native)
+  # does not keep. Core declares no `typescript` peer, so this injection gives
+  # it a real dependency — the pinned TS 6 compiler via the npm alias protocol.
+  # The vitest-runner and typescript-checker plugins are injected here too:
+  # Stryker imports its plugins from core's own module context, and the
+  # checker's `typescript` peer then resolves in that same context — TS 6 for
+  # the whole chain. (Injecting the checker's peer directly, or an override on
+  # it, has no effect — pnpm resolves the peer from the importer's context,
+  # which carries the root workspace's typescript for everything else.)
+  # Root devDependencies therefore only need core itself (for the bin).
+  "@stryker-mutator/core@10.1.1":
+    dependencies:
+      typescript: "npm:@typescript/typescript6@6.0.2"
+      "@stryker-mutator/vitest-runner": "10.1.1"
+      "@stryker-mutator/typescript-checker": "10.1.1"
   dependency-cruiser:
     optionalDependencies:
       typescript: "npm:@typescript/typescript6@6.0.2"
-
 # Vite/Playwright toolchains ship build scripts (esbuild platform binary,
 # browser binary downloads); the web devDependencies are the only sources.
 allowBuilds:
@@ -29,3 +44,24 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - "@inlang/plugin-message-format@4.5.6"
   - "@inlang/sdk@4.1.0"
+
+# pnpm audit tolerances — the harshest audit (the full-suite `pnpm audit` job)
+# passes with EXACTLY these accepted advisories; any NEW advisory fails the
+# job, so the list is a ratchet, not an allowlist wildcard.
+audit:
+  ignore:
+    # qs (4 advisories) via @stryker-mutator/core > typed-rest-client —
+    # dev-only mutation tooling, never in production deps or the runtime
+    # images, unreachable at runtime. REMOVE when the chain's qs lands
+    # >=6.15.4 / >=6.16.1 (the strictest of the four fixes).
+    - GHSA-q8mj-m7cp-5q26
+    - GHSA-x5fp-wj9c-mxmx
+    - GHSA-4mjr-xmp4-gh2g
+    - GHSA-6pq8-jhm2-2vcw
+    # minimatch via the stryker/eslint dev chains (dev-only, never a
+    # production dep). REMOVE when the chain's minimatch lands >=11.0.1.
+    - GHSA-g3hv-75wg-m249
+    # deepmerge via @sveltejs/vite-plugin-svelte (build-time only, never in
+    # the production runtime image). There is NO patched deepmerge yet —
+    # REMOVE this entry the moment one ships. Accepted 2026-10-31.
+    - GHSA-gcqx-w48m-w2h4

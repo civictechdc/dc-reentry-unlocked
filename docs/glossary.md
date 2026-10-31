@@ -1,8 +1,8 @@
 # Domain glossary — dc-reentry-unlocked
 
 The ubiquitous language of this project. Definitions are consolidated from
-the capability specs in the machine-local OpenSpec planning workspace
-(container level; run `openspec` commands from there);
+the capability specs in the in-repo OpenSpec planning workspace
+(`openspec/`; run `openspec` commands from the repo root);
 every term must stay consistent with them. Change a definition by changing
 the spec first, then this file.
 

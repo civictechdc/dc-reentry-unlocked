@@ -11,9 +11,8 @@ description: >
 Display prototype: MapLibre map + card list of available synthetic DC
 reentry-housing units, schema-driven filtering, slide-over detail ending at
 provider contact info. The API boundary is the stable seam. Full product
-truth: the machine-local OpenSpec planning workspace at the container level
-(run `openspec` commands from there — this repo intentionally carries no
-spec folder).
+truth: the in-repo OpenSpec planning workspace at `openspec/`
+(run `openspec` commands from the repo root).
 
 ## Monorepo layout
 

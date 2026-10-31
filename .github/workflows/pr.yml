@@ -1,0 +1,157 @@
+# Pull-request gate: the full local-equivalent check sequence plus the
+# compose-backed e2e matrix. Gate design:
+# - `checks` — deterministic repo checks in the documented order. pnpm comes
+#   from the official pnpm/setup action (project-pinned pnpm via
+#   packageManager; cache: true caches the pnpm store), with an explicit
+#   frozen install for determinism. apps/api has no build step (tsx at
+#   runtime); apps/web is built from source with the adapter-node output.
+# - `e2e` — Docker Compose boots API + production-built web (healthchecked,
+#   `--wait`), then the Playwright browser matrix runs against it: the spec
+#   suite and the generated BDD golden paths across Chromium/WebKit/Firefox
+#   desktop + Chromium mobile. Chromium launches with software GL
+#   (--use-gl=angle --use-angle=swiftshader) so the MapLibre WebGL2 canvas
+#   renders on runner hosts; Firefox/WebKit set mesa software-GL env.
+# - commitlint is the single engine for PR title + PR commit range
+#   (official commitlint CI pattern); e2e artifacts upload on failure only.
+
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, format, typecheck, arch, tests, build, gate
+    runs-on: ubuntu-24.04
+    # A stalled step should not consume runner hours; the local equivalents
+    # of every step here finish well inside 10 minutes on a laptop
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history for the commitlint PR range)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm + Node.js (pinned via package.json packageManager)
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      # Production-dependency audit gate: strict — any advisory in the
+      # production graph fails the PR. The full suite (`.github/workflows/
+      # full.yml`, manual dispatch) runs the COMPLETE audit; its tolerated
+      # dev-chain advisories live in the `audit.ignore` list in
+      # pnpm-workspace.yaml.
+      - name: Audit production dependencies
+        run: pnpm audit --prod
+
+      - name: Commit messages (PR range)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+      - name: PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s' "$PR_TITLE" | pnpm exec commitlint --verbose
+
+      - name: Lint (oxlint + ESLint on JSON)
+        run: pnpm lint
+
+      - name: Format check (oxfmt)
+        run: pnpm format:check
+
+      - name: Typecheck (tsc for shared/api/datagen, tsc6 + svelte-check for web)
+        run: pnpm typecheck
+
+      - name: Architecture rules (dependency-cruiser)
+        run: pnpm arch:check
+
+      - name: Unit and component tests (Vitest)
+        run: pnpm test
+
+      # apps/api has no build step — the server runs on tsx; only the web
+      # app (and the shared data pipeline) produce build output.
+      - name: Web production build (adapter-node)
+        run: pnpm -C apps/web build
+
+      - name: Install the diagram renderer's headless chrome
+        # mermaid-cli 12.0.0 (pinned together with this puppeteer version in
+        # scripts/check-diagrams.mjs) drives it for rendering; its
+        # chrome-headless-shell is not bundled with the package download —
+        # install it into the puppeteer cache. Keep this version equal to
+        # PUPPETEER_VERSION in that script.
+        run: pnpm dlx puppeteer@25.16.0 browsers install chrome-headless-shell
+
+      - name: Diagram check (renderability of the in-doc mermaid sources)
+        run: node scripts/check-diagrams.mjs
+
+      - name: OpenSpec validate gate (all changes + specs, strict)
+        run: npx -y @fission-ai/openspec@1.16.0 validate --all --strict
+
+  e2e:
+    name: Compose e2e matrix
+    runs-on: ubuntu-24.04
+    # two compose image builds + browser installs + the full matrix; 45 min
+    # gives software-GL headless suites ample headroom on runner cores
+    timeout-minutes: 45
+    env:
+      # mesa software-GL fallthrough for Firefox/WebKit's MapLibre canvas;
+      # Chromium carries its own SwiftShader launch args in the project config
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pnpm + Node.js (pinned via package.json packageManager)
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers + system deps
+        run: pnpm -C apps/web exec playwright install --with-deps chromium firefox webkit
+
+      - name: Boot API + web with Docker Compose
+        run: |
+          docker compose up -d --wait --wait-timeout 240
+          docker compose ps
+
+      - name: BDD golden paths (generated from Gherkin features)
+        run: pnpm -C apps/web e2e:bdd:ci
+
+      - name: Spec suite across the browser matrix
+        run: pnpm -C apps/web e2e:ci
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down Compose
+        if: always()
+        run: docker compose down -v --remove-orphans
