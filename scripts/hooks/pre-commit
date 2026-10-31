@@ -18,7 +18,30 @@ oxfmt_files=$(
     '*.md' '*.mdx' '*.svelte' '*.html' '*.css'
 )
 if [ -n "$oxfmt_files" ]; then
-  printf '%s' "$oxfmt_files" | tr '\n' '\0' | xargs -0 pnpm exec oxfmt --check || exit 1
+  # oxfmt exits non-zero when EVERY target is ignore-excluded — e.g. an
+  # openspec-only commit, where .oxfmtrc.jsonc ignores openspec/ because
+  # openspec's markdown follows its own tooling conventions. That case is
+  # "nothing to check" (success); real format failures still block. The
+  # error string is stable (oxfmt is exact-pinned at 0.75.0). oxlint has no
+  # equivalent failure mode: zero matches exits 0 ("No files found to
+  # lint"), so its stage below stays untouched.
+  oxfmt_output=$(
+    printf '%s' "$oxfmt_files" | tr '\n' '\0' | xargs -0 pnpm exec oxfmt --check 2>&1
+  )
+  oxfmt_status=$?
+  if [ "$oxfmt_status" -ne 0 ]; then
+    case "$oxfmt_output" in
+      *"Expected at least one target file"*)
+        echo "pre-commit: every staged oxfmt target is ignore-excluded — nothing to check"
+        ;;
+      *)
+        printf '%s\n' "$oxfmt_output" >&2
+        exit 1
+        ;;
+    esac
+  else
+    [ -n "$oxfmt_output" ] && printf '%s\n' "$oxfmt_output"
+  fi
 fi
 
 # oxlint lints js/ts/svelte
