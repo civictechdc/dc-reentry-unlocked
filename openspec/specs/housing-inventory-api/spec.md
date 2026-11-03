@@ -7,7 +7,7 @@ Defines the HTTP API that serves available housing units and the filter schema â
 
 ### Requirement: Available units listing
 
-The API SHALL serve currently-available units as flattened unit cards: unit-level fields (id, address, bedrooms, size, cost, ward, quadrant, location precision, coordinates, verification badge) joined with the owning program's policy fields and provider's contact fields. Unavailable units SHALL be excluded.
+The API SHALL serve currently-available units as flattened unit cards: unit-level fields (id, address, bedrooms, size, cost, ward, quadrant, coordinates, verification badge) joined with the owning program's policy fields and provider's contact fields. Every served card SHALL carry exact coordinates. Unavailable units SHALL be excluded.
 
 #### Scenario: Card payload is self-contained
 - **WHEN** a consumer fetches the units listing

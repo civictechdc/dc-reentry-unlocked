@@ -1,7 +1,7 @@
 # housing-inventory Specification
 
 ## Purpose
-Defines the housing inventory data model — the versioned, city-agnostic `Provider → Program → Unit` hierarchy, availability states, location precision, and the rules governing synthetic prototype data for Washington DC.
+Defines the housing inventory data model — the versioned, city-agnostic `Provider → Program → Unit` hierarchy, availability states, exact-address unit locations, and the rules governing synthetic prototype data for Washington DC.
 
 ## Requirements
 
@@ -29,14 +29,6 @@ The data model SHALL capture two distinct concepts: a per-unit **availability st
 - **WHEN** an available unit's availability has not been confirmed with the source
 - **THEN** the unit is still listed (it is available), and the confirmed-vs-needs-verification distinction is carried as a displayable badge field
 
-### Requirement: Location precision as first-class
-
-The unit location SHALL carry a precision concept distinguishing exact street address from approximate location (ward or corridor level). Approximate locations SHALL remain fully representable in the inventory and displayable on the map (e.g., placed within the correct ward), not treated as missing data.
-
-#### Scenario: Approximate unit still mappable
-- **WHEN** a unit has only ward-level location precision
-- **THEN** the unit appears in listings and is placed on the map within its ward rather than being dropped
-
 ### Requirement: Unknown is a representable state
 
 Every policy/eligibility field in the data model SHALL support an unknown ("not publicly listed") state distinct from yes and no. Consumer-facing detail views SHALL display unknown honestly as "not publicly listed" rather than rendering a fabricated yes/no.
@@ -47,7 +39,7 @@ Every policy/eligibility field in the data model SHALL support an unknown ("not 
 
 ### Requirement: Versioned, city-agnostic model
 
-The unit data model SHALL be versioned and SHALL keep jurisdiction-specific fields as extension points rather than core fields, so the same spec can be adopted by other cities without breaking existing consumers.
+The unit data model SHALL be versioned and SHALL keep jurisdiction-specific fields as extension points rather than core fields, so the same spec can be adopted by other cities without breaking existing consumers. Every unit SHALL carry exact coordinates.
 
 #### Scenario: Model revision consumed gracefully
 - **WHEN** the data model adds a field or enum value in a new revision
@@ -72,3 +64,11 @@ The prototype SHALL generate synthetic inventory on real Washington DC geography
 #### Scenario: No real-world confusion
 - **WHEN** a user inspects any synthetic provider
 - **THEN** the organization is fictional and carries non-real contact details
+
+### Requirement: Bedrooms agree with room type
+
+Generated units SHALL keep bedrooms coherent with room type: apartment units carry at least one bedroom, efficiency units are zero-bedroom, private rooms carry one, and shared-room units are zero-bedroom.
+
+#### Scenario: Bedrooms agree with room type
+- **WHEN** a generated unit's bedrooms and room type are checked
+- **THEN** the pair is coherent — apartments have at least one bedroom, efficiencies are zero-bedroom, private rooms have one, shared rooms are zero-bedroom
