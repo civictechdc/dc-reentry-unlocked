@@ -1,7 +1,7 @@
 # Synthetic dataset — generation, provenance, and seed policy
 
 The housing inventory ships with one frozen synthetic dataset,
-`data/units.v1.json`: a `Provider → Program → Unit` hierarchy of fictional
+`data/units.v2.json`: a `Provider → Program → Unit` hierarchy of fictional
 providers and programs on real Washington DC geography. This document explains
 how it is produced, how the geography corpus is licensed and sourced, and what
 the data does and does not guarantee.
@@ -13,7 +13,7 @@ pnpm datagen
 ```
 
 That runs the deterministic generator (`tools/datagen`) against the committed
-geography corpus and rewrites `data/units.v1.json`. Regeneration is
+geography corpus and rewrites `data/units.v2.json`. Regeneration is
 byte-identical: run the command as many times as you like, the file does not
 change. The regression check after touching the generator or the corpus is:
 
@@ -44,8 +44,8 @@ The dataset currently carries ~1,200 units (inside the 1,000–1,500 unit
 performance envelope the prototype assumes) across 8 wards. Realistic aspects:
 roughly three quarters of units are available with the rest not-available or
 unverified-availability, both confirmed and needs-verification flags appear,
-19–20% of units are approximate (ward-level) locations, and every policy or
-eligibility field carries honest `unknown` ("not publicly listed") states.
+and every policy or eligibility field carries honest `unknown`
+("not publicly listed") states.
 
 ## Geography corpus provenance and licensing
 
@@ -110,8 +110,6 @@ ambiguous for a derived database like this protected dataset.
   present.
 - Coordinates always sit on real street geometry, strictly inside their real
   ward boundary, inside exactly one real ZIP, with matching quadrant.
-- Approximate units carry `null` coordinates and a ward-level address; the map
-  resolves placement from the ward.
 - Building numbers are sampled from per-street ranges derived from street
   geometry length — never from any real listing, address-point, or
   address-range source.
@@ -158,7 +156,7 @@ surfaced collision (only a missing/empty list skips; a read error fails
 loudly).
 
 The dataset header (`synthetic`, `disclaimer`, `seed`, `generation` in
-`data/units.v1.json`) keeps the synthetic disclosure embedded in the file
+`data/units.v2.json`) keeps the synthetic disclosure embedded in the file
 itself, so the data cannot be mistaken for a real inventory when it travels
 out of context. The disclosure fields are part of the frozen contract and
 guarded by a test invariant.
@@ -170,7 +168,7 @@ guarded by a test invariant.
 | `tools/datagen/`                         | Generator source, corpus loader, CLI, tests             |
 | `tools/datagen/scripts/fetch-corpus.mjs` | Rebuilds `data/geography/` from the DC GIS endpoints    |
 | `data/geography/`                        | Committed curated corpus (wards, ZIPs, street segments) |
-| `data/units.v1.json`                     | Frozen synthetic dataset — never hand-edit              |
+| `data/units.v2.json`                     | Frozen synthetic dataset — never hand-edit              |
 | `packages/shared/`                       | The schemas every generated record conforms to          |
 
 [mulberry32]: https://gist.github.com/tommyettinger/46f8849

@@ -48,17 +48,13 @@ publicly listed" — distinct from yes and no:
 - Enum filters match unknown values against every value selection, carrying
   a "policy not listed" marker on results so users know to confirm.
 
-## Location precision
-
-Unit location carries a precision concept: exact street address vs
-approximate (ward-level). Approximate locations are fully representable and
-mappable (placed within the correct ward), never treated as missing data.
-
 ## Versioned, city-agnostic model
 
 The model is versioned and additive-tolerant: new fields and enum values are
-ignorable by existing consumers; breaking changes are versioned. Ward and
-quadrant are core (required DC fields for this prototype); future
+ignorable by existing consumers; breaking changes are versioned, and unit
+cards and API envelopes carry `schemaVersion` `"2.0"`. Every unit and card
+carries required, non-null coordinates — exact street addresses only. Ward
+and quadrant are core (required DC fields for this prototype); future
 jurisdiction-specific concepts land as additive extension fields, not
 required core changes.
 

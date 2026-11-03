@@ -36,7 +36,7 @@ LICENSE
 
 # Human docs and agent instructions are not build inputs; the web build
 # consumes its localization sources (messages/, project.inlang/) and the API
-# image bakes in the frozen dataset (data/units.v1.json) — both stay in.
+# image bakes in the frozen dataset (data/units.v2.json) — both stay in.
 
 # Secrets never enter a build context (defensive — none exist at root)
 .env*
@@ -50,5 +50,5 @@ LICENSE
 .DS_Store
 
 # Note: data/ is intentionally NOT ignored — the API image needs the frozen
-# generated dataset (data/units.v1.json), and the web build consumes its
+# generated dataset (data/units.v2.json), and the web build consumes its
 # localization sources (messages/, project.inlang/) from the same tree.

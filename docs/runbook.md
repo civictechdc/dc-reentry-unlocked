@@ -20,7 +20,7 @@ pnpm dev
 `pnpm dev` starts both dev servers: the web app at
 [localhost:5173](http://localhost:5173/) and the API at
 [localhost:3000](http://localhost:3000/) (`/health`, `/units`, `/filters`).
-The API loads the frozen generated dataset (`data/units.v1.json`) at boot.
+The API loads the frozen generated dataset (`data/units.v2.json`) at boot.
 
 Spot-check the boot:
 
@@ -108,7 +108,7 @@ only its column header row with zero rows beneath it.
 
 ## 3. Dataset regeneration
 
-The frozen dataset (`data/units.v1.json`, committed) must stay byte-identical
+The frozen dataset (`data/units.v2.json`, committed) must stay byte-identical
 across regenerations — the generator is deterministic with a fixed seed, so
 regenerating and diffing must end clean:
 

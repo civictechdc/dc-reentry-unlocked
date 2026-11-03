@@ -31,7 +31,7 @@ pnpm monorepo (Node ≥ 22.12, pnpm ≥ 12):
 | `apps/api`           | Fastify backend, TypeBox validation                                                                                              |
 | `packages/shared`    | TypeBox schemas + TS types — THE API CONTRACT (stable seam)                                                                      |
 | `tools/datagen`      | Deterministic synthetic dataset generator (fixed seed)                                                                           |
-| `data/`              | Frozen generated dataset (`data/units.v1.json`, committed) — regeneration must stay byte-identical. Never hand-edit              |
+| `data/`              | Frozen generated dataset (`data/units.v2.json`, committed) — regeneration must stay byte-identical. Never hand-edit              |
 | `compose.yaml`       | The Compose boot: API + production-built web images, healthchecked (build story in `docs/runbook.md`)                            |
 | `docs/`              | Human-facing docs: glossary, runbook, api, data-synthetic, shared-contracts, `architecture.md` (system diagram + seams)          |
 | `openspec/`          | In-repo OpenSpec planning workspace (`openspec/changes/`, `openspec/specs/`) — validated by the CI `openspec validate` gate      |

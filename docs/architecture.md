@@ -31,7 +31,7 @@ flowchart TB
             datagen["fixed-seed generator<br/>(DC geography corpus + synthetic units)"]
         end
         contract["packages/shared —<br/>TypeBox schemas + TS types<br/>THE API CONTRACT (stable seam)"]
-        data[("data/units.v1.json<br/>frozen synthetic dataset<br/>(never hand-edited)")]
+        data[("data/units.v2.json<br/>frozen synthetic dataset<br/>(never hand-edited)")]
     end
 
     user -- "HTTP GET (SPA shell)" --> web
@@ -67,7 +67,7 @@ flowchart TB
 - **`tools/datagen`** — the deterministic synthetic-data generator: real DC
   geography corpus + invented unit/policy data, written with a fixed seed so
   regeneration is byte-identical (CI asserts this with a diff on `data/`).
-- **`data/units.v1.json`** — the committed frozen dataset the API loads.
+- **`data/units.v2.json`** — the committed frozen dataset the API loads.
   Never hand-edit; regenerate instead (see `docs/data-synthetic.md`).
 
 ## The stable seams

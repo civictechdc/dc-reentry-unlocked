@@ -44,6 +44,6 @@ pnpm-debug.log*
 .agents/local/
 AGENTS.local.md
 
-# NOTE: data/ (the frozen synthetic dataset, e.g. data/units.v1.json) is
+# NOTE: data/ (the frozen synthetic dataset, e.g. data/units.v2.json) is
 # intentionally NOT ignored — it is committed for reproducible CI.
 # Regeneration is deterministic with a fixed seed.

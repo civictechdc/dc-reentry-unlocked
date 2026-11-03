@@ -13,7 +13,7 @@ routes.
 pnpm -C apps/api dev        # tsx watch, http://127.0.0.1:3000
 ```
 
-The server loads the frozen generated dataset (`data/units.v1.json`) at
+The server loads the frozen generated dataset (`data/units.v2.json`) at
 boot and serves only units whose availability state is `available` — the
 availability gate lives inside the data source module, so unavailable and
 unverified-availability units never leave it.
@@ -93,7 +93,10 @@ curl -sS http://127.0.0.1:3000/filters | head -c 400
 ### `GET /units`
 
 Currently-available housing units as self-contained cards (unit specs +
-program policies + provider contacts; no further lookups needed):
+program policies + provider contacts; no further lookups needed).
+Coordinates are required and non-null on every served card — exact street
+addresses only — and both the response envelope and each card carry
+`schemaVersion` `"2.0"`:
 
 ```sh
 curl -sS "http://127.0.0.1:3000/units" | head -c 400
@@ -119,7 +122,7 @@ curl -sS http://127.0.0.1:3000/openapi.json | head -c 300
 
 ```sh
 curl -sS "http://127.0.0.1:3000/units?housing-type=somewhere-else"
-# {"schemaVersion":"1.0","code":"invalid-filter","message":"At least one filter name or value is not defined by the published filter schema — see GET /filters.","correlationId":"…"}
+# {"schemaVersion":"2.0","code":"invalid-filter","message":"At least one filter name or value is not defined by the published filter schema — see GET /filters.","correlationId":"…"}
 ```
 
 Browser preflight (what a SvelteKit dev-server request triggers before its

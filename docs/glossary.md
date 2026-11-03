@@ -31,12 +31,12 @@ treatment, vouchers, population, gender, length of stay)").
 ## Unit
 
 The individually displayable housing unit — leaf of the hierarchy. A unit
-carries id, address, bedrooms, size, cost, ward, quadrant, location
-precision, coordinates, availability state, confirmation flag, and
-verification badge (housing-inventory: "Unit (individually displayable
-housing unit)"; housing-inventory-api: "unit-level fields (id, address,
-bedrooms, size, cost, ward, quadrant, location precision, coordinates,
-verification badge)").
+carries id, address, bedrooms, size, cost, ward, quadrant, coordinates,
+availability state, confirmation flag, and verification badge
+(housing-inventory: "Unit (individually displayable housing unit)";
+housing-inventory-api: "unit-level fields (id, address, bedrooms, size,
+cost, ward, quadrant, coordinates, verification badge)"). Coordinates are
+required and non-null on every unit — exact street addresses only.
 
 ## Availability state
 
@@ -63,21 +63,12 @@ on unit cards and listings (housing-inventory-api: "unit-level fields (…,
 verification badge)"; housing-search-ui: "the confirmed-vs-needs-verification
 badge where applicable").
 
-## Location precision
-
-The first-class concept distinguishing exact street address from approximate
-location (ward or corridor level). Approximate locations stay fully
-representable and mappable — placed within the correct ward — never treated
-as missing data (housing-inventory: "The unit location SHALL carry a
-precision concept distinguishing exact street address from approximate
-location (ward or corridor level) … not treated as missing data").
-
 ## Ward
 
-The administrative DC geography used for approximate locations and ward
-memberships (wards 1–8; the synthetic dataset covers every ward, and ward is
-a multi-select filter over the 8 wards) (housing-inventory: "every ward 1–8
-contains units"; dynamic-filtering: select "Ward 5" scenario).
+The administrative DC geography carrying unit ward memberships (wards 1–8;
+the synthetic dataset covers every ward, and ward is a multi-select filter
+over the 8 wards) (housing-inventory: "every ward 1–8 contains units";
+dynamic-filtering: select "Ward 5" scenario).
 
 ## Filter schema
 
