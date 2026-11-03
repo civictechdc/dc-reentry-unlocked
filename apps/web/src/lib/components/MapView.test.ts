@@ -4,9 +4,9 @@ import { UNIT_FILTERS } from "@dc-reentry/shared";
 import { aUnit } from "@dc-reentry/shared/testing";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { tick } from "svelte";
+import { m } from "#lib/paraglide/messages.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
 import { uiState } from "#lib/state/ui-state.svelte.ts";
-import { WARD_ANCHORS } from "#lib/map/ward-anchors.ts";
 import {
   DC_MAP_CENTER,
   DC_MAP_ZOOM,
@@ -99,8 +99,16 @@ vi.mock("maplibre-gl", () => {
 import MapView from "./MapView.svelte";
 
 let store: HousingStore;
-const unitInWard7 = aUnit().withId("unit-exact").inWard(7).build();
-const approximateUnit = aUnit().withId("unit-approx").inWard(3).withApproximateLocation().build();
+const unitInWard7 = aUnit()
+  .withId("unit-exact")
+  .inWard(7)
+  .withCoordinates(38.9254, -77.0314)
+  .build();
+const unitInWard3 = aUnit()
+  .withId("unit-ward3")
+  .inWard(3)
+  .withCoordinates(38.9364, -77.079)
+  .build();
 
 function freshStore(initialUnits: unknown[]): HousingStore {
   class FakeTransport {
@@ -141,7 +149,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("renders one pin per unit in the shared GeoJSON source", async () => {
-    store = freshStore([unitInWard7, approximateUnit]);
+    store = freshStore([unitInWard7, unitInWard3]);
     await store.initialize();
     render(MapView, { props: { store } });
     await tick();
@@ -153,7 +161,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     expect(collection.features).toHaveLength(2);
     expect(collection.features.map((feature) => feature.properties.id)).toEqual([
       "unit-exact",
-      "unit-approx",
+      "unit-ward3",
     ]);
   });
 
@@ -170,19 +178,19 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     expect(before.features.map((feature) => feature.properties.id)).toEqual(["unit-exact"]);
 
     // the REACTIVE path: a filter change swaps the result set, the wrapper re-renders pins
-    store.units = [unitInWard7, approximateUnit];
+    store.units = [unitInWard7, unitInWard3];
     await tick();
     const after = created.sources.get("units-pins")!.data as {
       features: { properties: { id: string } }[];
     };
     expect(after.features.map((feature) => feature.properties.id)).toEqual([
       "unit-exact",
-      "unit-approx",
+      "unit-ward3",
     ]);
   });
 
-  test("approximate-location units place at their ward anchor (never coordinates-not-found)", async () => {
-    store = freshStore([approximateUnit]);
+  test("every pin feature sits at its unit's own exact coordinates", async () => {
+    store = freshStore([unitInWard7, unitInWard3]);
     await store.initialize();
     render(MapView, { props: { store } });
     await tick();
@@ -191,11 +199,57 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     const collection = created.sources.get("units-pins")!.data as ReturnType<
       typeof unitsToFeatureCollection
     >;
-    const anchor = WARD_ANCHORS.find((entry) => entry.ward === 3)!;
-    const feature = collection.features[0]!;
-    expect(feature.geometry.coordinates).toEqual([anchor.longitude, anchor.latitude]);
-    // visually distinct style characteristics
-    expect(feature.properties.approximate).toBe(true);
+    const featureById = new Map(
+      collection.features.map((feature) => [feature.properties.id, feature]),
+    );
+    for (const unit of [unitInWard7, unitInWard3]) {
+      expect(featureById.get(unit.id)?.geometry.coordinates).toEqual([
+        unit.coordinates.longitude,
+        unit.coordinates.latitude,
+      ]);
+    }
+  });
+
+  test("pin features carry no approximate-location marker", async () => {
+    store = freshStore([unitInWard7, unitInWard3]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+
+    const created = h.instances.at(0)!;
+    const collection = created.sources.get("units-pins")!.data as {
+      features: Array<{ properties: Record<string, unknown> }>;
+    };
+    for (const feature of collection.features) {
+      expect(feature.properties).not.toHaveProperty("approximate");
+    }
+  });
+
+  test("pins paint with the single exact-pin style (no per-feature style branch)", async () => {
+    store = freshStore([unitInWard7, unitInWard3]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+
+    const created = h.instances.at(0)!;
+    const baseLayer = created.layers.find((layer) => layer.id === "units-pins-base");
+    expect(baseLayer).toBeTruthy();
+    const paint = baseLayer!.paint as Record<string, unknown>;
+    expect(paint["circle-color"]).toBe("#0b5fab");
+    expect(paint["circle-radius"]).toBe(6);
+  });
+
+  test("the legend lists only the exact-address pin meaning", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+
+    const legend = document.querySelector(".map-legend")!;
+    expect(legend.querySelectorAll(".legend-item")).toHaveLength(1);
+    expect(legend.querySelector(".pin.approximate")).toBeNull();
+    expect(legend.textContent).toContain(m.map_legend_exact());
+    expect(legend.textContent ?? "").not.toMatch(/approximate/i);
   });
 
   test("hovering a card highlights its pin through the highlight-layer filter", async () => {

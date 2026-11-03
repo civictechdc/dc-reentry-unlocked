@@ -1,6 +1,5 @@
 <script lang="ts">
   import { m } from "#lib/paraglide/messages.js";
-  import type { UnitCard } from "@dc-reentry/shared";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
   import { detailValueLabel, roomTypeDetailLabel } from "./detail-values.ts";
@@ -42,17 +41,10 @@
     }
   }
 
-  function addressLabelFor(unit: UnitCard): string {
-    if (unit.locationPrecision === "approximate") {
-      return m.detail_address_approximate({ address: unit.address });
-    }
-    return unit.address;
-  }
-
   const specRows = $derived.by(() => {
     if (!unit) return [];
     return [
-      { label: m.detail_address(), value: addressLabelFor(unit) },
+      { label: m.detail_address(), value: unit.address },
       { label: m.detail_bedrooms(), value: m.detail_bedrooms_value({ bedrooms: unit.bedrooms }) },
       { label: m.detail_size(), value: m.detail_size_value({ squareFeet: unit.size.squareFeet }) },
       { label: m.card_room_type(), value: roomTypeDetailLabel(unit.size.roomType) },

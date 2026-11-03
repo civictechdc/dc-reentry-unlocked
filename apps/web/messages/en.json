@@ -40,7 +40,6 @@
   "card_room_type_apartment": "Apartment",
   "map_region_label": "Map of available housing units",
   "map_legend_exact": "Exact address",
-  "map_legend_approximate": "Approximate location (ward only)",
   "map_legend_title": "What the pins mean",
   "map_select_pin": "Select housing unit at {address}",
   "detail_close": "Close unit details",
@@ -97,6 +96,5 @@
   "taxonomy_gender_men": "Men",
   "taxonomy_gender_women": "Women",
   "taxonomy_gender_all": "All",
-  "detail_address_approximate": "{address} (approximate location — shown at ward level)",
   "chips_region_label": "Active filter selections"
 }

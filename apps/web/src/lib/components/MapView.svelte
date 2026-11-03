@@ -25,9 +25,8 @@
 
   /**
    * MapLibre thin wrapper: GeoJSON circle-layer pins only (no per-pin DOM
-   * markers), OSM raster tiles with the required attribution, approximate
-   * locations pinned at their ward anchor with a visually distinct style,
-   * and pin↔card cross-highlighting in both directions.
+   * markers), OSM raster tiles with the required attribution, and pin↔card
+   * cross-highlighting in both directions.
    */
   let container: HTMLElement | undefined = $state();
   let map: MapLibreMap | null = null;
@@ -129,10 +128,6 @@
       <span class="pin exact" aria-hidden="true"></span>
       {m.map_legend_exact()}
     </span>
-    <span class="legend-item">
-      <span class="pin approximate" aria-hidden="true"></span>
-      {m.map_legend_approximate()}
-    </span>
   </p>
 </section>
 
@@ -200,9 +195,5 @@
   }
   .pin.exact {
     background: var(--pin-exact);
-  }
-  .pin.approximate {
-    background: var(--pin-approximate);
-    border-style: dashed;
   }
 </style>

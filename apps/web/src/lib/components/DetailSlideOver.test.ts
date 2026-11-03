@@ -116,18 +116,6 @@ describe("unit detail slide-over", () => {
     expect(within(detail).getByText(m.card_room_type_private_room())).toBeInTheDocument();
   });
 
-  test("an approximate location renders the qualified address (map-legend honesty)", () => {
-    const card = aUnit().withId("unit-1").withApproximateLocation().build();
-    store.units = [card];
-    uiState.selectedUnitId = "unit-1";
-    render(DetailSlideOver, { props: { store } });
-
-    const detail = screen.getByTestId("unit-detail");
-    expect(
-      within(detail).getByText(m.detail_address_approximate({ address: card.address })),
-    ).toBeInTheDocument();
-  });
-
   test("a selection that leaves the result set closes the panel gracefully", async () => {
     store.units = [aUnit().withId("unit-1").build()];
     uiState.selectedUnitId = "unit-1";

@@ -1,12 +1,10 @@
 import type { StyleSpecification } from "maplibre-gl";
 import type { UnitCard } from "@dc-reentry/shared";
-import { wardAnchor } from "./ward-anchors.ts";
 
 /**
  * Map configuration shared by the MapLibre wrapper and the mocked component
  * tests: OpenStreetMap raster tiles WITH the required attribution, a GeoJSON
- * pin source, circle layers only (no per-pin DOM markers), and a visually
- * distinct style for approximate-location units placed at their ward anchor.
+ * pin source, and circle layers only (no per-pin DOM markers).
  */
 
 /** OSM raster tile URL (attribution control carries the © notice). */
@@ -42,15 +40,13 @@ export const PIN_SOURCE = "units-pins";
 
 export interface PinFeatureProperties {
   id: string;
-  approximate: boolean;
   selected: boolean;
   ward: number;
 }
 
 /**
- * GeoJSON features for the current result set. Approximate-location units
- * (null coordinates) are placed at their ward's anchor point and marked
- * `approximate` so the layer style can render them distinctly.
+ * GeoJSON features for the current result set: every pin sits at its unit's
+ * own exact coordinates.
  */
 export function unitsToFeatureCollection(
   units: readonly UnitCard[],
@@ -71,14 +67,10 @@ export function unitsToFeatureCollection(
       id: unit.id,
       geometry: {
         type: "Point",
-        coordinates: [
-          unit.coordinates?.longitude ?? wardAnchor(unit.ward).longitude,
-          unit.coordinates?.latitude ?? wardAnchor(unit.ward).latitude,
-        ] as [number, number],
+        coordinates: [unit.coordinates.longitude, unit.coordinates.latitude] as [number, number],
       },
       properties: {
         id: unit.id,
-        approximate: unit.locationPrecision === "approximate",
         selected: unit.id === selectedUnitId,
         ward: unit.ward,
       },
@@ -89,8 +81,8 @@ export function unitsToFeatureCollection(
 /** The MapLibre paint properties for the base pin circle layer. */
 export function basePinLayerPaint(): Record<string, unknown> {
   return {
-    "circle-color": ["case", ["==", ["get", "approximate"], true], "#b45309", "#0b5fab"],
-    "circle-radius": ["case", ["==", ["get", "approximate"], true], 4.5, 6],
+    "circle-color": "#0b5fab",
+    "circle-radius": 6,
     "circle-stroke-color": "#ffffff",
     "circle-stroke-width": 1.5,
   };
