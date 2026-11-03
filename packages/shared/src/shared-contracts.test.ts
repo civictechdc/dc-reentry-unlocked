@@ -41,7 +41,6 @@ const aUnitEntity = (
   address: sampleCard.address,
   ward: sampleCard.ward,
   quadrant: sampleCard.quadrant,
-  locationPrecision: sampleCard.locationPrecision,
   coordinates: sampleCard.coordinates,
   bedrooms: sampleCard.bedrooms,
   size: sampleCard.size,
@@ -65,10 +64,10 @@ test("example 1 compiles: entity schemas validate real providers, programs, unit
 });
 
 // Example 2: the flattened unit card
-test("example 2 compiles: the unit card validates a fluent-built card", () => {
-  const validCard: UnitCard = aUnit().inWard(5).withApproximateLocation().build();
+test("example 2 compiles: the unit card validates a fluent-built v2 card", () => {
+  const validCard: UnitCard = aUnit().inWard(5).build();
 
-  expect(validCard.locationPrecision).toBe("approximate");
+  expect(validCard.coordinates).toEqual({ latitude: 38.913, longitude: -77.032 });
   expect(Value.Check(UnitCardSchema, validCard)).toBe(true);
 });
 
@@ -110,14 +109,14 @@ test("example 6 compiles: filter definitions validate as data", () => {
 // Example 7: API envelopes
 test("example 7 compiles: envelopes validate real payloads", () => {
   const payloadFromApi = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     synthetic: true as const,
     disclosure: "Synthetic prototype data — fictional providers. Never contact.",
     units: [aUnit().build()],
   };
-  const schemaPayloadFromApi = { schemaVersion: "1.0", filters: UNIT_FILTERS };
+  const schemaPayloadFromApi = { schemaVersion: "2.0", filters: UNIT_FILTERS };
   const errorFromApi = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     code: "not-found",
     message: "Unit not found.",
   };

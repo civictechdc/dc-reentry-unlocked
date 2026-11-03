@@ -91,20 +91,27 @@ test("two cards built from one builder never share nested fixtures", () => {
   expect(first.provider).not.toBe(second.provider);
 });
 
-test("the tested card builder becomes exact again only through re-confirmed coordinates", () => {
-  expect(() =>
-    aUnit().withApproximateLocation().withExactAddress("1440 Test Street NW").build(),
-  ).toThrow();
+test("rejects a card whose coordinates are null", () => {
+  const card = { ...sampleCard(), coordinates: null };
 
-  const reconfirmed = aUnit()
-    .withApproximateLocation()
-    .withCoordinates(38.913, -77.032)
-    .withExactAddress("1440 Test Street NW")
-    .build();
+  expect(Value.Check(UnitCardSchema, card)).toBe(false);
+});
 
-  expect(reconfirmed.locationPrecision).toBe("exact");
-  expect(reconfirmed.coordinates).not.toBeNull();
-  expect(Value.Check(UnitCardSchema, reconfirmed)).toBe(true);
+test("rejects the former approximate-location wire shape", () => {
+  const approximateShaped = {
+    ...sampleCard(),
+    locationPrecision: "approximate",
+    coordinates: null,
+  };
+
+  expect(Value.Check(UnitCardSchema, approximateShaped)).toBe(false);
+});
+
+test("a built card carries exact coordinates without extra arrangement", () => {
+  const card = aUnit().build();
+
+  expect(card.coordinates).toEqual({ latitude: 38.913, longitude: -77.032 });
+  expect(Value.Check(UnitCardSchema, card)).toBe(true);
 });
 
 test("a future field on the card is ignorable by old consumers", () => {

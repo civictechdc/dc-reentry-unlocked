@@ -2,7 +2,6 @@ import Type, { type Static } from "typebox";
 import {
   AvailabilityStateSchema,
   CoordinatesSchema,
-  LocationPrecisionSchema,
   QuadrantSchema,
   SCHEMA_VERSION,
   VerificationBadgeSchema,
@@ -39,9 +38,8 @@ export const UnitSchema = Type.Object({
   address: Type.String({ minLength: 1 }),
   ward: WardSchema,
   quadrant: QuadrantSchema,
-  locationPrecision: LocationPrecisionSchema,
-  /** Exact coordinates when the location is exact; null when approximate. */
-  coordinates: Type.Union([CoordinatesSchema, Type.Null()]),
+  /** Exact street-level coordinates — every unit is pinned to a real place. */
+  coordinates: CoordinatesSchema,
   bedrooms: Type.Number(),
   size: UnitSizeSchema,
   /** Monthly cost to the returning citizen (rent portion). */
@@ -64,8 +62,7 @@ export const UnitCardSchema = Type.Object({
   address: Type.String({ minLength: 1 }),
   ward: WardSchema,
   quadrant: QuadrantSchema,
-  locationPrecision: LocationPrecisionSchema,
-  coordinates: Type.Union([CoordinatesSchema, Type.Null()]),
+  coordinates: CoordinatesSchema,
   bedrooms: Type.Number(),
   size: UnitSizeSchema,
   cost: Type.Number(),

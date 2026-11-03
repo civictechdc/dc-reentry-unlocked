@@ -3,7 +3,6 @@ import { Value } from "typebox/value";
 import type { Program } from "./index";
 import {
   AvailabilityStateSchema,
-  LocationPrecisionSchema,
   ProgramSchema,
   ProviderSchema,
   RoomTypeSchema,
@@ -18,7 +17,6 @@ const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value))
 const aUnitEntity = (
   overrides?: Partial<{
     ward: number;
-    coordinates: { latitude: number; longitude: number } | null;
     availabilityState: "available" | "not-available" | "unverified-availability";
     availabilityConfirmed: boolean;
   }>,
@@ -28,11 +26,7 @@ const aUnitEntity = (
   address: "1440 Test Street NW",
   ward: overrides?.ward ?? 5,
   quadrant: "NW",
-  locationPrecision: overrides?.coordinates === null ? "approximate" : "exact",
-  coordinates:
-    overrides && "coordinates" in overrides
-      ? overrides.coordinates
-      : { latitude: 38.913, longitude: -77.032 },
+  coordinates: { latitude: 38.913, longitude: -77.032 },
   bedrooms: 1,
   size: { squareFeet: 400, roomType: "efficiency" },
   cost: 650,
@@ -68,12 +62,17 @@ test("a provider without listed contacts stays optional, never fabricated", () =
   expect(Value.Check(ProviderSchema, roundTrip(unlisted))).toBe(true);
 });
 
-test("an approximate location is fully representable, never missing", () => {
-  const wardLevelOnly = aUnitEntity({ coordinates: null });
+test("rejects a unit whose coordinates are null", () => {
+  const approximateShaped = { ...aUnitEntity(), coordinates: null };
 
-  expect(Value.Check(LocationPrecisionSchema, "approximate")).toBe(true);
-  expect(Value.Check(UnitSchema, wardLevelOnly)).toBe(true);
-  expect(wardLevelOnly.coordinates).toBeNull();
+  expect(Value.Check(UnitSchema, approximateShaped)).toBe(false);
+});
+
+test("rejects a unit without coordinates", () => {
+  const withoutCoordinates: Record<string, unknown> = { ...aUnitEntity() };
+  delete withoutCoordinates.coordinates;
+
+  expect(Value.Check(UnitSchema, withoutCoordinates)).toBe(false);
 });
 
 test("unit size carries both square footage and room type", () => {

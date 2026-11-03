@@ -12,7 +12,7 @@ import Type, { type Static } from "typebox";
  */
 
 /** Version of the shared contract carried by card and envelope payloads. */
-export const SCHEMA_VERSION = "1.0";
+export const SCHEMA_VERSION = "2.0";
 
 export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION);
 
@@ -36,22 +36,17 @@ export const QUADRANTS = ["NW", "NE", "SW", "SE"] as const;
 export const QuadrantSchema = Type.Enum([...QUADRANTS]);
 export type Quadrant = Static<typeof QuadrantSchema>;
 
-/** Geo coordinates for an exact street-level location. */
+/**
+ * Geo coordinates for a unit's exact street-level location. Every unit and
+ * card carries coordinates — exact addresses only; the approximate-location
+ * representation (precision flag, null coordinates) was removed in schema
+ * version 2.0 (user decision 2026-10-31).
+ */
 export const CoordinatesSchema = Type.Object({
   latitude: Type.Number(),
   longitude: Type.Number(),
 });
 export type Coordinates = Static<typeof CoordinatesSchema>;
-
-/**
- * Location precision: exact street address vs approximate (ward/corridor
- * level). Approximate locations are fully representable — never "missing
- * data" — and carry null coordinates (map placement resolves from the ward).
- */
-export const LOCATION_PRECISIONS = ["exact", "approximate"] as const;
-
-export const LocationPrecisionSchema = Type.Enum([...LOCATION_PRECISIONS]);
-export type LocationPrecision = Static<typeof LocationPrecisionSchema>;
 
 /**
  * Per-unit availability state: available / not available /

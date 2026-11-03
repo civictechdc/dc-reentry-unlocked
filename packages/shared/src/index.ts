@@ -16,8 +16,6 @@ export {
   QUADRANTS,
   QuadrantSchema,
   CoordinatesSchema,
-  LOCATION_PRECISIONS,
-  LocationPrecisionSchema,
   AVAILABILITY_STATES,
   AvailabilityStateSchema,
   VERIFICATION_BADGES,
@@ -28,7 +26,6 @@ export type {
   Ward,
   Quadrant,
   Coordinates,
-  LocationPrecision,
   AvailabilityState,
   VerificationBadge,
 } from "./primitives";

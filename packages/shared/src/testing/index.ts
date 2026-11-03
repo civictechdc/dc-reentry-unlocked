@@ -3,7 +3,6 @@ import type {
   Coordinates,
   Gender,
   HousingType,
-  LocationPrecision,
   LengthOfStay,
   PolicyState,
   Population,
@@ -184,9 +183,8 @@ export class UnitCardBuilder {
   private unitId = "unit-test";
   private ward: Ward = 1;
   private quadrant: Quadrant = "NW";
-  private locationPrecision: LocationPrecision = "exact";
   private address = "1440 Test Street NW";
-  private coordinates: Coordinates | null = { latitude: 38.913, longitude: -77.032 };
+  private coordinates: Coordinates = { latitude: 38.913, longitude: -77.032 };
   private bedrooms = 1;
   private size: UnitSize = { squareFeet: 400, roomType: "efficiency" };
   private cost = 650;
@@ -209,24 +207,11 @@ export class UnitCardBuilder {
   }
 
   withExactAddress(address: string): this {
-    if (this.coordinates === null) {
-      throw new Error(
-        "contradictory location transition — the location became approximate; call withCoordinates() to make it exact again",
-      );
-    }
     this.address = address;
-    this.locationPrecision = "exact";
-    return this;
-  }
-
-  withApproximateLocation(): this {
-    this.locationPrecision = "approximate";
-    this.coordinates = null;
     return this;
   }
 
   withCoordinates(latitude: number, longitude: number): this {
-    this.locationPrecision = "exact";
     this.coordinates = { latitude, longitude };
     return this;
   }
@@ -389,7 +374,6 @@ export class UnitCardBuilder {
       address: this.address,
       ward: this.ward,
       quadrant: this.quadrant,
-      locationPrecision: this.locationPrecision,
       coordinates: this.coordinates,
       bedrooms: this.bedrooms,
       size: this.size,
