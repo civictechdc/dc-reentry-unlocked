@@ -15,7 +15,6 @@ import type {
   Population,
   Gender,
   PolicyState,
-  Quadrant,
   RoomType,
   Unit,
 } from "@dc-reentry/shared";
@@ -31,7 +30,6 @@ import {
 import type { Corpus, Street, StreetPiece } from "./corpus.ts";
 import {
   hashString,
-  pick,
   chance,
   intInRange,
   mulberry32,
@@ -102,8 +100,8 @@ const SQUARE_FEET_BY_ROOM_TYPE: Record<string, readonly [number, number]> = {
   apartment: [500, 1150],
 };
 
+/** Apartment bedroom counts: always at least one separate bedroom. */
 const BEDROOMS_WEIGHTS: readonly (readonly [number, number])[] = [
-  [0, 30],
   [1, 45],
   [2, 18],
   [3, 7],
@@ -219,7 +217,6 @@ const UNITS_PER_PROGRAM: readonly (readonly [number, number])[] = [
 const AVAILABLE_SHARE = 0.76;
 const NOT_AVAILABLE_SHARE = 0.12;
 const CONFIRMED_SHARE_WHEN_AVAILABLE = 0.6;
-const APPROXIMATE_SHARE = 0.2;
 
 export interface DatasetProgram {
   id: string;
@@ -290,8 +287,6 @@ interface WardPieceRef {
 
 interface GenerationContext {
   wardPieces: Map<number, WardPieceRef[]>;
-  /** The quadrants actually reachable per ward, from the corpus streets. */
-  wardQuadrants: Map<number, Quadrant[]>;
   zips: {
     code: string;
     geometry: PolygonGeometry;
@@ -327,17 +322,6 @@ function buildContext(corpus: Corpus): GenerationContext {
       throw new Error(`no street pieces in the corpus for ward ${ward}`);
     }
   }
-  const wardQuadrants = new Map<number, Quadrant[]>();
-  for (const [ward, refs] of wardPieces) {
-    const quadrants = new Set<Quadrant>();
-    for (const ref of refs) {
-      const street = corpus.streets[ref.streetIndex];
-      if (street) {
-        quadrants.add(street.quadrant);
-      }
-    }
-    wardQuadrants.set(ward, [...quadrants]);
-  }
   const zips = corpus.zips.map((zip) => ({
     code: zip.code,
     geometry: zip.geometry,
@@ -346,7 +330,7 @@ function buildContext(corpus: Corpus): GenerationContext {
     maxX: zip.maxX,
     maxY: zip.maxY,
   }));
-  return { wardPieces, wardQuadrants, zips };
+  return { wardPieces, zips };
 }
 
 interface WardSample {
@@ -547,7 +531,6 @@ function generateUnit(
   const availabilityState = pickAvailabilityState(rng);
   const availabilityConfirmed =
     availabilityState === "available" ? chance(rng, CONFIRMED_SHARE_WHEN_AVAILABLE) : false;
-  const approximate = chance(rng, APPROXIMATE_SHARE);
   const roomType = pickRoomType(rng, program.housingType);
   const bedrooms = pickBedrooms(rng, roomType);
   const sizeRange = SQUARE_FEET_BY_ROOM_TYPE[roomType];
@@ -557,42 +540,25 @@ function generateUnit(
   const costRange = MONTHLY_COST_RANGE_BY_HOUSING_TYPE[program.housingType];
   const cost = costRange ? Math.round(costRange[0] + rng() * (costRange[1] - costRange[0])) : 400;
 
+  // Every unit derives from a real street piece: interpolated coordinates on
+  // the piece's geometry, a building number consistent with the position
+  // along the street, and the street's own quadrant.
+  const sample = sampleExactLocation(rng, context, corpus, ward);
+  const number = streetNumberFor(sample.street, sample.piece, sample.segmentIndex, sample.t);
+
   const unit: Unit = {
     id: `${program.id}-${String(unitIndex).padStart(2, "0")}`,
     programId: program.id,
-    address: "",
+    address: `${number} ${sample.street.name} ${sample.street.quadrant}, Washington, DC ${sample.zipCode}`,
     ward,
-    quadrant: "NW",
-    locationPrecision: "exact",
-    coordinates: null,
+    quadrant: sample.street.quadrant,
+    coordinates: { latitude: sample.y, longitude: sample.x },
     bedrooms,
     size: { squareFeet, roomType },
     cost,
     availabilityState,
     availabilityConfirmed,
   };
-
-  if (approximate) {
-    unit.locationPrecision = "approximate";
-    unit.coordinates = null;
-    // Ward-level location: the quadrant stays coherent with the ward's real
-    // streets (a random pick would label ward-level units with quadrants
-    // they cannot have).
-    const reachable = context.wardQuadrants.get(ward);
-    if (!reachable || reachable.length === 0) {
-      throw new Error(`no reachable quadrants for ward ${ward}`);
-    }
-    unit.quadrant = pick(rng, reachable);
-    unit.address = `Ward ${ward} (approximate location)`;
-    return unit;
-  }
-
-  const sample = sampleExactLocation(rng, context, corpus, ward);
-  const number = streetNumberFor(sample.street, sample.piece, sample.segmentIndex, sample.t);
-  unit.locationPrecision = "exact";
-  unit.coordinates = { latitude: sample.y, longitude: sample.x };
-  unit.quadrant = sample.street.quadrant;
-  unit.address = `${number} ${sample.street.name} ${sample.street.quadrant}, Washington, DC ${sample.zipCode}`;
   return unit;
 }
 
@@ -607,14 +573,18 @@ function pickAvailabilityState(rng: Rng): AvailabilityState {
   return "unverified-availability";
 }
 
+/**
+ * Bedrooms agree with room type: apartments have at least one separate
+ * bedroom, private rooms exactly one, and efficiency/shared rooms none.
+ */
 function pickBedrooms(rng: Rng, roomType: string): number {
-  if (roomType === "shared-room" || roomType === "efficiency") {
-    return 0;
+  if (roomType === "apartment") {
+    return weightedPick(rng, BEDROOMS_WEIGHTS);
   }
   if (roomType === "private-room") {
     return 1;
   }
-  return weightedPick(rng, BEDROOMS_WEIGHTS);
+  return 0;
 }
 
 function bagWard(values: number[], ordinal: number): number {
