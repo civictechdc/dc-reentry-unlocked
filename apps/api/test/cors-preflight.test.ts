@@ -69,7 +69,7 @@ test("a rate-limited preflight still answers with the shared envelope on the COR
   expect(second.statusCode).toBe(429);
   const payload = second.json();
   expect(payload.code).toBe("rate-limited");
-  expect(payload.schemaVersion).toBe("1.0");
+  expect(payload.schemaVersion).toBe("2.0");
   expect(payload.message).toBe("Too many requests — please wait a moment before trying again.");
   expect(payload.correlationId).toEqual(second.headers["x-request-id"]);
   expect(second.headers["retry-after"]).toBeTruthy();
@@ -175,7 +175,7 @@ test("the rate-limited 404 keeps the stable envelope shape for a client probing 
   expect(first.json().code).toBe("not-found");
   expect(second.statusCode).toBe(429);
   expect(second.json().code).toBe("rate-limited");
-  expect(second.json().schemaVersion).toBe("1.0");
+  expect(second.json().schemaVersion).toBe("2.0");
   expect(second.headers["retry-after"]).toBeTruthy();
   await app.close();
 });

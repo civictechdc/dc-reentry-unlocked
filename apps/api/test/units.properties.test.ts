@@ -1,5 +1,6 @@
 import {
   UNIT_FILTERS,
+  CoordinatesSchema,
   Value,
   UnitsResponseSchema,
   type FilterDefinition,
@@ -199,6 +200,18 @@ fcTest.prop({ selection: selectionArbitrary() }, { numRuns: 30 })(
     expect(payload.units.every((unit: UnitCard) => unit.availabilityState === "available")).toBe(
       true,
     );
+    // Every served card carries exact coordinates — the shared coordinate
+    // contract is the oracle, never the response-shaping code under test —
+    // and the withdrawn approximate-location marker never comes back.
+    for (const unit of payload.units as UnitCard[]) {
+      expect(
+        Value.Check(CoordinatesSchema, unit.coordinates),
+        `${unit.id} carries exact coordinates`,
+      ).toBe(true);
+      expect(unit, `${unit.id} carries no removed location-precision marker`).not.toHaveProperty(
+        "locationPrecision",
+      );
+    }
   },
 );
 

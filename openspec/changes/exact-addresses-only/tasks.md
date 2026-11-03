@@ -12,7 +12,7 @@
 
 ## 3. API (apps/api)
 
-- [ ] 3.1 Serve the v2 dataset (loader changes only — routes serialize via the shared schemas); verify the served-card tests pin exact coordinates on every card, the availability/unknown semantics suites stay green, and `pnpm -C apps/api test` passes including the OpenAPI drift test against the updated schemas
+- [x] 3.1 Serve the v2 dataset (loader changes only — routes serialize via the shared schemas); verify the served-card tests pin exact coordinates on every card, the availability/unknown semantics suites stay green, and `pnpm -C apps/api test` passes including the OpenAPI drift test against the updated schemas
 
 ## 4. Web (apps/web)
 

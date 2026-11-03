@@ -18,12 +18,54 @@ test("the running API serves only the available units of the frozen dataset", as
   const payload = response.json();
 
   expect(response.statusCode).toBe(200);
-  expect(payload.units.length).toBe(919); // 1200 dataset units − not-available − unverified-availability
+  expect(payload.units.length).toBe(932); // 1200 dataset units − 151 not-available − 117 unverified-availability
   expect(Value.Check(UnitsResponseSchema, payload)).toBe(true);
   expect(payload.units.every((unit: UnitCard) => unit.availabilityState === "available")).toBe(
     true,
   );
   expect(payload.units.every((unit: UnitCard) => Value.Check(UnitCardSchema, unit))).toBe(true);
+
+  await app.close();
+});
+
+test("every served card carries the frozen dataset's exact coordinates across the whole listing", async () => {
+  const source = await createDatasetHousingUnitsSource(defaultDatasetPath());
+  const app = await buildApp({ unitSource: source, logLevel: "error" });
+
+  const served = (await app.inject("/units")).json().units as UnitCard[];
+
+  // Independent oracle: the frozen file's own coordinates per unit id —
+  // compared against EVERY served card, not a sample.
+  const { readFile } = await import("node:fs/promises");
+  const dataset = JSON.parse(await readFile(defaultDatasetPath(), "utf8")) as {
+    providers: Array<{
+      programs: Array<{
+        units: Array<{ id: string; coordinates: { latitude: number; longitude: number } }>;
+      }>;
+    }>;
+  };
+  const exactCoordinatesById = new Map<string, { latitude: number; longitude: number }>();
+  for (const provider of dataset.providers) {
+    for (const program of provider.programs) {
+      for (const unit of program.units) {
+        exactCoordinatesById.set(unit.id, unit.coordinates);
+      }
+    }
+  }
+
+  expect(served.length).toBeGreaterThan(0);
+  for (const unit of served) {
+    const exact = exactCoordinatesById.get(unit.id);
+    expect(exact, `the dataset pins coordinates for ${unit.id}`).toBeTruthy();
+    expect(unit.coordinates, `${unit.id} serves the dataset's exact coordinates`).toEqual(exact);
+    expect(Number.isFinite(unit.coordinates.latitude), `${unit.id} latitude is finite`).toBe(true);
+    expect(Number.isFinite(unit.coordinates.longitude), `${unit.id} longitude is finite`).toBe(
+      true,
+    );
+    expect(unit, `${unit.id} carries no removed location-precision marker`).not.toHaveProperty(
+      "locationPrecision",
+    );
+  }
 
   await app.close();
 });
@@ -86,7 +128,6 @@ function cardToDatasetTree(card: UnitCard, header: Record<string, unknown>): obj
                 address: card.address,
                 ward: card.ward,
                 quadrant: card.quadrant,
-                locationPrecision: card.locationPrecision,
                 coordinates: card.coordinates,
                 bedrooms: card.bedrooms,
                 size: card.size,
@@ -215,6 +256,37 @@ test("a non-fictional phone also fails a dataset-source construction at the same
 
   await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
     /not the fictional phone pattern/i,
+  );
+});
+
+test("a unit row shaped like the removed approximate location refuses to boot the source", async () => {
+  const card = aUnit().withId("legacy-approximate-row").build();
+  const payload = JSON.parse(
+    JSON.stringify(
+      cardToDatasetTree(card, {
+        schemaVersion: SCHEMA_VERSION,
+        synthetic: true,
+        disclaimer: SYNTHETIC_DISCLOSURE,
+      }),
+    ),
+  ) as {
+    providers: Array<{
+      programs: Array<{ units: Array<{ id: string } & Record<string, unknown>> }>;
+    }>;
+  };
+  // One legacy violation: the unit row loses its exact coordinates and
+  // carries the withdrawn approximate marker instead.
+  const row = payload.providers[0]?.programs[0]?.units.find(
+    (candidate) => candidate.id === card.id,
+  );
+  if (row === undefined) throw new Error("the fixture's own unit row went missing");
+  delete row.coordinates;
+  row.locationPrecision = "approximate";
+
+  const datasetPath = await writeScratchDataset(JSON.stringify(payload));
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /does not conform to the served inventory contract/i,
   );
 });
 

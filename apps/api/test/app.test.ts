@@ -44,7 +44,7 @@ test("a stub data source keeps serving its units through the app wiring", async 
   const response = await app.inject("/units");
   expect(response.statusCode).toBe(200);
   expect(response.json()).toEqual({
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     synthetic: true,
     disclosure,
     units: [card],

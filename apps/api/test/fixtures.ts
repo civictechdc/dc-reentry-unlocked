@@ -17,7 +17,7 @@ const shaped = (id: string, shape: (builder: UnitCardBuilder) => UnitCardBuilder
 export const fixtureDataset: UnitCard[] = [
   shaped("verified-exact-nw", (unit) => unit.inWard(1).confirmed()),
   shaped("unconfirmed-ne", (unit) => unit.inWard(2).needsVerification()),
-  shaped("approximate-sw", (unit) => unit.inWard(8).withApproximateLocation()),
+  shaped("exact-sw", (unit) => unit.inQuadrant("SW").inWard(8)),
   shaped("referral-unknown", (unit) => unit.inWard(3).withUnknownReferralPolicy()),
   shaped("referral-required", (unit) => unit.inWard(4).withReferralPolicy("yes")),
   shaped("sobriety-unknown", (unit) => unit.inWard(5).withUnknownSobrietyPolicy()),
