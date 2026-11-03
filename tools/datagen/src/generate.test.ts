@@ -59,13 +59,9 @@ test("the dataset carries the synthetic disclosure in a fixed header block", () 
   expect(dataset.generation.corpusFormat).toBe(corpus.format);
 });
 
-// Skipped until the frozen dataset is regenerated for the exact-only world:
-// the generator's distributions changed intentionally (every unit now derives
-// from a real street piece), so v1 bytes no longer match. Regeneration is
-// planned, not yet landed — flip this back once `pnpm datagen` has run.
-test.skip("the frozen dataset file matches regeneration byte for byte", async () => {
+test("the frozen dataset file matches regeneration byte for byte", async () => {
   const dataset = generateDataset(DEFAULT_SEED, corpus);
-  const target = fileURLToPath(new URL("../../../data/units.v1.json", import.meta.url));
+  const target = fileURLToPath(new URL("../../../data/units.v2.json", import.meta.url));
   const frozen = await readFile(target, "utf8");
   expect(
     frozen,

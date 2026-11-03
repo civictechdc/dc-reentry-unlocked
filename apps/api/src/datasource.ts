@@ -286,7 +286,7 @@ export async function createDatasetHousingUnitsSource(
 /** Default location of the frozen generated dataset (repo root /data). */
 export function defaultDatasetPath(): string {
   // src/datasource.ts → apps/api/src → apps/api → apps → repo root /data.
-  return fileURLToPath(new URL("../../../data/units.v1.json", import.meta.url));
+  return fileURLToPath(new URL("../../../data/units.v2.json", import.meta.url));
 }
 
 interface DatasetFile {

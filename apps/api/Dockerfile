@@ -30,7 +30,7 @@ RUN pnpm --filter @dc-reentry/api deploy --prod /prod/apps/api
 FROM node:22-slim
 WORKDIR /app
 COPY --from=build --chown=node:node /prod/apps/api /app/apps/api
-COPY --from=build --chown=node:node /app/data/units.v1.json /app/data/units.v1.json
+COPY --from=build --chown=node:node /app/data/units.v2.json /app/data/units.v2.json
 
 ENV HOST=0.0.0.0 \
     PORT=3000 \

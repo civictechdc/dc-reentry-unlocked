@@ -19,19 +19,22 @@ the JSON card payload).
   (`e2e/perf-payload.spec.ts`); `bytesOnWire` counts the encoded BODY chunks
   on the socket — response headers (content-length, transfer framing) are
   excluded. Brotli decode is for the card count only (wire bytes stay the compressed size).
-- Served dataset: 919 available unit cards (frozen synthetic dataset).
+- Served dataset: 932 available unit cards (frozen synthetic dataset v2, seed
+  20261029 — every card carries map coordinates).
 
 | Number                          | Value         |
 | ------------------------------- | ------------- |
-| Uncompressed body               | 904,146 bytes |
-| Wire payload (brotli)           | 49,742 bytes  |
-| Wire bytes per 1,000 unit cards | **54,126**    |
+| Uncompressed body               | 896,581 bytes |
+| Wire payload (brotli)           | 53,488 bytes  |
+| Wire bytes per 1,000 unit cards | **57,390**    |
 | Budget target per 1,000         | 500,000 bytes |
 
 The uncompressed join (program policies + provider contacts on every card)
-clocks in at ~984KB per 1,000 units — noted as the recorded baseline that
-motivated the compression decision. On the wire the payload is well inside
-the ~500KB/1,000 budget; the warn-gate semantics stay (wire budget warns
+is ~896KB for 932 cards (~962KB per 1,000) — noted as the recorded baseline
+that motivated the compression decision. The brotli wire payload grew from
+the previous 919-card dataset (49,742 → 53,488 bytes; 54,126 → 57,390 per
+1,000) because every card now carries coordinates; it remains well inside
+the ~500KB/1,000 budget. The warn-gate semantics stay (wire budget warns
 above 500KB/1,000, gross churn fails above 1MB total).
 
 ## Map interaction smoothness (dev-server numbers)
