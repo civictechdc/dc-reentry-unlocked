@@ -7,7 +7,7 @@
 
 ## 2. Dataset v2 (tools/datagen)
 
-- [ ] 2.1 Remove the approximate distribution from the generator (every unit derives from a real street piece with interpolated coordinates); drop the both-precisions-per-ward invariant while keeping ward coverage 1–8; correlate bedrooms with room type (apartment ≥ 1, efficiency 0, private-room 1, shared-room 0 — the incoherent 0BR apartments die); verify fast-check properties re-proven for the exact-only world (on-street, strictly-inside-ward, one-ZIP, schema conformance, determinism) plus the new bedrooms-agree-with-room-type invariant
+- [x] 2.1 Remove the approximate distribution from the generator (every unit derives from a real street piece with interpolated coordinates); drop the both-precisions-per-ward invariant while keeping ward coverage 1–8; correlate bedrooms with room type (apartment ≥ 1, efficiency 0, private-room 1, shared-room 0 — the incoherent 0BR apartments die); verify fast-check properties re-proven for the exact-only world (on-street, strictly-inside-ward, one-ZIP, schema conformance, determinism) plus the new bedrooms-agree-with-room-type invariant
 - [ ] 2.2 Write the new frozen dataset `data/units.v2.json` (fixed seed discipline unchanged), delete `data/units.v1.json`, update the loader path + version assert (schemaVersion 2.0) and the api Dockerfile's dataset COPY; verify `pnpm datagen && git diff --exit-code -- data/` proves byte-identical regeneration of v2, and re-measure the units payload (record the new baseline in `docs/perf-notes.md`)
 
 ## 3. API (apps/api)

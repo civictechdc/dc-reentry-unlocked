@@ -87,6 +87,48 @@ test("the default-seed unit count stays inside the 1,000–1,500 envelope", () =
 });
 
 /* ------------------------------------------------------------------ */
+/* Near-valid single-violation rejection pins. Characterization tests  */
+/* (expected immediate pass): they pin that the suite's oracles catch  */
+/* each legacy one-constraint violation on an otherwise-valid unit.    */
+/* ------------------------------------------------------------------ */
+
+/** A valid unit exactly as the generator emits it (deterministic seed). */
+function aGeneratedUnit(): SharedUnit {
+  const dataset = generateDataset(DEFAULT_SEED, corpus);
+  const unit = datasetUnits(dataset)[0];
+  if (!unit) {
+    throw new Error("generator produced no units");
+  }
+  return structuredClone(unit);
+}
+
+test("the schema oracle rejects a generator unit whose coordinates were nulled — one violation, nothing else", () => {
+  const unit = aGeneratedUnit();
+  expect(Value.Check(UnitSchema, unit), "the untouched generator unit starts valid").toBe(true);
+  const nulled: Record<string, unknown> = structuredClone(unit);
+  nulled.coordinates = null;
+  expect(Value.Check(UnitSchema, nulled), "null coordinates alone must be rejected").toBe(false);
+});
+
+test("the exact-shape oracle rejects a generator unit carrying a stray locationPrecision field — one violation, nothing else", () => {
+  const unit = aGeneratedUnit();
+  // Value.Check accepts additional properties (TypeBox default), so the
+  // exact-shape oracle compares the key set against the schema's own
+  // property list — a stray legacy field cannot hide inside a unit.
+  const expectedKeys = Object.keys(UnitSchema.properties).sort();
+  expect(
+    Object.keys(unit).sort(),
+    "the untouched generator unit carries exactly the v2 field set",
+  ).toEqual(expectedKeys);
+  const stray: Record<string, unknown> = structuredClone(unit);
+  stray.locationPrecision = "approximate";
+  expect(
+    Object.keys(stray).sort(),
+    "a stray locationPrecision field alone must be rejected",
+  ).not.toEqual(expectedKeys);
+});
+
+/* ------------------------------------------------------------------ */
 /* Structural + geographic invariants shared by the seed checks         */
 /* ------------------------------------------------------------------ */
 
