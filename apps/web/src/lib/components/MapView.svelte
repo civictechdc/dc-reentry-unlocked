@@ -82,17 +82,27 @@
   // NO highlight dependency here: hover/selection highlight is handled by
   // the highlight layer's setFilter — a pin re-render (setData) per hover
   // would churn the whole source for a paint-only change.
+  //
+  // The guard is SOURCE EXISTENCE, not the style's load state: isStyleLoaded()
+  // flips back to false right after the load handler adds the source and
+  // layers (pending source updates + tile settling) and re-dips while tiles
+  // settle, so guarding on it silently dropped units changes with no replay.
+  // setData on an existing source carries no style-loaded precondition (it
+  // enqueues a coalesced worker update — the latest call wins), and while
+  // the source does not exist yet the load handler attaches it with the
+  // current units — so the latest units always reach the source.
   $effect(() => {
     const data = unitsToFeatureCollection(store.units ?? []);
-    if (map?.isStyleLoaded()) {
-      (map.getSource(PIN_SOURCE) as GeoJSONSource | undefined)?.setData(data);
-    }
+    const source = map?.getSource(PIN_SOURCE) as GeoJSONSource | undefined;
+    if (source) source.setData(data);
   });
 
   // The highlight filter follows the card hover/focus and pin selection.
+  // Layer existence, not style-load state: setFilter on a not-yet-attached
+  // layer throws, and the layer appears exactly when the load handler runs.
   $effect(() => {
     highlightedUnitId = uiState.hoveredCardUnitId ?? uiState.hoveredPinUnitId;
-    if (map && map.isStyleLoaded()) {
+    if (map?.getLayer("units-pins-highlight")) {
       map.setFilter(
         "units-pins-highlight",
         highlightLayerFilter(highlightedUnitId) as FilterSpecification | null,

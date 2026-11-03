@@ -21,6 +21,20 @@ import {
  * rendering proof comes from the Playwright e2e suite against the dev
  * server. The mock records the constructor arguments and every source/layer
  * mutation so the wrapper behavior is assertable.
+ *
+ * Event ordering is CONTROLLABLE so tests can drive first-load interleavings
+ * the real map produces:
+ * - `load` handlers are captured, never fired automatically; a test fires
+ *   them explicitly with `fireLoad()` (the real map dispatches `load` once,
+ *   only after the style loads — `fireLoad` clears the handlers to model
+ *   that one-shot contract).
+ * - `styleLoaded` is a plain flag the test sets, independent of load firing.
+ *   The component no longer reads it (its guards key on source/layer
+ *   existence), but tests keep setting it to arrange realistic maplibre
+ *   state: `isStyleLoaded()` maps to `style.loaded()`, which is false while
+ *   a newly added source is still settling (`_updatedSources` pending, its
+ *   TileManager unloaded) — so the load handler's own `addSource`/`addLayer`
+ *   calls flip it back to false for a window after load.
  */
 const h = vi.hoisted(() => ({
   instances: [] as Array<{
@@ -28,6 +42,7 @@ const h = vi.hoisted(() => ({
     sources: Map<string, { data: unknown; setDataCount: number }>;
     layers: Array<Record<string, unknown>>;
     styleLoaded: boolean;
+    fireLoad(): void;
     setFilterLog: unknown[];
     removed: boolean;
     clickPin: (unitId: string) => void;
@@ -50,7 +65,10 @@ vi.mock("maplibre-gl", () => {
     options: Record<string, unknown>;
     sources = new Map<string, MockSource>();
     layers: Array<Record<string, unknown>> = [];
-    styleLoaded = true;
+    /** Test-controlled style state; the real map starts with the style NOT loaded. */
+    styleLoaded = false;
+    /** Captured `load` handlers — dispatched only when the test fires them. */
+    loadHandlers: Array<() => void> = [];
     setFilterLog: unknown[] = [];
     removed = false;
     clickHandlers: unknown[] = [];
@@ -61,16 +79,25 @@ vi.mock("maplibre-gl", () => {
     }
     on(event: string, a: unknown, b?: unknown): void {
       if (event === "load" && typeof a === "function") {
-        (a as () => void)();
+        this.loadHandlers.push(a as () => void);
       } else if (event === "click" && typeof b === "function") {
         this.clickHandlers.push(b);
       }
+    }
+    /** Test helper: dispatch the captured `load` handlers once (the real `load` is one-shot). */
+    fireLoad(): void {
+      const handlers = this.loadHandlers;
+      this.loadHandlers = [];
+      for (const handler of handlers) handler();
     }
     isStyleLoaded(): boolean {
       return this.styleLoaded;
     }
     getSource(id: string): MockSource | undefined {
       return this.sources.get(id);
+    }
+    getLayer(id: string): Record<string, unknown> | undefined {
+      return this.layers.find((layer) => layer.id === id);
     }
     addSource(id: string, definition: { data: unknown }): void {
       this.sources.set(id, new MockSource(definition.data));
@@ -122,6 +149,30 @@ function freshStore(initialUnits: unknown[]): HousingStore {
   return new HousingStore(new FakeTransport() as never);
 }
 
+/**
+ * Mounts MapView over a store whose units are already resolved, then plays
+ * the healthy first-load sequence: style finishes loading, `load` fires, the
+ * load handler attaches the pin source with the current units.
+ */
+async function mountedMapWithResolvedUnits(units: unknown[]) {
+  store = freshStore(units);
+  await store.initialize();
+  render(MapView, { props: { store } });
+  await tick();
+  const created = h.instances.at(0)!;
+  created.styleLoaded = true;
+  created.fireLoad();
+  await tick();
+  return created;
+}
+
+function pinnedUnitIds(created: { sources: Map<string, { data: unknown }> }): string[] {
+  const collection = created.sources.get("units-pins")!.data as ReturnType<
+    typeof unitsToFeatureCollection
+  >;
+  return collection.features.map((feature) => feature.properties.id);
+}
+
 afterEach(() => {
   cleanup();
   h.instances.length = 0;
@@ -132,70 +183,35 @@ afterEach(() => {
 
 describe("MapLibre map wrapper (mocked maplibre)", () => {
   test("creates the GL map on the OSM raster style with the required attribution", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0);
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
     expect(created).toBeTruthy();
-    const style = created!.options.style as {
+    const style = created.options.style as {
       sources: Record<string, { attribution: string; tiles: string[] }>;
     };
     expect(style.sources.osm?.tiles[0]).toBe(OSM_TILE_URL);
     expect(style.sources.osm?.attribution).toBe(OSM_ATTRIBUTION);
-    expect(created!.options.center).toEqual([DC_MAP_CENTER.lng, DC_MAP_CENTER.lat]);
-    expect(created!.options.zoom).toBe(DC_MAP_ZOOM);
+    expect(created.options.center).toEqual([DC_MAP_CENTER.lng, DC_MAP_CENTER.lat]);
+    expect(created.options.zoom).toBe(DC_MAP_ZOOM);
   });
 
   test("renders one pin per unit in the shared GeoJSON source", async () => {
-    store = freshStore([unitInWard7, unitInWard3]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0)!;
-    const pinned = created.sources.get("units-pins");
-    expect(pinned).toBeTruthy();
-    const collection = pinned!.data as ReturnType<typeof unitsToFeatureCollection>;
-    expect(collection.features).toHaveLength(2);
-    expect(collection.features.map((feature) => feature.properties.id)).toEqual([
-      "unit-exact",
-      "unit-ward3",
-    ]);
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    expect(created.sources.get("units-pins")).toBeTruthy();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact", "unit-ward3"]);
   });
 
   test("pins re-render from the same result set: mutating the store restructures the shared source", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0)!;
-    const before = created.sources.get("units-pins")!.data as {
-      features: { properties: { id: string } }[];
-    };
-    expect(before.features.map((feature) => feature.properties.id)).toEqual(["unit-exact"]);
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
 
     // the REACTIVE path: a filter change swaps the result set, the wrapper re-renders pins
     store.units = [unitInWard7, unitInWard3];
     await tick();
-    const after = created.sources.get("units-pins")!.data as {
-      features: { properties: { id: string } }[];
-    };
-    expect(after.features.map((feature) => feature.properties.id)).toEqual([
-      "unit-exact",
-      "unit-ward3",
-    ]);
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact", "unit-ward3"]);
   });
 
   test("every pin feature sits at its unit's own exact coordinates", async () => {
-    store = freshStore([unitInWard7, unitInWard3]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0)!;
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
     const collection = created.sources.get("units-pins")!.data as ReturnType<
       typeof unitsToFeatureCollection
     >;
@@ -211,12 +227,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("pin features carry no approximate-location marker", async () => {
-    store = freshStore([unitInWard7, unitInWard3]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0)!;
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
     const collection = created.sources.get("units-pins")!.data as {
       features: Array<{ properties: Record<string, unknown> }>;
     };
@@ -226,12 +237,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("pins paint with the single exact-pin style (no per-feature style branch)", async () => {
-    store = freshStore([unitInWard7, unitInWard3]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-
-    const created = h.instances.at(0)!;
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
     const baseLayer = created.layers.find((layer) => layer.id === "units-pins-base");
     expect(baseLayer).toBeTruthy();
     const paint = baseLayer!.paint as Record<string, unknown>;
@@ -240,10 +246,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("the legend lists only the exact-address pin meaning", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
+    await mountedMapWithResolvedUnits([unitInWard7]);
 
     const legend = document.querySelector(".map-legend")!;
     expect(legend.querySelectorAll(".legend-item")).toHaveLength(1);
@@ -253,10 +256,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("hovering a card highlights its pin through the highlight-layer filter", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
+    await mountedMapWithResolvedUnits([unitInWard7]);
 
     uiState.hoveredCardUnitId = "unit-exact";
     await tick();
@@ -265,12 +265,8 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("clicking a map pin highlights its CARD and opens the detail", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
 
-    const created = h.instances.at(0)!;
     created.clickPin("unit-exact");
     await tick();
 
@@ -280,10 +276,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("the keyboard pin list selects a unit (focus highlight + click opens detail)", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
+    await mountedMapWithResolvedUnits([unitInWard7]);
 
     const pinButton = document.querySelector(
       '[data-testid="map-pin-list"] button',
@@ -301,11 +294,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
   });
 
   test("hovering a card re-renders NO pins (setFilter owns the highlight paint)", async () => {
-    store = freshStore([unitInWard7]);
-    await store.initialize();
-    render(MapView, { props: { store } });
-    await tick();
-    const created = h.instances.at(0)!;
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
     const setDataBefore = (created.sources.get("units-pins") as { setDataCount?: number })
       ?.setDataCount;
     uiState.hoveredCardUnitId = "unit-exact";
@@ -325,5 +314,121 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     const created = h.instances.at(0)!;
     mounted.unmount();
     expect(created.removed).toBe(true);
+  });
+});
+
+describe("first-load interleavings (regression pins)", () => {
+  test("units resolving before load still pin every unit once load fires (the load handler reads the latest units)", async () => {
+    // Mount while the units fetch is still in flight (the real page fires
+    // `store.initialize()` without waiting, MapView mounts immediately).
+    store = freshStore([unitInWard7]);
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    // `load` has not fired yet: no source exists, nothing to update.
+    expect(created.sources.get("units-pins")).toBeUndefined();
+
+    // The units fetch resolves while the map is still loading; the update
+    // effect runs but the source does not exist yet — nothing to apply.
+    await store.initialize();
+    await tick();
+    expect(created.sources.get("units-pins")).toBeUndefined();
+
+    // The style finishes, `load` fires — and the handler reads the CURRENT
+    // units, so the not-yet-applied change is overtaken by the initial attach.
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
+  });
+
+  test("units resolving after the source settled re-render every pin through the update path", async () => {
+    store = freshStore([unitInWard7]);
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    // `load` fires BEFORE the units fetch resolves (cached style, slow API):
+    // the source attaches with zero features, then the source settles (the
+    // real style reports not-loaded during that settling — modeled below —
+    // though the update path no longer consults the style's load state).
+    created.styleLoaded = true;
+    created.fireLoad();
+    created.styleLoaded = false; // the load handler's addSource re-opens the style-loading window
+    created.styleLoaded = true; // the newly added source settles; units still absent
+    expect(pinnedUnitIds(created)).toEqual([]);
+
+    // Units arrive AFTER the source settled: the source exists, so the
+    // update effect applies the fetch result to it.
+    await store.initialize();
+    await tick();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
+    expect((created.sources.get("units-pins") as { setDataCount: number }).setDataCount).toBe(1);
+  });
+
+  test("units resolving while the style reports loaded but load has not fired still pin every unit", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    // The style reports loaded one frame before `load` dispatches (real
+    // maplibre: `load` fires inside a render frame, `style.loaded()` flips
+    // earlier). The update effect runs but the source does not exist yet —
+    // it applies nothing, and nothing is lost.
+    created.styleLoaded = true;
+    await tick();
+    expect(created.sources.get("units-pins")).toBeUndefined();
+
+    // `load` fires and the handler reads the CURRENT units, so this window
+    // alone loses nothing.
+    created.fireLoad();
+    await tick();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
+  });
+
+  // Regression pin for the first-load pin drop: the real style reports NOT
+  // loaded in the window after the load handler attaches the source (pending
+  // source updates + settling tiles) — units arriving there must still reach
+  // the source. The update path keys on source existence, never on the
+  // style's load state; restore the old isStyleLoaded guard and this fails.
+  test("units resolving in the style-reloading window after the source attaches land in the source while the style reports not-loaded", async () => {
+    store = freshStore([unitInWard7]);
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    // `load` fires before the units fetch resolves (warm style, cold API).
+    created.styleLoaded = true;
+    created.fireLoad();
+    // REAL maplibre: the load handler's own addSource + addLayer calls
+    // re-open the style-loading window — `style.loaded()` returns false
+    // while the added source's TileManager is still settling and its
+    // `_updatedSources` entries are pending. Model that window:
+    created.styleLoaded = false;
+
+    // Units arrive INSIDE that window; the update effect runs.
+    await store.initialize();
+    await tick();
+
+    expect((created.sources.get("units-pins") as { setDataCount: number }).setDataCount).toBe(1);
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
+  });
+
+  test("units arriving in the style-reloading window and the next result-set change both reach the source", async () => {
+    store = freshStore([unitInWard7]);
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    created.styleLoaded = false; // the style-reloading window after addSource
+    await store.initialize(); // units arrive inside the window
+    await tick();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact"]);
+
+    // The user picks a filter — the next result set replaces the first.
+    store.units = [unitInWard7, unitInWard3];
+    await tick();
+    expect(pinnedUnitIds(created)).toEqual(["unit-exact", "unit-ward3"]);
+    expect((created.sources.get("units-pins") as { setDataCount: number }).setDataCount).toBe(2);
   });
 });
