@@ -10,6 +10,10 @@ The search UI SHALL present a map of unit location pins alongside the card list 
 - **WHEN** a pin or its card is hovered or selected
 - **THEN** the corresponding card and pin highlight in both directions
 
+#### Scenario: Unfiltered first load is complete
+- **WHEN** the page first loads with no filters set
+- **THEN** every available unit's pin appears on the map without requiring any interaction, consistent with the full card list shown alongside it
+
 #### Scenario: Desktop proportions use the viewport well
 - **WHEN** the page is viewed on a maximized desktop-width viewport
 - **THEN** the map pane is not a wide strip (its aspect ratio is closer to square than today's roughly 2:1), and the card list's unscrolled window shows several units rather than around three
