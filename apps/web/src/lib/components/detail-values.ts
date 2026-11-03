@@ -43,6 +43,29 @@ export function roomTypeDetailLabel(roomType: string): string {
   return roomTypeMessages[roomType] ?? m.detail_value_unknown();
 }
 
+/**
+ * Bedrooms value vocabulary: the pair (zero bedrooms, efficiency room type)
+ * presents as "Studio"; every other pair keeps the surface's numeric bedroom
+ * count, so a zero-bedroom shared-room bed stays honestly "Bedrooms: 0" on
+ * the card and "0 bedroom(s)" in the detail. Bedrooms stay 0 in the data —
+ * this mapping is presentation only.
+ */
+function isStudioPresentation(bedrooms: number, roomType: string): boolean {
+  return bedrooms === 0 && roomType === "efficiency";
+}
+
+export function cardBedroomsValue(bedrooms: number, roomType: string): string {
+  return isStudioPresentation(bedrooms, roomType)
+    ? m.bedrooms_value_studio()
+    : m.card_bedrooms({ bedrooms });
+}
+
+export function detailBedroomsValue(bedrooms: number, roomType: string): string {
+  return isStudioPresentation(bedrooms, roomType)
+    ? m.bedrooms_value_studio()
+    : m.detail_bedrooms_value({ bedrooms });
+}
+
 export function detailValueLabel(
   value: PolicyState | HousingType | LengthOfStay | Population | Gender,
 ): string {

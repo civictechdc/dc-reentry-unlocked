@@ -31,6 +31,7 @@
   "card_badge_needs_verification": "Needs verification",
   "card_ward": "Ward {ward}",
   "card_bedrooms": "Bedrooms: {bedrooms}",
+  "bedrooms_value_studio": "Studio",
   "card_cost": "${cost} per month",
   "card_housing_type": "Housing type: {type}",
   "card_room_type": "Room type",

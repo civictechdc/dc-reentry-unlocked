@@ -2,7 +2,7 @@
   import { m } from "#lib/paraglide/messages.js";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
-  import { detailValueLabel, roomTypeDetailLabel } from "./detail-values.ts";
+  import { detailBedroomsValue, detailValueLabel, roomTypeDetailLabel } from "./detail-values.ts";
 
   let { store = housingStore }: { store?: HousingStore } = $props();
 
@@ -45,7 +45,7 @@
     if (!unit) return [];
     return [
       { label: m.detail_address(), value: unit.address },
-      { label: m.detail_bedrooms(), value: m.detail_bedrooms_value({ bedrooms: unit.bedrooms }) },
+      { label: m.detail_bedrooms(), value: detailBedroomsValue(unit.bedrooms, unit.size.roomType) },
       { label: m.detail_size(), value: m.detail_size_value({ squareFeet: unit.size.squareFeet }) },
       { label: m.card_room_type(), value: roomTypeDetailLabel(unit.size.roomType) },
       { label: m.detail_cost(), value: m.detail_cost_value({ cost: unit.cost }) },

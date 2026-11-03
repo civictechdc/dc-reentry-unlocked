@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FilterDefinition, UnitCard } from "@dc-reentry/shared";
   import { m } from "#lib/paraglide/messages.js";
+  import { cardBedroomsValue } from "./detail-values.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
 
   let {
@@ -61,7 +62,7 @@
     <dl class="specs">
       <div>
         <dt class="sr-only">{m.detail_bedrooms()}</dt>
-        <dd>{m.card_bedrooms({ bedrooms: card.bedrooms })}</dd>
+        <dd>{cardBedroomsValue(card.bedrooms, card.size.roomType)}</dd>
       </div>
       <div>
         <dt class="sr-only">{m.detail_ward()}</dt>

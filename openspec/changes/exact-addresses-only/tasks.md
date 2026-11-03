@@ -17,7 +17,7 @@
 ## 4. Web (apps/web)
 
 - [x] 4.1 Remove the approximate machinery: delete `src/lib/map/ward-anchors.ts`; simplify `unitsToFeatureCollection` (no anchor fallback, no `approximate` property); remove the dashed pin style, the legend's approximate entry, the detail view's approximate qualifier, and their message keys; verify the i18n audit stays green (no dead keys), component tests pin the new shape (legend without approximate entry, every pin from unit coordinates), and existing approximate-pinning tests are removed or inverted honestly
-- [ ] 4.2 Present zero-bedroom efficiencies as "Studio": a message key mapping 0BR + efficiency on the card's bedroom line and the detail's bedrooms row (other zero-bedroom pairs keep numeric presentation — a shared-room bed is honestly "0 bedrooms"); verify component tests pin the Studio presentation and the shared-room numeric case, the i18n audit stays green, and the BDD/detail steps that count bedroom labels are updated
+- [x] 4.2 Present zero-bedroom efficiencies as "Studio": a message key mapping 0BR + efficiency on the card's bedroom line and the detail's bedrooms row (other zero-bedroom pairs keep numeric presentation — a shared-room bed is honestly "0 bedrooms"); verify component tests pin the Studio presentation and the shared-room numeric case, the i18n audit stays green, and the BDD/detail steps that count bedroom labels are updated
 - [ ] 4.3 Update the e2e/BDD layers: mobile/a11y/perf/detail specs and BDD steps that referenced approximate placement or the qualifier; verify `pnpm -C apps/web e2e` + `e2e:bdd` + `e2e:prod` all green
 
 ## 5. Docs + hygiene

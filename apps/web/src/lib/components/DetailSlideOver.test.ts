@@ -42,6 +42,38 @@ beforeEach(async () => {
 
 afterEach(() => cleanup());
 
+describe("zero-bedroom presentation vocabulary", () => {
+  test("presents a zero-bedroom efficiency as Studio in the detail bedrooms row", () => {
+    store.units = [aUnit().withId("studio-1").withBedrooms(0).build()];
+    uiState.selectedUnitId = "studio-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
+    expect(
+      within(bedroomsRow as HTMLElement).getByText(m.bedrooms_value_studio()),
+    ).toBeInTheDocument();
+    expect(
+      within(bedroomsRow as HTMLElement).queryByText(m.detail_bedrooms_value({ bedrooms: 0 })),
+    ).not.toBeInTheDocument();
+  });
+
+  test("presents a zero-bedroom shared-room as the honest numeric bedroom count in the detail bedrooms row", () => {
+    store.units = [aUnit().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build()];
+    uiState.selectedUnitId = "shared-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
+    expect(
+      within(bedroomsRow as HTMLElement).getByText(m.detail_bedrooms_value({ bedrooms: 0 })),
+    ).toBeInTheDocument();
+    expect(
+      within(bedroomsRow as HTMLElement).queryByText(m.bedrooms_value_studio()),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("unit detail slide-over", () => {
   test("renders unknown policy fields as the honest 'not publicly listed'", async () => {
     const card = aUnit()

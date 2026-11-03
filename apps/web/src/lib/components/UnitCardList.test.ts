@@ -41,6 +41,34 @@ beforeEach(async () => {
 
 afterEach(() => cleanup());
 
+describe("zero-bedroom presentation vocabulary", () => {
+  test("presents a zero-bedroom efficiency as Studio on the card", () => {
+    store.units = [aUnit().withId("studio-1").withBedrooms(0).build()];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(within(card as HTMLElement).getByText(m.bedrooms_value_studio())).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(m.card_bedrooms({ bedrooms: 0 })),
+    ).not.toBeInTheDocument();
+  });
+
+  test("presents a zero-bedroom shared-room as the honest numeric bedroom count on the card", () => {
+    store.units = [aUnit().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build()];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 0 })),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(m.bedrooms_value_studio()),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("unit card list states", () => {
   test("shows skeleton loading while nothing has loaded yet", () => {
     store.units = null;
