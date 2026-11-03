@@ -36,12 +36,31 @@ export function createMapStyle(): StyleSpecification {
 export const DC_MAP_CENTER = { lat: 38.9072, lng: -77.0369 };
 export const DC_MAP_ZOOM = 12.5;
 
+/**
+ * Street-level focus zoom for card selection: selecting a unit flies the map
+ * to that unit's pin at this zoom. Chosen from an in-app comparison of
+ * 14.5–16.5 across two wards: 16 keeps the selected building's footprint and
+ * house numbers legible while neighboring streets still give orientation —
+ * 16.5 loses the area context and 14.5–15 leave the building ambiguous. The
+ * value is deliberately a single constant so tuning it is a one-line change.
+ */
+export const CARD_FOCUS_ZOOM = 16;
+
 export const PIN_SOURCE = "units-pins";
 
 export interface PinFeatureProperties {
   id: string;
   selected: boolean;
   ward: number;
+}
+
+/**
+ * The single placement source for a unit's pin: `[longitude, latitude]` in
+ * the order MapLibre expects. Pin features and camera focus both derive
+ * from it, so a pin and the camera that flies to it can never disagree.
+ */
+export function pinCoordinatesFor(unit: UnitCard): [number, number] {
+  return [unit.coordinates.longitude, unit.coordinates.latitude];
 }
 
 /**
@@ -67,7 +86,7 @@ export function unitsToFeatureCollection(
       id: unit.id,
       geometry: {
         type: "Point",
-        coordinates: [unit.coordinates.longitude, unit.coordinates.latitude] as [number, number],
+        coordinates: pinCoordinatesFor(unit),
       },
       properties: {
         id: unit.id,

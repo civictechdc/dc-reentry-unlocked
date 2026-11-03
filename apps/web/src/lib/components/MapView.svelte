@@ -10,11 +10,13 @@
   setWorkerUrl(mapWorkerUrl);
   import {
     basePinLayerPaint,
+    CARD_FOCUS_ZOOM,
     createMapStyle,
     DC_MAP_CENTER,
     DC_MAP_ZOOM,
     highlightLayerFilter,
     highlightPinLayerPaint,
+    pinCoordinatesFor,
     PIN_SOURCE,
     unitsToFeatureCollection,
   } from "#lib/map/map-config.ts";
@@ -31,14 +33,41 @@
   let container: HTMLElement | undefined = $state();
   let map: MapLibreMap | null = null;
   let highlightedUnitId = $state<string | null>(null);
+  // Camera observability (e2e/debug hook, not user-facing): center serialized
+  // as `"<lng>,<lat>"`, zoom as a plain number string; refreshed on `moveend`.
+  let cameraCenterAttribute = $state(`${DC_MAP_CENTER.lng},${DC_MAP_CENTER.lat}`);
+  let cameraZoomAttribute = $state(String(DC_MAP_ZOOM));
 
   $effect(() => {
     if (!container || map) return;
+    // Mount-time camera: a selection pre-existing at mount (the map can be
+    // unmounted while the list tab is active) opens already focused on that
+    // unit's pin. When the selected unit is no longer in the current result
+    // set, the camera intentionally falls back to the DC default view — no
+    // pin is placed, so there is nothing to focus. Read untracked like the
+    // units snapshot below — the create effect must depend on the container
+    // only.
+    const focusedUnit = untrack(() => {
+      const selectedUnitId = uiState.selectedUnitId;
+      return (store.units ?? []).find((unit) => unit.id === selectedUnitId) ?? null;
+    });
+    const initialCenter: [number, number] = focusedUnit
+      ? pinCoordinatesFor(focusedUnit)
+      : [DC_MAP_CENTER.lng, DC_MAP_CENTER.lat];
+    const initialZoom = focusedUnit ? CARD_FOCUS_ZOOM : DC_MAP_ZOOM;
     map = new MapLibreMap({
       container,
       style: createMapStyle(),
-      center: [DC_MAP_CENTER.lng, DC_MAP_CENTER.lat],
-      zoom: DC_MAP_ZOOM,
+      center: initialCenter,
+      zoom: initialZoom,
+    });
+    cameraCenterAttribute = `${initialCenter[0]},${initialCenter[1]}`;
+    cameraZoomAttribute = String(initialZoom);
+    map.on("moveend", () => {
+      if (!map) return;
+      const center = map.getCenter();
+      cameraCenterAttribute = `${center.lng},${center.lat}`;
+      cameraZoomAttribute = String(map.getZoom());
     });
     map.on("load", () => {
       if (!map) return;
@@ -109,9 +138,38 @@
       );
     }
   });
+
+  // Focus follows EVERY selection change (card clicks, keyboard card
+  // activation, pin activation, canvas pin clicks): the camera flies to the
+  // selected unit's pin at the card-focus zoom. The units lookup stays
+  // untracked — only the selection drives this effect; a result-set change
+  // re-renders pins but never moves the camera. The mount-time value is
+  // skipped: the create effect above already opens the camera on a
+  // pre-existing selection, so no redundant flyTo fires at mount.
+  let selectionFocusPrimed = false;
+  $effect(() => {
+    const selectedUnitId = uiState.selectedUnitId;
+    if (!selectionFocusPrimed) {
+      selectionFocusPrimed = true;
+      return;
+    }
+    const unit = untrack(() =>
+      (store.units ?? []).find((candidate) => candidate.id === selectedUnitId),
+    );
+    if (!unit || !map) return;
+    map.flyTo({ center: pinCoordinatesFor(unit), zoom: CARD_FOCUS_ZOOM });
+  });
 </script>
 
-<section class="map-view" aria-label={m.map_region_label()} data-testid="map-view">
+<!-- Camera observability (e2e/debug): center as `"<lng>,<lat>"`, zoom as a
+     number string, refreshed on the map's `moveend`. -->
+<section
+  class="map-view"
+  aria-label={m.map_region_label()}
+  data-testid="map-view"
+  data-map-center={cameraCenterAttribute}
+  data-map-zoom={cameraZoomAttribute}
+>
   <div class="map-canvas" bind:this={container}></div>
   <!-- Keyboard-reachable pin selection: every unit pin has a focusable button. -->
   <ul class="sr-pins" aria-label={m.map_region_label()} data-testid="map-pin-list">

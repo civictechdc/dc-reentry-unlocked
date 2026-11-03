@@ -8,11 +8,13 @@ import { m } from "#lib/paraglide/messages.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
 import { uiState } from "#lib/state/ui-state.svelte.ts";
 import {
+  CARD_FOCUS_ZOOM,
   DC_MAP_CENTER,
   DC_MAP_ZOOM,
   highlightLayerFilter,
   OSM_ATTRIBUTION,
   OSM_TILE_URL,
+  pinCoordinatesFor,
   unitsToFeatureCollection,
 } from "#lib/map/map-config.ts";
 
@@ -44,6 +46,13 @@ const h = vi.hoisted(() => ({
     styleLoaded: boolean;
     fireLoad(): void;
     setFilterLog: unknown[];
+    flyToLog: Array<Record<string, unknown>>;
+    moveendHandlers: Array<() => void>;
+    fireMoveEnd(): void;
+    getCenter(): { lng: number; lat: number };
+    getZoom(): number;
+    currentCenter: { lng: number; lat: number };
+    currentZoom: number;
     removed: boolean;
     clickPin: (unitId: string) => void;
   }>,
@@ -69,7 +78,13 @@ vi.mock("maplibre-gl", () => {
     styleLoaded = false;
     /** Captured `load` handlers — dispatched only when the test fires them. */
     loadHandlers: Array<() => void> = [];
+    /** Captured `moveend` handlers — dispatched only when the test fires them. */
+    moveendHandlers: Array<() => void> = [];
     setFilterLog: unknown[] = [];
+    flyToLog: Array<Record<string, unknown>> = [];
+    /** Test-settable camera readouts backing `getCenter()`/`getZoom()`. */
+    currentCenter: { lng: number; lat: number } = { lng: 0, lat: 0 };
+    currentZoom = 0;
     removed = false;
     clickHandlers: unknown[] = [];
 
@@ -80,6 +95,8 @@ vi.mock("maplibre-gl", () => {
     on(event: string, a: unknown, b?: unknown): void {
       if (event === "load" && typeof a === "function") {
         this.loadHandlers.push(a as () => void);
+      } else if (event === "moveend" && typeof a === "function") {
+        this.moveendHandlers.push(a as () => void);
       } else if (event === "click" && typeof b === "function") {
         this.clickHandlers.push(b);
       }
@@ -89,6 +106,19 @@ vi.mock("maplibre-gl", () => {
       const handlers = this.loadHandlers;
       this.loadHandlers = [];
       for (const handler of handlers) handler();
+    }
+    /** Test helper: dispatch the captured `moveend` handlers (the camera settled from a move). */
+    fireMoveEnd(): void {
+      for (const handler of this.moveendHandlers) handler();
+    }
+    flyTo(options: Record<string, unknown>): void {
+      this.flyToLog.push(options);
+    }
+    getCenter(): { lng: number; lat: number } {
+      return this.currentCenter;
+    }
+    getZoom(): number {
+      return this.currentZoom;
     }
     isStyleLoaded(): boolean {
       return this.styleLoaded;
@@ -273,6 +303,11 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     expect(uiState.hoveredPinUnitId).toBe("unit-exact");
     expect(uiState.selectedUnitId).toBe("unit-exact");
     expect(created.setFilterLog.at(-1)).toEqual(highlightLayerFilter("unit-exact"));
+    // the canvas-pin click path focuses the camera exactly like card selection
+    expect(created.flyToLog.at(-1)).toEqual({
+      center: pinCoordinatesFor(unitInWard7),
+      zoom: CARD_FOCUS_ZOOM,
+    });
   });
 
   test("the keyboard pin list selects a unit (focus highlight + click opens detail)", async () => {
@@ -430,5 +465,86 @@ describe("first-load interleavings (regression pins)", () => {
     await tick();
     expect(pinnedUnitIds(created)).toEqual(["unit-exact", "unit-ward3"]);
     expect((created.sources.get("units-pins") as { setDataCount: number }).setDataCount).toBe(2);
+  });
+});
+
+describe("card selection focuses the map", () => {
+  test("selecting a unit flies the camera to its pin at the card-focus zoom", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    uiState.selectedUnitId = unitInWard7.id;
+    await tick();
+
+    expect(created.flyToLog).toEqual([
+      { center: pinCoordinatesFor(unitInWard7), zoom: CARD_FOCUS_ZOOM },
+    ]);
+  });
+
+  test("activating the unit's keyboard pin button focuses the camera identically to card selection", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    const pinButton = document.querySelector(
+      '[data-testid="map-pin-list"] button',
+    ) as HTMLButtonElement;
+    pinButton.click();
+    await tick();
+
+    expect(created.flyToLog).toEqual([
+      { center: pinCoordinatesFor(unitInWard7), zoom: CARD_FOCUS_ZOOM },
+    ]);
+  });
+
+  test("a selection pre-existing at mount opens the camera already focused on the unit's pin with no redundant flyTo", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    uiState.selectedUnitId = unitInWard7.id;
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+
+    expect(created.options.center).toEqual(pinCoordinatesFor(unitInWard7));
+    expect(created.options.zoom).toBe(CARD_FOCUS_ZOOM);
+    expect(created.flyToLog).toEqual([]);
+  });
+
+  test("no selection at mount keeps the DC default initial view", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+
+    expect(created.options.center).toEqual([DC_MAP_CENTER.lng, DC_MAP_CENTER.lat]);
+    expect(created.options.zoom).toBe(DC_MAP_ZOOM);
+    expect(created.flyToLog).toEqual([]);
+  });
+
+  test("the section reports the camera center and zoom, refreshed when the map settles from a move", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+
+    const section = document.querySelector('[data-testid="map-view"]')!;
+    expect(section.getAttribute("data-map-center")).toBe(
+      `${DC_MAP_CENTER.lng},${DC_MAP_CENTER.lat}`,
+    );
+    expect(section.getAttribute("data-map-zoom")).toBe(String(DC_MAP_ZOOM));
+
+    // The camera moved (as after a flyTo animation) and settles: moveend fires.
+    created.currentCenter = {
+      lng: unitInWard7.coordinates.longitude,
+      lat: unitInWard7.coordinates.latitude,
+    };
+    created.currentZoom = CARD_FOCUS_ZOOM;
+    created.fireMoveEnd();
+    await tick();
+
+    expect(section.getAttribute("data-map-center")).toBe(
+      `${unitInWard7.coordinates.longitude},${unitInWard7.coordinates.latitude}`,
+    );
+    expect(section.getAttribute("data-map-zoom")).toBe(String(CARD_FOCUS_ZOOM));
+  });
+
+  test("selecting a unit id absent from the result set flies nowhere", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+
+    uiState.selectedUnitId = "unit-not-in-results";
+    await tick();
+
+    expect(created.flyToLog).toEqual([]);
   });
 });
