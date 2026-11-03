@@ -1,0 +1,12 @@
+# Tasks
+
+## 1. Web (apps/web)
+
+- [ ] 1.1 Add the label substrate in `map-config.ts`: the unit's `address` as a feature property in `unitsToFeatureCollection`, the `units-pins-label` symbol-layer definition (text-only, `text-field: ["get","address"]`, offset above the pin, contrasting halo, overlap setting that cannot suppress the cue — never both `text-allow-overlap` and `text-overlap`), and a match-one/no-match filter helper pair (idle state MUST be an explicit no-match filter, never `setFilter(layer, null)`); cover the definitions and helpers with tests
+- [ ] 1.2 Wire MapView: attach the label layer in the load handler above the circles (initial filter from the CURRENT identity at attach — covers mobile remount with a live selection), introduce the shared identity `hoveredCardUnitId ?? hoveredPinUnitId ?? selectedUnitId` driving BOTH the highlight filter and the label filter (`getLayer`-guarded, no silent-drop window per the landed lifecycle invariants); upgrade the mock (`setFilter` records the target layer id and mutates that layer's stored filter; add `setLayoutProperty` logging) and add the label lifecycle tests — hover/focus appears, selection persists with focus inside the detail panel, hover precedence over selection, clear on detail close — mutation-calibrated (dropping the `?? selectedUnitId` fallback fails the persistence test; a null-filter clear fails the clear test); `pnpm -C apps/web test` + root `pnpm typecheck` + `pnpm lint` + `pnpm format:check` pass
+- [ ] 1.3 Prove it in a real browser: verify a local font renders the label at all (the style omits `glyphs` — if nothing renders, STOP and surface font options before any CSP/remote change), then verify label appear/disappear on card hover, keyboard focus, pin selection, detail close, and mobile map remount with a selection; check the label never occludes the card list (SC 1.4.13) and the halo keeps text contrast; `pnpm -C apps/web e2e` + `e2e:bdd` + `e2e:prod` green
+
+## Workflow follow-up
+
+- After all tasks complete: run code review per project policy, resolve findings, then archive the change (`openspec archive`) and verify the archived specs — re-run `openspec validate --all --strict` first: `housing-search-ui` deltas also exist in active `map-aspect-ratio` (and `card-map-focus` will add more), so sync order matters.
+- Land AFTER or TOGETHER WITH `card-map-focus` (shared MapView/map-config/test files; this change assumes its selection lifecycle).
