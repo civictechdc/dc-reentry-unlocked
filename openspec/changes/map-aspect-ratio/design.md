@@ -35,6 +35,16 @@ work: the criteria are the proportions and the visible-card count, verified
 visually in a live session; component tests pin structure (grid/proportion
 rules present, no regression to `1fr` stretch), not pixel snapshots.
 
+**D5 — Size-class map confirmed with the user before mid-width work.**
+Known today: mobile = tabbed list-first with conditional map mount; desktop
+= grid `1fr` + fixed list column. Unknown/unverified: mid-widths (tablet
+portrait/landscape, narrow laptop) and mobile verification of the current
+build. The survey task renders every size class on the running stack,
+records what each does today, proposes a preferred form per class, and the
+user confirms the set; the confirmed set is written into this change's spec
+delta before any mid-width implementation. The desktop proportions fix
+(D1–D4) proceeds regardless and must not break the confirmed mobile form.
+
 ## Risks / Trade-offs
 
 - [Taste] "Square-like" is a product-voice call; wrong-guess cost is one

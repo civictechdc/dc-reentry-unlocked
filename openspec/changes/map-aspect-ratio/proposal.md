@@ -8,7 +8,7 @@ User bug report (walkthrough of the running app, 2026-11-03): on a maximized des
 
 - Desktop layout proportions in `apps/web/src/routes/+page.svelte`: the map pane renders closer to a square-like aspect ratio on wide viewports (today it takes `1fr` beside a fixed `minmax(22rem, 26rem)` list column, giving roughly 2:1 width:height when maximized)
 - The card list's visible scroll window grows accordingly (target: comfortably more than ~3 cards visible on a maximized desktop viewport; exact count validated in a live walkthrough)
-- Mobile layout (tabbed, list-first) is untouched
+- A responsive survey and preferred-layout confirmation: verify current behavior on mobile and across window sizes (phone / narrow tablet / wide tablet / narrow laptop / maximized desktop), confirm the preferred layout for each size class with the user, and encode the confirmed set — mobile's tabbed list-first behavior stays unless the confirmed preferences change it
 
 ## Capabilities
 
