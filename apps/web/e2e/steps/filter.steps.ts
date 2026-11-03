@@ -56,16 +56,19 @@ When("the active filters match zero units", async ({ page }: { page: Page }) => 
   await openApp(page);
   await expectResultsLoaded(page);
   // The synthetic corpus is deliberately dense — two-way selections always
-  // match. The minimal zero-match combination (byte-frozen dataset, verified
-  // against the API: /units?housing-type=emergency-shelter&population=families&sobriety=yes&ward=6
-  // -> zero rows): no unit is both an emergency shelter and a family-housing
-  // sobriety-gated program in ward 6.
+  // match, and enum selections also match not-publicly-listed values (the
+  // unknown-matches-every-selection honesty rule), so only stacked
+  // boolean-yes requirements narrow hard. The minimal zero-match combination
+  // (byte-frozen dataset, verified against the API:
+  // /units?housing-type=emergency-shelter&population=families&referral-required=yes&ward=6
+  // -> zero rows): no referral-required, emergency-shelter-or-unlisted
+  // family program exists in ward 6.
   await page.selectOption("#filter-housing-type", { label: "Emergency shelter" });
   await page.selectOption("#filter-population", { label: "Families" });
   await page
     .locator(".filter-bar")
     .locator(".control-boolean")
-    .filter({ hasText: "Sobriety required" })
+    .filter({ hasText: "Referral required" })
     .getByRole("button", { name: "Yes" })
     .click();
   await page.locator(".filter-bar").getByRole("button", { name: "Ward 6" }).click();
