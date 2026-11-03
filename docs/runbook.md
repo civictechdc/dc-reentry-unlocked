@@ -30,7 +30,7 @@ curl -sS "http://localhost:3000/units" | node -e "let s='';process.stdin.on('dat
 ```
 
 The health endpoint answers `{"status":"ok"}` and the units count prints the
-available-unit total (919 with the frozen dataset at the time of writing).
+available-unit total (932 with the current frozen dataset).
 
 Stopping: interrupt `pnpm dev` in its terminal (Ctrl-C). On some platforms
 killing the parent processes can leave the API's TypeScript server child

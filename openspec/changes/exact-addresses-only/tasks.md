@@ -22,7 +22,7 @@
 
 ## 5. Docs + hygiene
 
-- [ ] 5.1 Update committed docs and the skill for the exact-only world: `docs/glossary.md` (remove the location-precision term), `docs/data-synthetic.md` (no approximate share; v2 dataset), `docs/api.md` (card field list), the data-model-reference skill's contract description, `docs/architecture.md` diagram if it names precision; verify the hygiene grep stays clean and every documented command still runs as written
+- [x] 5.1 Update committed docs and the skill for the exact-only world: `docs/glossary.md` (remove the location-precision term), `docs/data-synthetic.md` (no approximate share; v2 dataset), `docs/api.md` (card field list), the data-model-reference skill's contract description, `docs/architecture.md` diagram if it names precision; verify the hygiene grep stays clean and every documented command still runs as written
 - [ ] 5.2 Verify the planned `card-map-focus` change (amended during this change's planning) carries no approximate/ward-anchor references and remains coherent with the exact-only world; verify `openspec validate --all --strict` passes with both changes planned
 
 ## Workflow follow-up
