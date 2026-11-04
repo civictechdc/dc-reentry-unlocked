@@ -50,6 +50,7 @@ export const PIN_SOURCE = "units-pins";
 
 export interface PinFeatureProperties {
   id: string;
+  address: string;
   selected: boolean;
   ward: number;
 }
@@ -90,6 +91,7 @@ export function unitsToFeatureCollection(
       },
       properties: {
         id: unit.id,
+        address: unit.address,
         selected: unit.id === selectedUnitId,
         ward: unit.ward,
       },
@@ -133,5 +135,45 @@ export function pinSourceDefinition(): {
 
 /** Filter expression of the highlight layer: the pin of one unit only. */
 export function highlightLayerFilter(unitId: string | null): unknown[] {
+  return ["==", ["get", "id"], unitId ?? ""];
+}
+
+/**
+ * Text-only symbol layer that labels each pin with its unit's address. The
+ * label lives above the pin (positive y offsets push text down in MapLibre,
+ * so a negative y places it over the pin's top), and `text-allow-overlap`
+ * keeps collision detection from ever suppressing a label. Only the halo
+ * pair (`text-halo-color` + `text-halo-width`) separates the text from the
+ * tiles underneath — `text-overlap` is intentionally never set, because the
+ * two overlap options fight each other. The caller supplies the initial
+ * filter (an explicit no-match filter when idle) so the layer can be added
+ * to the style without immediately labeling anything.
+ */
+export function pinLabelLayerDefinition(initialFilter: unknown[]): Record<string, unknown> {
+  return {
+    id: "units-pins-label",
+    type: "symbol",
+    source: PIN_SOURCE,
+    layout: {
+      "text-field": ["get", "address"],
+      "text-offset": [0, -1.1],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "#1f2937",
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.8,
+    },
+    filter: initialFilter,
+  };
+}
+
+/**
+ * Filter expression of the label layer: the label of one unit only while a
+ * unit is active, and an explicit no-match expression when idle. An empty
+ * id is used for "matches nothing" instead of handing MapLibre a null
+ * filter — clearing the filter would label every pin on the map.
+ */
+export function pinLabelLayerFilter(unitId: string | null): unknown[] {
   return ["==", ["get", "id"], unitId ?? ""];
 }

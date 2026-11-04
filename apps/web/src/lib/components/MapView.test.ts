@@ -15,6 +15,7 @@ import {
   OSM_ATTRIBUTION,
   OSM_TILE_URL,
   pinCoordinatesFor,
+  pinLabelLayerFilter,
   unitsToFeatureCollection,
 } from "#lib/map/map-config.ts";
 
@@ -46,6 +47,7 @@ const h = vi.hoisted(() => ({
     styleLoaded: boolean;
     fireLoad(): void;
     setFilterLog: unknown[];
+    setLayoutPropertyLog: unknown[];
     flyToLog: Array<Record<string, unknown>>;
     moveendHandlers: Array<() => void>;
     fireMoveEnd(): void;
@@ -80,7 +82,10 @@ vi.mock("maplibre-gl", () => {
     loadHandlers: Array<() => void> = [];
     /** Captured `moveend` handlers — dispatched only when the test fires them. */
     moveendHandlers: Array<() => void> = [];
+    /** Filter changes: the target layer id recorded together with the filter. */
     setFilterLog: unknown[] = [];
+    /** Layout mutations: layer id, property, value — never silently swallowed. */
+    setLayoutPropertyLog: unknown[] = [];
     flyToLog: Array<Record<string, unknown>> = [];
     /** Test-settable camera readouts backing `getCenter()`/`getZoom()`. */
     currentCenter: { lng: number; lat: number } = { lng: 0, lat: 0 };
@@ -135,8 +140,14 @@ vi.mock("maplibre-gl", () => {
     addLayer(layer: Record<string, unknown>): void {
       this.layers.push(layer);
     }
-    setFilter(_id: string, filter: unknown): void {
-      this.setFilterLog.push(filter);
+    setFilter(id: string, filter: unknown): void {
+      this.setFilterLog.push({ layerId: id, filter });
+      // The stored layer reflects the latest call, like the real map.
+      const layer = this.layers.find((candidate) => candidate.id === id);
+      if (layer) layer.filter = filter;
+    }
+    setLayoutProperty(id: string, property: string, value: unknown): void {
+      this.setLayoutPropertyLog.push({ layerId: id, property, value });
     }
     remove(): void {
       this.removed = true;
@@ -201,6 +212,12 @@ function pinnedUnitIds(created: { sources: Map<string, { data: unknown }> }): st
     typeof unitsToFeatureCollection
   >;
   return collection.features.map((feature) => feature.properties.id);
+}
+
+/** The filter of the last `setFilter` call aimed at one layer. */
+function lastFilterFor(created: { setFilterLog: unknown[] }, layerId: string): unknown {
+  const entries = created.setFilterLog as Array<{ layerId: string; filter: unknown }>;
+  return entries.filter((entry) => entry.layerId === layerId).at(-1)?.filter;
 }
 
 afterEach(() => {
@@ -291,7 +308,9 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     uiState.hoveredCardUnitId = "unit-exact";
     await tick();
     const created = h.instances.at(0)!;
-    expect(created.setFilterLog.at(-1)).toEqual(highlightLayerFilter("unit-exact"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-exact"),
+    );
   });
 
   test("clicking a map pin highlights its CARD and opens the detail", async () => {
@@ -302,7 +321,9 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
 
     expect(uiState.hoveredPinUnitId).toBe("unit-exact");
     expect(uiState.selectedUnitId).toBe("unit-exact");
-    expect(created.setFilterLog.at(-1)).toEqual(highlightLayerFilter("unit-exact"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-exact"),
+    );
     // the canvas-pin click path focuses the camera exactly like card selection
     expect(created.flyToLog.at(-1)).toEqual({
       center: pinCoordinatesFor(unitInWard7),
@@ -349,6 +370,119 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     const created = h.instances.at(0)!;
     mounted.unmount();
     expect(created.removed).toBe(true);
+  });
+});
+
+describe("address label lifecycle", () => {
+  test("hovering a card moves both the highlight filter and the label filter to that unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-ward3"),
+    );
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("hovering a canvas pin moves both the highlight filter and the label filter to that unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    uiState.hoveredPinUnitId = "unit-ward3";
+    await tick();
+
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-ward3"),
+    );
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+    // the stored label layer mirrors the latest call, like the real map
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("the label layer attaches above both pin circle layers so labels paint over the circles", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    const layerIds = created.layers.map((layer) => layer.id);
+    const labelIndex = layerIds.indexOf("units-pins-label");
+    expect(labelIndex).toBeGreaterThan(layerIds.indexOf("units-pins-base"));
+    expect(labelIndex).toBeGreaterThan(layerIds.indexOf("units-pins-highlight"));
+  });
+
+  test("an open detail with no hover keeps both filters on the selected unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    uiState.selectedUnitId = "unit-ward3";
+    await tick();
+
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-ward3"),
+    );
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+    // the stored layer mirrors the latest call, like the real map
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("a card hover overrides the open selection's filters and clearing the hover restores the selection", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    uiState.selectedUnitId = "unit-exact";
+    await tick();
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-ward3"),
+    );
+
+    uiState.hoveredCardUnitId = null;
+    await tick();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-exact"),
+    );
+  });
+
+  test("closing the detail filters the label layer to the explicit no-match and never null", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+
+    uiState.selectedUnitId = "unit-exact";
+    await tick();
+    uiState.selectedUnitId = null;
+    uiState.hoveredPinUnitId = null;
+    uiState.hoveredCardUnitId = null;
+    await tick();
+
+    const labelEntries = (
+      created.setFilterLog as Array<{ layerId: string; filter: unknown }>
+    ).filter((entry) => entry.layerId === "units-pins-label");
+    expect(labelEntries.length).toBeGreaterThan(0);
+    for (const entry of labelEntries) {
+      expect(entry.filter).not.toBeNull();
+      expect(Array.isArray(entry.filter)).toBe(true);
+    }
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(null));
+  });
+
+  test("a remount while a selection is live attaches the label layer already filtered to that unit", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    uiState.selectedUnitId = unitInWard7.id;
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer).toBeTruthy();
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(unitInWard7.id));
+    expect(labelLayer?.type).toBe("symbol");
   });
 });
 

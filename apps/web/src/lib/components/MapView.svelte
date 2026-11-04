@@ -18,6 +18,8 @@
     highlightPinLayerPaint,
     pinCoordinatesFor,
     PIN_SOURCE,
+    pinLabelLayerDefinition,
+    pinLabelLayerFilter,
     unitsToFeatureCollection,
   } from "#lib/map/map-config.ts";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
@@ -26,9 +28,9 @@
   let { store = housingStore }: { store?: HousingStore } = $props();
 
   /**
-   * MapLibre thin wrapper: GeoJSON circle-layer pins only (no per-pin DOM
-   * markers), OSM raster tiles with the required attribution, and pin↔card
-   * cross-highlighting in both directions.
+   * MapLibre thin wrapper: GeoJSON circle-layer pins with a shared
+   * address-label layer (no per-pin DOM markers), OSM raster tiles with the
+   * required attribution, and pin↔card cross-highlighting in both directions.
    */
   let container: HTMLElement | undefined = $state();
   let map: MapLibreMap | null = null;
@@ -93,6 +95,14 @@
         paint: highlightPinLayerPaint(),
         filter: highlightLayerFilter(highlightedUnitId) as FilterSpecification,
       } as AddLayerObject);
+      // The address labels ride the same pin source, attached above both
+      // circle layers so the text renders over the pins. The initial filter
+      // is the identity live at attach time: the identity state above is
+      // synced before `load` can fire, so a remount with the detail open
+      // starts labeled on the selected unit instead of briefly unlabeled.
+      map.addLayer(
+        pinLabelLayerDefinition(pinLabelLayerFilter(highlightedUnitId)) as AddLayerObject,
+      );
       map.on("click", "units-pins-base", (event) => {
         const id = event.features?.[0]?.properties?.id as string | undefined;
         if (id) {
@@ -126,15 +136,26 @@
     if (source) source.setData(data);
   });
 
-  // The highlight filter follows the card hover/focus and pin selection.
+  // ONE shared highlight identity drives both the highlight circle layer and
+  // the address-label layer: card hover/focus wins while active (including
+  // the keyboard pin-button focus path), the canvas-pin hover next, and the
+  // selection persists as the fallback — with the detail open and no hover,
+  // the selected unit stays highlighted and labeled until the detail closes.
   // Layer existence, not style-load state: setFilter on a not-yet-attached
-  // layer throws, and the layer appears exactly when the load handler runs.
+  // layer throws, and the layers appear exactly when the load handler runs.
   $effect(() => {
-    highlightedUnitId = uiState.hoveredCardUnitId ?? uiState.hoveredPinUnitId;
+    highlightedUnitId =
+      uiState.hoveredCardUnitId ?? uiState.hoveredPinUnitId ?? uiState.selectedUnitId;
     if (map?.getLayer("units-pins-highlight")) {
       map.setFilter(
         "units-pins-highlight",
         highlightLayerFilter(highlightedUnitId) as FilterSpecification | null,
+      );
+    }
+    if (map?.getLayer("units-pins-label")) {
+      map.setFilter(
+        "units-pins-label",
+        pinLabelLayerFilter(highlightedUnitId) as FilterSpecification | null,
       );
     }
   });
