@@ -11,3 +11,13 @@
 ## Workflow follow-up
 
 - After all tasks complete: run code review + adversarial security review per project policy, resolve findings, then archive this change (`openspec archive`) and verify the archived specs.
+
+## Follow-up notes (recorded 2026-11-04, out of scope for this change)
+
+Both items surfaced during this change's verification; neither is part of its specified behavior, and neither blocks archiving.
+
+1. **Mobile pointer path to the mount-focus flow is blocked by product geometry (pre-existing).**
+   On phone width, selecting a card opens the full-screen bottom sheet, which covers the tab row; closing the sheet clears the selection, so a pointer user cannot switch to the Map tab with a selection alive — only keyboard tab activation reaches the mount-focused view (the e2e covers the keyboard path). Candidate follow-up change; the planned `pin-selection-label` change already touches the adjacent selection-persists-while-detail-open surface.
+
+2. **Dev e2e contention headroom (pre-existing, infra-only).**
+   perf.spec's 2 s "applying a filter re-renders pins fast" guard and the a11y axe scan have thin headroom under the dev suite's default parallel workers: observed 1.5–3.3 s filter-latency runs and one axe 60 s evaluate timeout under machine load, versus 518 ms and clean passes when isolated or serial. CI's `e2e:ci` matrix uses `workers: 2` against the Compose production boot — a different environment from the dev suite. Consider serial local dev e2e runs or added headroom as separate housekeeping.
