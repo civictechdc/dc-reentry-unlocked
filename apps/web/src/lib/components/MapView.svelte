@@ -18,6 +18,9 @@
     highlightPinLayerPaint,
     pinCoordinatesFor,
     PIN_SOURCE,
+    PIN_LABEL_BUBBLE_IMAGE_ID,
+    pinLabelBubbleImage,
+    pinLabelBubbleImageMetadata,
     pinLabelLayerDefinition,
     pinLabelLayerFilter,
     unitsToFeatureCollection,
@@ -96,10 +99,17 @@
         filter: highlightLayerFilter(highlightedUnitId) as FilterSpecification,
       } as AddLayerObject);
       // The address labels ride the same pin source, attached above both
-      // circle layers so the text renders over the pins. The initial filter
-      // is the identity live at attach time: the identity state above is
-      // synced before `load` can fire, so a remount with the detail open
+      // circle layers so bubble and text render over the pins. The bubble
+      // bitmap registers first — a symbol layer referencing an unregistered
+      // image draws nothing — with its stretch/content metadata passed
+      // through the PUBLIC addImage's options argument: the runtime reads
+      // pixelRatio/sdf/stretchX/stretchY/content from the options only and
+      // takes just {width, height, data} from the image object, so metadata
+      // inside the image object would never reach the renderer. The initial
+      // filter is the identity live at attach time: the identity state above
+      // is synced before `load` can fire, so a remount with the detail open
       // starts labeled on the selected unit instead of briefly unlabeled.
+      map.addImage(PIN_LABEL_BUBBLE_IMAGE_ID, pinLabelBubbleImage(), pinLabelBubbleImageMetadata());
       map.addLayer(
         pinLabelLayerDefinition(pinLabelLayerFilter(highlightedUnitId)) as AddLayerObject,
       );

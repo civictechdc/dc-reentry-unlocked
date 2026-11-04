@@ -48,6 +48,13 @@ const h = vi.hoisted(() => ({
     fireLoad(): void;
     setFilterLog: unknown[];
     setLayoutPropertyLog: unknown[];
+    addImageLog: Array<{
+      id: string;
+      seq: number;
+      image: Record<string, unknown>;
+      options: Record<string, unknown> | null;
+    }>;
+    addLayerLog: Array<{ id: string; seq: number }>;
     flyToLog: Array<Record<string, unknown>>;
     moveendHandlers: Array<() => void>;
     fireMoveEnd(): void;
@@ -86,6 +93,16 @@ vi.mock("maplibre-gl", () => {
     setFilterLog: unknown[] = [];
     /** Layout mutations: layer id, property, value — never silently swallowed. */
     setLayoutPropertyLog: unknown[] = [];
+    /** Registered images with a sequence number for add-order proofs. */
+    addImageLog: Array<{
+      id: string;
+      seq: number;
+      image: Record<string, unknown>;
+      options: Record<string, unknown> | null;
+    }> = [];
+    /** Added layers with the same sequence counter — ordering is assertable. */
+    addLayerLog: Array<{ id: string; seq: number }> = [];
+    callSeq = 0;
     flyToLog: Array<Record<string, unknown>> = [];
     /** Test-settable camera readouts backing `getCenter()`/`getZoom()`. */
     currentCenter: { lng: number; lat: number } = { lng: 0, lat: 0 };
@@ -139,6 +156,10 @@ vi.mock("maplibre-gl", () => {
     }
     addLayer(layer: Record<string, unknown>): void {
       this.layers.push(layer);
+      this.addLayerLog.push({ id: layer.id as string, seq: ++this.callSeq });
+    }
+    addImage(id: string, image: Record<string, unknown>, options?: Record<string, unknown>): void {
+      this.addImageLog.push({ id, seq: ++this.callSeq, image, options: options ?? null });
     }
     setFilter(id: string, filter: unknown): void {
       this.setFilterLog.push({ layerId: id, filter });
@@ -483,6 +504,31 @@ describe("address label lifecycle", () => {
     expect(labelLayer).toBeTruthy();
     expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(unitInWard7.id));
     expect(labelLayer?.type).toBe("symbol");
+  });
+
+  test("the bubble image and its metadata reach the public addImage with the right shapes", async () => {
+    await mountedMapWithResolvedUnits([unitInWard7]);
+
+    const created = h.instances.at(0)!;
+    const imageEntry = created.addImageLog.find((entry) => entry.id === "pin-label-bubble");
+    const labelLayerEntry = created.addLayerLog.find((entry) => entry.id === "units-pins-label");
+    expect(imageEntry, "the bubble bitmap is registered").toBeTruthy();
+    expect(labelLayerEntry, "the label layer is attached").toBeTruthy();
+    // a symbol layer referencing an unregistered image draws nothing
+    expect(imageEntry!.seq).toBeLessThan(labelLayerEntry!.seq);
+    // argument fidelity to the PUBLIC addImage signature: the image object
+    // carries geometry and bytes only; the metadata travels in the options
+    expect(Object.keys(imageEntry!.image).sort()).toEqual(["data", "height", "width"]);
+    expect(imageEntry!.image.data).toBeInstanceOf(Uint8Array);
+    const options = imageEntry!.options as Record<string, unknown>;
+    expect(options.pixelRatio).toBe(2);
+    expect(options.sdf).toBe(false);
+    expect(options.stretchX).toEqual([
+      [10, 29],
+      [58, 77],
+    ]);
+    expect(options.stretchY).toEqual([[8, 24]]);
+    expect(options.content).toEqual([10, 8, 78, 28]);
   });
 });
 

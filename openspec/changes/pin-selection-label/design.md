@@ -84,6 +84,38 @@ identity at load. Mutation-calibrate: (a) dropping the `?? selectedUnitId`
 fallback must fail the persistence scenario; (b) a `null`-filter clear must
 fail the clear scenario (filter must be no-match).
 
+**D9 — Speech-bubble label background via a runtime stretchable icon.** The
+bare-text label can clash with map tiles, so the label sits inside a white
+bubble shape with a small centered tail pointing down at the pin. No style-spec
+property paints a background behind text (halo only), and a DOM overlay stays
+rejected (D1) — the bubble is a second runtime-registered image on the SAME
+symbol layer: a procedurally generated RGBA bitmap (typed-array math, no
+canvas, jsdom-testable) registered through the PUBLIC `Map.addImage`, whose
+third argument (`options`) carries the metadata the runtime actually reads —
+`pixelRatio`, `sdf`, `stretchX`, `stretchY`, `content` (the image argument
+itself contributes only `width/height/data`; metadata inside the image object
+is silently ignored). `stretchX` bands flank a FIXED center column (the tail
+never smears), one `stretchY` band in the bubble body, `content` = interior
+text box; the layer sets `icon-image` + `icon-text-fit: "both"` +
+`icon-text-fit-padding` so the bubble sizes to the text. Under the fit,
+`icon-anchor`/`icon-offset` proved inert — placement is tuned through
+`text-offset` (empirically verified in the browser e2e). Solid bubble fill
+replaces the halo paint (dropped). Overlap controls cover BOTH parts
+(`icon-allow-overlap` alongside the existing `text-allow-overlap`). The
+tail-on-pin proof is owned by the browser e2e (pixel assertions: ink inside
+white bubble, bubble above the highlight ring, white tail between).
+
+**D10 — Label text: street + ZIP, city/state trimmed structurally.** Feature
+data carries a derived label string consumed by `text-field` — the full
+address stays on cards, detail, and the sr-pin aria-labels. The derivation is
+STRUCTURAL, not literal: parse the trailing `", <city>, <state> <ZIP>"`
+segment shape (comma-separated tail whose last part is a state/ZIP form) and
+rebuild as `<street> , <ZIP>` — no city name or state code is hardcoded, so a
+future city expansion (none yet) needs no code change. An address whose
+structure is not recognized renders unchanged rather than blank (unknown
+honesty for future data); the recognized-shape rule lives in one tested
+helper with table-driven cases.
+
 ## Risks / Trade-offs
 
 - [card-map-focus overlap] Same files (`MapView.svelte`, `map-config.ts`,

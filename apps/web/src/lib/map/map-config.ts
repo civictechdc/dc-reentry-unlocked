@@ -48,11 +48,35 @@ export const CARD_FOCUS_ZOOM = 16;
 
 export const PIN_SOURCE = "units-pins";
 
+/** Id the label bubble image is registered under on the GL map. */
+export const PIN_LABEL_BUBBLE_IMAGE_ID = "pin-label-bubble";
+
 export interface PinFeatureProperties {
   id: string;
   address: string;
+  addressLabel: string;
   selected: boolean;
   ward: number;
+}
+
+/**
+ * Structurally trimmed pin-label text: a `<street>, <city>, <SS> <ZIP>` shape
+ * (uppercase two-letter state code, five-digit ZIP, optional +4) collapses to
+ * `<street>, <ZIP>` — the city name is noise at pin-label size. Anything else
+ * passes through UNCHANGED, never blank: a lowercase state code is not
+ * trusted as a state (USPS abbreviations are uppercase), and an address
+ * without a trailing `<state> <ZIP>` segment is already as short as the rule
+ * could make it. Future cities therefore need no code change, and the card
+ * list, detail, and screen-reader pins keep the full address regardless.
+ */
+export function pinLabelText(address: string): string {
+  const segments = address.split(",").map((segment) => segment.trim());
+  if (segments.length < 3) return address;
+  const zip = /^([A-Z]{2}) (\d{5}(?:-\d{4})?)$/.exec(segments.at(-1)!)?.[2];
+  if (!zip) return address;
+  const street = segments.slice(0, -2).join(", ");
+  if (street.length === 0) return address;
+  return `${street}, ${zip}`;
 }
 
 /**
@@ -92,6 +116,7 @@ export function unitsToFeatureCollection(
       properties: {
         id: unit.id,
         address: unit.address,
+        addressLabel: pinLabelText(unit.address),
         selected: unit.id === selectedUnitId,
         ward: unit.ward,
       },
@@ -139,15 +164,135 @@ export function highlightLayerFilter(unitId: string | null): unknown[] {
 }
 
 /**
- * Text-only symbol layer that labels each pin with its unit's address. The
- * label lives above the pin (positive y offsets push text down in MapLibre,
- * so a negative y places it over the pin's top), and `text-allow-overlap`
- * keeps collision detection from ever suppressing a label. Only the halo
- * pair (`text-halo-color` + `text-halo-width`) separates the text from the
- * tiles underneath — `text-overlap` is intentionally never set, because the
- * two overlap options fight each other. The caller supplies the initial
- * filter (an explicit no-match filter when idle) so the layer can be added
- * to the style without immediately labeling anything.
+ * The label speech bubble bitmap, procedurally drawn at 2x resolution
+ * (pixelRatio 2, crisp on retina) as pure typed-array math — no canvas, no
+ * DOM, so it also runs in jsdom. White body, subtle gray border on the
+ * straight edges AND the rounded-corner arcs, and a small tail pointing
+ * DOWN toward the pin. Register it together with
+ * {@link pinLabelBubbleImageMetadata}. Data must be Uint8Array:
+ * texImage2D rejects Uint8ClampedArray in some browsers.
+ */
+export function pinLabelBubbleImage(): {
+  width: number;
+  height: number;
+  data: Uint8Array;
+} {
+  // All constants are 2x pixel units (pixelRatio 2). At 1x: 44×23 bubble,
+  // 16px body, 7px tail, 4px corner radius, 1px border.
+  const width = 88;
+  const bodyHeight = 32;
+  const height = 46;
+  const radius = 8;
+  const border = 2;
+  // Tail: centered on the image, tapering from a 24px-wide top to a tip.
+  const tailTop = bodyHeight;
+  const tailHalfTop = 12;
+  const center = (width - 1) / 2;
+
+  const data = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      let alpha = 0;
+      if (y < bodyHeight) {
+        // Rounded-rect body: corner mask keeps the four corners transparent.
+        const dx = Math.max(radius - x, x - (width - 1 - radius), 0);
+        const dy = Math.max(radius - y, y - (bodyHeight - 1 - radius), 0);
+        if (dx * dx + dy * dy <= radius * radius) {
+          // Border on the straight edges and on the rounded-corner arc ring
+          // (pixels just inside the arc edge), so corners get the same
+          // subtle gray frame the straight edges get.
+          const onBorder =
+            x < border ||
+            x >= width - border ||
+            y < border ||
+            y >= bodyHeight - border ||
+            dx * dx + dy * dy > (radius - border) * (radius - border);
+          alpha = 255;
+          if (onBorder) {
+            // Subtle gray border.
+            data[i] = 204;
+            data[i + 1] = 204;
+            data[i + 2] = 204;
+          } else {
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+          }
+        }
+      } else {
+        // Tail: triangle narrowing downward, kept strictly inside the fixed
+        // center column so horizontal stretching can never smear it.
+        const remaining = height - 1 - y;
+        const half = Math.max((tailHalfTop * remaining) / (height - 1 - tailTop), 0.6);
+        if (Math.abs(x - center) <= half) {
+          alpha = 255;
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+        }
+      }
+      data[i + 3] = alpha;
+    }
+  }
+
+  return { width, height, data };
+}
+
+/**
+ * The stretch/content registration metadata for the bubble bitmap, passed
+ * through the options argument of the PUBLIC `Map.addImage(id, image,
+ * options)`: the runtime takes only `{width, height, data}` from the image
+ * object and reads `pixelRatio`/`sdf`/`stretchX`/`stretchY`/`content` from
+ * the options — metadata placed inside the image object would silently
+ * never reach the renderer (the bubble would stretch wholesale: smeared
+ * tail, elliptical corners, growing border, pixelRatio 1). `stretchX` holds
+ * TWO bands flanking a fixed center column that contains the tail (the
+ * tail can never smear horizontally), `stretchY` holds ONE band in the body
+ * above the tail rows (the height stretches for wrapped text; the tail
+ * rows can never stretch), and `content` marks the interior text box.
+ */
+export function pinLabelBubbleImageMetadata(): {
+  pixelRatio: number;
+  sdf: false;
+  stretchX: Array<[number, number]>;
+  stretchY: Array<[number, number]>;
+  content: [number, number, number, number];
+} {
+  return {
+    pixelRatio: 2,
+    sdf: false,
+    // Two horizontal bands flank the fixed center column (columns 30..57)
+    // that contains the tail's full span.
+    stretchX: [
+      [10, 29],
+      [58, 77],
+    ],
+    // One vertical band in the body above the tail rows: the height
+    // stretches with wrapped text; the 7 bitmap rows above the tail
+    // (rows 25..31, i.e. 3.5px at 1x with pixelRatio 2) and the tail
+    // itself stay fixed.
+    stretchY: [[8, 24]],
+    // The interior text box spans the stretchable interior across the center.
+    content: [10, 8, 78, 28],
+  };
+}
+
+/**
+ * Text-on-bubble symbol layer: the procedurally drawn speech bubble is
+ * stretched behind the address text on the SAME layer (`icon-text-fit`
+ * "both"), so the opaque bubble separates the text from the tiles and the
+ * halo paint is gone. Both allow-overlap flags stay on so collision
+ * detection can never suppress the cue; the sibling `*-overlap` options are
+ * intentionally never set because the two overlap mechanisms fight each
+ * other. Placement is empirical (the fitted composite's anchor semantics
+ * are not style-spec-guaranteed): measured in the real browser, the fitted
+ * bubble centers on the anchor point and `icon-anchor`/`icon-offset` proved
+ * inert under the fit — the bubble simply covered the pin — so the
+ * composite is lifted by `text-offset` instead, putting the ink above the
+ * ring with the tail reaching into the pin's top. The caller supplies the
+ * initial filter (an explicit no-match filter when idle) so the layer can
+ * be added to the style without labeling anything.
  */
 export function pinLabelLayerDefinition(initialFilter: unknown[]): Record<string, unknown> {
   return {
@@ -155,14 +300,17 @@ export function pinLabelLayerDefinition(initialFilter: unknown[]): Record<string
     type: "symbol",
     source: PIN_SOURCE,
     layout: {
-      "text-field": ["get", "address"],
-      "text-offset": [0, -1.1],
+      "icon-image": PIN_LABEL_BUBBLE_IMAGE_ID,
+      "icon-text-fit": "both",
+      "icon-text-fit-padding": [8, 12, 8, 12],
+      "text-field": ["get", "addressLabel"],
+      "text-offset": [0, -1.4],
+      "text-max-width": 18,
+      "icon-allow-overlap": true,
       "text-allow-overlap": true,
     },
     paint: {
       "text-color": "#1f2937",
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 1.8,
     },
     filter: initialFilter,
   };

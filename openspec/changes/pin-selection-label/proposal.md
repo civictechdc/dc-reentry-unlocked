@@ -11,18 +11,21 @@ map cue entirely once the detail panel takes focus.
 
 ## What Changes
 
-- Add a text label (the unit's address) that appears on the map pin whenever
-  that unit is the active highlight target — card hover/focus, pin hover, or
-  selection — and disappears when the unit is no longer active (blur, hover
-  moving elsewhere, detail close/deselect)
+- Add a text label that appears on the map pin whenever that unit is the
+  active highlight target — card hover/focus, pin hover, or selection — and
+  disappears when the unit is no longer active (blur, hover moving elsewhere,
+  detail close/deselect). The label shows the unit's street address and ZIP
+  code (city/state segment trimmed, derived structurally so other cities need
+  no code change) and sits inside a speech-bubble shape with a small tail
+  pointing at the pin, just above the pin icon
 - Extend the highlight identity to include selection as the fallback after
   hover/focus (`hoveredCard ?? hoveredPin ?? selected`), so a selected unit
   keeps BOTH its colour highlight and its label while the detail panel is
   open — aligning the implementation with the existing cross-highlighting
   scenario, which already says selection highlights the pin
-- Implement as a text-only symbol layer over the existing shared GeoJSON
-  source, driven by a single-feature filter (no per-hover source rewrites, no
-  DOM overlay path)
+- Implement as a symbol layer over the existing shared GeoJSON source (the
+  label background a runtime stretchable icon sized to the text), driven by a
+  single-feature filter (no per-hover source rewrites, no DOM overlay path)
 - No new user-facing strings: the label text is the unit's address, already
   domain data rendered on cards and exposed to screen readers via the
   existing pin buttons
