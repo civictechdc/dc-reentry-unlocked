@@ -527,8 +527,8 @@ describe("address label lifecycle", () => {
       [10, 29],
       [58, 77],
     ]);
-    expect(options.stretchY).toEqual([[8, 24]]);
-    expect(options.content).toEqual([10, 8, 78, 28]);
+    expect(options.stretchY).toEqual([[2, 30]]);
+    expect(options.content).toEqual([10, 2, 78, 30]);
   });
 });
 

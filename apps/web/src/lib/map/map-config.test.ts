@@ -83,10 +83,13 @@ describe("pin address labels", () => {
     const layout = layer.layout as Record<string, unknown>;
     expect(layout["icon-image"]).toBe(PIN_LABEL_BUBBLE_IMAGE_ID);
     expect(layout["icon-text-fit"]).toBe("both");
-    expect(layout["icon-text-fit-padding"]).toEqual([8, 12, 8, 12]);
+    expect(layout["icon-text-fit-padding"]).toEqual([12, 12, 12, 12]);
+    expect(layout["text-size"]).toBe(16);
     expect(layout["text-field"]).toEqual(["get", "addressLabel"]);
     const textOffset = layout["text-offset"] as [number, number];
-    expect(textOffset[1], "the composite lifts above the pin").toBeLessThan(0);
+    // tuned so the rendered tail tip lands on the pin circle's center
+    // (16px per em of text-offset; -1.8 measured -1px, +1/16 em corrects it)
+    expect(textOffset).toEqual([0, -1.7375]);
     expect(layout["text-allow-overlap"]).toBe(true);
     expect(layout["icon-allow-overlap"]).toBe(true);
     // the fitted bubble travels with the text; the overlap siblings fight
@@ -98,6 +101,19 @@ describe("pin address labels", () => {
     expect(paint).not.toHaveProperty("text-halo-color");
     expect(paint).not.toHaveProperty("text-halo-width");
     expect(paint["text-color"]).toBe("#1f2937");
+
+    const customized = pinLabelLayerDefinition(idleFilter, {
+      textSize: 18,
+      padding: [16, 12, 16, 12],
+    });
+    const customizedLayout = customized.layout as Record<string, unknown>;
+    expect(customizedLayout["text-size"], "an explicit textSize override reaches the layer").toBe(
+      18,
+    );
+    expect(
+      customizedLayout["icon-text-fit-padding"],
+      "an explicit padding override reaches the layer",
+    ).toEqual([16, 12, 16, 12]);
   });
 
   test("the label filter matches exactly one unit while a unit is active and matches nothing while idle", () => {
@@ -261,6 +277,29 @@ describe("the pin label bubble bitmap", () => {
     const innerCorner = pixelAt(image, 4, 4);
     expect(innerCorner[3]).toBe(255);
     expect([innerCorner[0], innerCorner[1], innerCorner[2]]).toEqual([255, 255, 255]);
+  });
+
+  test("the tail renders as one piece with the body: white fill across the junction, outline flowing around the tail edges", () => {
+    const bodyBottom = 31;
+    // inside the silhouette at the body/tail junction: white fill, no border
+    // line crossing where the two shapes meet
+    expect(
+      pixelAt(image, Math.floor(image.width / 2), bodyBottom),
+      "no border across the junction",
+    ).toEqual([255, 255, 255, 255]);
+    expect(
+      pixelAt(image, Math.floor(image.width / 2), bodyBottom + 2),
+      "white fill continues through the junction into the tail",
+    ).toEqual([255, 255, 255, 255]);
+    // the body's bottom edge outside the tail span keeps its gray border
+    const bottomEdge = pixelAt(image, 10, bodyBottom);
+    expect(bottomEdge[3]).toBe(255);
+    expect(bottomEdge[0]).toBeLessThan(255);
+    // the tail's slanted edge carries the outline
+    const slantedEdge = pixelAt(image, 33, bodyBottom + 2);
+    expect(slantedEdge[3]).toBe(255);
+    expect(slantedEdge[0]).toBeLessThan(255);
+    // the outline converges on the tip: opaque, inside the fixed center gap
     const tailTip = pixelAt(image, Math.floor(image.width / 2), image.height - 1);
     expect(tailTip[3], "the tail paints a tip on the bitmap's bottom row").toBe(255);
   });
@@ -272,8 +311,8 @@ describe("the pin label bubble bitmap", () => {
       [10, 29],
       [58, 77],
     ]);
-    expect(metadata.stretchY).toEqual([[8, 24]]);
-    expect(metadata.content).toEqual([10, 8, 78, 28]);
+    expect(metadata.stretchY).toEqual([[2, 30]]);
+    expect(metadata.content).toEqual([10, 2, 78, 30]);
     expect(image.data).toBeInstanceOf(Uint8Array);
     expect(image.data.length).toBe(image.width * image.height * 4);
   });

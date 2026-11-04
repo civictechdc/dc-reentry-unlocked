@@ -164,6 +164,43 @@ export function highlightLayerFilter(unitId: string | null): unknown[] {
 }
 
 /**
+ * Bubble geometry knobs (all bitmap rows/pixels at 2x resolution; defaults
+ * produce today's 88×46 bitmap: 32-row body, 14-row tail, 8px radius, 2px
+ * border). The preview harness varies these; the production default is the
+ * plain zero-argument call. Values must be integers, and `tailHeight` must
+ * stay ≥ 2: the tail-width formula divides by `tailHeight - 1` and the
+ * border pass samples neighbors, so zero/negative/fractional values break
+ * the tail shape (no runtime clamp — the knob set is internal).
+ */
+export interface PinLabelBubbleOptions {
+  bodyHeight?: number;
+  tailHeight?: number;
+  radius?: number;
+  border?: number;
+}
+
+/** Resolved bubble geometry shared by the bitmap and metadata builders. */
+function bubbleGeometry(opts: PinLabelBubbleOptions = {}): {
+  width: number;
+  bodyHeight: number;
+  height: number;
+  radius: number;
+  border: number;
+  tailHalfTop: number;
+} {
+  const bodyHeight = opts.bodyHeight ?? 32;
+  const tailHeight = opts.tailHeight ?? 14;
+  return {
+    width: 88,
+    bodyHeight,
+    height: bodyHeight + tailHeight,
+    radius: opts.radius ?? 8,
+    border: opts.border ?? 2,
+    tailHalfTop: 12,
+  };
+}
+
+/**
  * The label speech bubble bitmap, procedurally drawn at 2x resolution
  * (pixelRatio 2, crisp on retina) as pure typed-array math — no canvas, no
  * DOM, so it also runs in jsdom. White body, subtle gray border on the
@@ -172,67 +209,73 @@ export function highlightLayerFilter(unitId: string | null): unknown[] {
  * {@link pinLabelBubbleImageMetadata}. Data must be Uint8Array:
  * texImage2D rejects Uint8ClampedArray in some browsers.
  */
-export function pinLabelBubbleImage(): {
+export function pinLabelBubbleImage(opts: PinLabelBubbleOptions = {}): {
   width: number;
   height: number;
   data: Uint8Array;
 } {
-  // All constants are 2x pixel units (pixelRatio 2). At 1x: 44×23 bubble,
-  // 16px body, 7px tail, 4px corner radius, 1px border.
-  const width = 88;
-  const bodyHeight = 32;
-  const height = 46;
-  const radius = 8;
-  const border = 2;
+  const { width, bodyHeight, height, radius, border, tailHalfTop } = bubbleGeometry(opts);
   // Tail: centered on the image, tapering from a 24px-wide top to a tip.
   const tailTop = bodyHeight;
-  const tailHalfTop = 12;
   const center = (width - 1) / 2;
 
+  // The silhouette is the UNION of the rounded-rect body and the tail
+  // triangle — one shape, so the border can be derived from the union's
+  // boundary instead of stroking body and tail separately (a separate tail
+  // stroke left the body's bottom border line running across the
+  // body/tail junction, reading as two pieces).
+  const inside = (x: number, y: number): boolean => {
+    if (y < bodyHeight) {
+      const dx = Math.max(radius - x, x - (width - 1 - radius), 0);
+      const dy = Math.max(radius - y, y - (bodyHeight - 1 - radius), 0);
+      return dx * dx + dy * dy <= radius * radius;
+    }
+    const remaining = height - 1 - y;
+    const half = Math.max((tailHalfTop * remaining) / (height - 1 - tailTop), 0.6);
+    return Math.abs(x - center) <= half;
+  };
+
+  const silhouette = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (inside(x, y)) silhouette[y * width + x] = 1;
+    }
+  }
+
+  // Border = inside pixels within `border` of the silhouette's outside
+  // (out-of-bounds counts as outside, so bitmap edges get their stroke).
+  // Euclidean neighborhood: the outline keeps constant thickness around
+  // corners and flows continuously around the tail's slanted edges — there
+  // is no border line across the body/tail junction because those pixels
+  // have only inside neighbors nearby.
   const data = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
-      let alpha = 0;
-      if (y < bodyHeight) {
-        // Rounded-rect body: corner mask keeps the four corners transparent.
-        const dx = Math.max(radius - x, x - (width - 1 - radius), 0);
-        const dy = Math.max(radius - y, y - (bodyHeight - 1 - radius), 0);
-        if (dx * dx + dy * dy <= radius * radius) {
-          // Border on the straight edges and on the rounded-corner arc ring
-          // (pixels just inside the arc edge), so corners get the same
-          // subtle gray frame the straight edges get.
-          const onBorder =
-            x < border ||
-            x >= width - border ||
-            y < border ||
-            y >= bodyHeight - border ||
-            dx * dx + dy * dy > (radius - border) * (radius - border);
-          alpha = 255;
-          if (onBorder) {
-            // Subtle gray border.
-            data[i] = 204;
-            data[i + 1] = 204;
-            data[i + 2] = 204;
-          } else {
-            data[i] = 255;
-            data[i + 1] = 255;
-            data[i + 2] = 255;
+      if (!silhouette[y * width + x]) continue;
+      let onBorder = false;
+      for (let dy = -border; dy <= border && !onBorder; dy++) {
+        for (let dx = -border; dx <= border && !onBorder; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          if (dx * dx + dy * dy > border * border) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height || !silhouette[ny * width + nx]) {
+            onBorder = true;
           }
         }
-      } else {
-        // Tail: triangle narrowing downward, kept strictly inside the fixed
-        // center column so horizontal stretching can never smear it.
-        const remaining = height - 1 - y;
-        const half = Math.max((tailHalfTop * remaining) / (height - 1 - tailTop), 0.6);
-        if (Math.abs(x - center) <= half) {
-          alpha = 255;
-          data[i] = 255;
-          data[i + 1] = 255;
-          data[i + 2] = 255;
-        }
       }
-      data[i + 3] = alpha;
+      data[i + 3] = 255;
+      if (onBorder) {
+        // Subtle gray border.
+        data[i] = 204;
+        data[i + 1] = 204;
+        data[i + 2] = 204;
+      } else {
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+      }
     }
   }
 
@@ -248,17 +291,22 @@ export function pinLabelBubbleImage(): {
  * never reach the renderer (the bubble would stretch wholesale: smeared
  * tail, elliptical corners, growing border, pixelRatio 1). `stretchX` holds
  * TWO bands flanking a fixed center column that contains the tail (the
- * tail can never smear horizontally), `stretchY` holds ONE band in the body
- * above the tail rows (the height stretches for wrapped text; the tail
- * rows can never stretch), and `content` marks the interior text box.
+ * tail can never smear horizontally); `stretchY` and `content` share the
+ * SAME vertical span — the body interior inside the border — so the text
+ * box is vertically symmetric inside the body (equal bitmap-row gaps to the
+ * body's top and bottom edges) and the fitted growth lands entirely in the
+ * band; the tail rows below stay fixed. Unit note (style spec): padding is
+ * in PIXELS, ordered [top, right, bottom, left]; `icon-text-fit: "both"`
+ * fits the content rect to `text ± padding`, growing only the bands.
  */
-export function pinLabelBubbleImageMetadata(): {
+export function pinLabelBubbleImageMetadata(opts: PinLabelBubbleOptions = {}): {
   pixelRatio: number;
   sdf: false;
   stretchX: Array<[number, number]>;
   stretchY: Array<[number, number]>;
   content: [number, number, number, number];
 } {
+  const { width, bodyHeight, border } = bubbleGeometry(opts);
   return {
     pixelRatio: 2,
     sdf: false,
@@ -268,14 +316,36 @@ export function pinLabelBubbleImageMetadata(): {
       [10, 29],
       [58, 77],
     ],
-    // One vertical band in the body above the tail rows: the height
-    // stretches with wrapped text; the 7 bitmap rows above the tail
-    // (rows 25..31, i.e. 3.5px at 1x with pixelRatio 2) and the tail
-    // itself stay fixed.
-    stretchY: [[8, 24]],
-    // The interior text box spans the stretchable interior across the center.
-    content: [10, 8, 78, 28],
+    // One vertical band covering the body interior inside the border — the
+    // same span as the content box below — so the height stretches with
+    // wrapped text. The band includes the corner-arc rows, so vertical
+    // growth stretches the arcs while the STRAIGHT border edges and the
+    // tail stay fixed — the accepted tradeoff for the symmetric content box.
+    stretchY: [[border, bodyHeight - border]],
+    // The interior text box: symmetric vertically inside the body (equal
+    // gaps to the top and bottom border edges), spanning the stretchable
+    // interior horizontally.
+    content: [10, border, width - 10, bodyHeight - border],
   };
+}
+
+/**
+ * Layer knobs for the label (defaults = the user-chosen design: the
+ * centering-fixed bubble, 12px vertical padding, 16px text). `textSize` is
+ * the style-spec `text-size` in px; `padding` is the
+ * `icon-text-fit-padding` in px, [top, right, bottom, left]; the lift is
+ * the `text-offset` in em that raises the fitted composite above the pin —
+ * tuned so the tail tip lands at the pin circle's CENTER (the highlight
+ * radius is 9px, the base radius 6px). The value is falsifiably derived:
+ * one em of text-offset moves the composite 16px, the measured text line
+ * box is 17.6px (1.1 × text-size — MapLibre's nominal 1.2-em default would
+ * drift 0.8px), so offset = −(lineBox/2 + padBottom + tailHeight/2) / 16 =
+ * −(8.8 + 12 + 7) / 16 = −1.7375.
+ */
+export interface PinLabelLayerOptions {
+  textSize?: number;
+  padding?: [number, number, number, number];
+  textOffset?: [number, number];
 }
 
 /**
@@ -289,12 +359,15 @@ export function pinLabelBubbleImageMetadata(): {
  * are not style-spec-guaranteed): measured in the real browser, the fitted
  * bubble centers on the anchor point and `icon-anchor`/`icon-offset` proved
  * inert under the fit — the bubble simply covered the pin — so the
- * composite is lifted by `text-offset` instead, putting the ink above the
- * ring with the tail reaching into the pin's top. The caller supplies the
+ * composite is lifted by `text-offset` instead, with the default tuned so
+ * the tail tip lands on the pin circle's center. The caller supplies the
  * initial filter (an explicit no-match filter when idle) so the layer can
  * be added to the style without labeling anything.
  */
-export function pinLabelLayerDefinition(initialFilter: unknown[]): Record<string, unknown> {
+export function pinLabelLayerDefinition(
+  initialFilter: unknown[],
+  opts: PinLabelLayerOptions = {},
+): Record<string, unknown> {
   return {
     id: "units-pins-label",
     type: "symbol",
@@ -302,9 +375,10 @@ export function pinLabelLayerDefinition(initialFilter: unknown[]): Record<string
     layout: {
       "icon-image": PIN_LABEL_BUBBLE_IMAGE_ID,
       "icon-text-fit": "both",
-      "icon-text-fit-padding": [8, 12, 8, 12],
+      "icon-text-fit-padding": opts.padding ?? [12, 12, 12, 12],
       "text-field": ["get", "addressLabel"],
-      "text-offset": [0, -1.4],
+      "text-offset": opts.textOffset ?? [0, -1.7375],
+      "text-size": opts.textSize ?? 16,
       "text-max-width": 18,
       "icon-allow-overlap": true,
       "text-allow-overlap": true,
