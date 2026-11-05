@@ -440,8 +440,16 @@ async function setupModelRun(): Promise<{ model: Model; real: Real }> {
   const store = new HousingStore(new FakeTransport() as never);
   await store.initialize();
   render(MapView, { props: { store } });
+  // The real page wraps the card list in a `.list-pane` div, and the map's
+  // off-map click dismissal keeps `.list-pane` clicks alive — the cards
+  // render inside the same page chrome so a card click selects its unit
+  // instead of dismissing. Any stub left by a previous run goes first.
+  document.querySelectorAll(".list-pane").forEach((stub) => stub.remove());
+  const listPane = document.createElement("div");
+  listPane.className = "list-pane";
+  document.body.append(listPane);
   for (const unit of store.units ?? []) {
-    render(UnitCard, { props: { card: unit } });
+    render(UnitCard, { props: { card: unit }, target: listPane });
   }
   // the detail slide-over joins the tree so the close paths (close button,
   // Escape, canvas click-off) and their focus restoration are live behavior
@@ -487,6 +495,7 @@ async function expectAllDismissedTerminalState(real: Real): Promise<void> {
 describe("map selection precedence and dismissal convergence (fc.commands + asyncModelRun)", () => {
   afterEach(() => {
     cleanup();
+    document.querySelectorAll(".list-pane").forEach((stub) => stub.remove());
     h.instances.length = 0;
     uiState.hoveredCardUnitId = null;
     uiState.hoveredPinUnitId = null;

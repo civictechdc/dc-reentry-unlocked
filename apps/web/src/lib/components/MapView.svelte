@@ -286,7 +286,36 @@
     if (!unit || !map) return;
     map.flyTo({ center: pinCoordinatesFor(unit), zoom: CARD_FOCUS_ZOOM });
   });
+
+  // Off-map click dismissal: a bubble-phase `document` click that lands on
+  // NONE of the keep-alive surfaces — the map pane (its empty-canvas
+  // click-off owns in-map clicks), the desktop card list pane, the detail
+  // slide-over, and the phone tab bar (tab switching preserves the
+  // selection) — clears exactly what the canvas click-off clears: the card
+  // hover, the pin hover, and the selection (closing the detail and
+  // filtering the label layer to the explicit no-match). The focus-return
+  // trigger is dropped BEFORE the selection so the detail's close edge
+  // finds no live trigger and skips focus restoration — the control the
+  // click just activated keeps its focus, instead of being yanked back to
+  // the opener. Bubble phase, never capture: excluded surfaces must
+  // receive their own clicks first.
+  const OFF_MAP_CLICK_KEEP_ALIVE_SELECTOR = ".map-view, .list-pane, .detail, .mobile-bar";
+
+  function onDocumentClick(event: MouseEvent): void {
+    const target = event.target;
+    if (target instanceof Element && target.closest(OFF_MAP_CLICK_KEEP_ALIVE_SELECTOR)) {
+      return;
+    }
+    uiState.detailTriggerElement = null;
+    uiState.hoveredCardUnitId = null;
+    uiState.hoveredPinUnitId = null;
+    uiState.selectedUnitId = null;
+  }
 </script>
+
+<!-- Document-level off-map click dismissal; lives and dies with the map's
+     mount, exactly like the GL map itself. -->
+<svelte:document onclick={onDocumentClick} />
 
 <!-- Camera observability (e2e/debug): center as `"<lng>,<lat>"`, zoom as a
      number string, refreshed on the map's `moveend`. -->

@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
 import { aUnit } from "@dc-reentry/shared/testing";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { tick } from "svelte";
 import { m } from "#lib/paraglide/messages.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
@@ -376,8 +376,33 @@ function cardButtonFor(unitId: string): HTMLButtonElement {
   return button as HTMLButtonElement;
 }
 
+/**
+ * Page-chrome stubs: the real page wraps the card list in a `.list-pane`
+ * div, the filter controls in a `.filter-bar`, and the phone tabs in a
+ * `.mobile-bar` div. Component tests mount the map alone, so chrome is
+ * stubbed with elements appended to `document.body` — they give the
+ * map's off-map click dismissal its keep-alive targets (a card click only
+ * survives when it bubbles through the same `.list-pane` class the live
+ * page uses). Removed after every test by the file's afterEach.
+ */
+const chromeStubs: Array<HTMLElement> = [];
+
+function chromeStub(className: string): HTMLElement {
+  const stub = document.createElement("div");
+  stub.className = className;
+  document.body.append(stub);
+  chromeStubs.push(stub);
+  return stub;
+}
+
+function removeChromeStubs(): void {
+  for (const stub of chromeStubs) stub.remove();
+  chromeStubs.length = 0;
+}
+
 afterEach(() => {
   cleanup();
+  removeChromeStubs();
   h.instances.length = 0;
   uiState.hoveredCardUnitId = null;
   uiState.hoveredPinUnitId = null;
@@ -629,6 +654,159 @@ describe("click-off dismissal", () => {
     expect(uiState.hoveredCardUnitId).toBe("unit-ward3");
     expect(uiState.hoveredPinUnitId).toBe("unit-exact");
     expect(uiState.selectedUnitId).toBe("unit-exact");
+  });
+});
+
+describe("off-map click dismissal", () => {
+  /**
+   * Mounts the map, every unit's card in its page-chrome list-pane stub,
+   * and the detail slide-over together: the off-map proofs need a live
+   * selection call site (canvas pin, card button) feeding the slide-over
+   * that closes, all sharing the uiState singleton. Filter-bar and
+   * mobile-bar chrome is stubbed per test with `chromeStub`.
+   */
+  async function mountedMapCardsAndDetail(units: unknown[]) {
+    store = freshStore(units);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    const listPane = chromeStub("list-pane");
+    for (const unit of store.units ?? []) {
+      render(UnitCard, { props: { card: unit }, target: listPane });
+    }
+    render(DetailSlideOver, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+    return created;
+  }
+
+  /** A focusable button inside a stubbed chrome pane, ready to be clicked. */
+  function chromeButtonIn(className: string): HTMLButtonElement {
+    const button = document.createElement("button");
+    chromeStub(className).append(button);
+    return button;
+  }
+
+  test("clicking a filter-bar control outside the map clears the card hover, the pin hover, and the selection: the detail closes and the label filters to the no-match", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const filterButton = chromeButtonIn("filter-bar");
+
+    // selection and label active: a canvas pin click opens the detail…
+    created.clickPin("unit-exact");
+    await tick();
+    // …and a live card hover owns the label above the selection
+    cardButtonFor(unitInWard3.id).dispatchEvent(new MouseEvent("pointerenter"));
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+
+    await userEvent.click(filterButton);
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(highlightLayerFilter(null));
+  });
+
+  test("clicking bare page background dismisses identically: the selection and both hovers clear and the open detail closes", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    // a page-background element: no keep-alive chrome class anywhere above it
+    const background = document.createElement("div");
+    document.body.append(background);
+    chromeStubs.push(background);
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    await userEvent.click(background);
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+  });
+
+  test("clicking a unit card in the list pane does not dismiss: the open selection moves to the clicked card and the detail stays open", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    // the card click bubbles through the `.list-pane` chrome: the dismissal
+    // must stay out of the way while the card's own handler selects the unit
+    await userEvent.click(cardButtonFor(unitInWard3.id));
+    await tick();
+
+    expect(uiState.selectedUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("clicking inside the open detail panel does not dismiss: the selection and the panel survive", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    // a click on the panel body — never a close control — bubbles through
+    // the `.detail` chrome, and the detail's own content stays interactive
+    screen.getByTestId("unit-detail").click();
+    await tick();
+
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+  });
+
+  test("clicking the phone tab bar does not dismiss: tab switching keeps the selection", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const tabButton = chromeButtonIn("mobile-bar");
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    tabButton.click();
+    await tick();
+
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+  });
+
+  test("an off-map dismissal does not yank focus back to the opener: the control the click activated keeps the focus", async () => {
+    await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const filterButton = chromeButtonIn("filter-bar");
+
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    // the freshly opened panel grabbed focus, so a passing proof must be
+    // active non-restoration — never inherited opener focus
+    expect(document.activeElement).not.toBe(opener);
+
+    await userEvent.click(filterButton);
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(uiState.selectedUnitId).toBeNull();
+    // the focus-return trigger is dropped, not spent on the opener
+    expect(uiState.detailTriggerElement).toBeNull();
+    expect(document.activeElement).toBe(filterButton);
   });
 });
 
@@ -968,12 +1146,19 @@ describe("card selection focuses the map", () => {
 });
 
 describe("stale pin-hover clearing", () => {
+  let listPane: HTMLElement;
+  beforeEach(() => {
+    // card clicks must bubble through the page's `.list-pane` chrome for
+    // the map's off-map click dismissal to keep them alive
+    listPane = chromeStub("list-pane");
+  });
+
   test("after a canvas pin click and selecting another unit's card, hovering a third card and unhovering it returns the label to the selected unit", async () => {
     const unitC = aUnit().withId("unit-ward5").inWard(5).build();
     const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3, unitC]);
     // The real card call sites share the singleton uiState with the map.
-    render(UnitCard, { props: { card: unitInWard3 } });
-    render(UnitCard, { props: { card: unitC } });
+    render(UnitCard, { props: { card: unitInWard3 }, target: listPane });
+    render(UnitCard, { props: { card: unitC }, target: listPane });
 
     // Canvas pin A clicked: the pin hover id carries unit A.
     created.clickPin("unit-exact");
@@ -1002,7 +1187,7 @@ describe("stale pin-hover clearing", () => {
 
   test("clicking a card clears a stale canvas-pin hover id while selecting that unit", async () => {
     const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
-    render(UnitCard, { props: { card: unitInWard3 } });
+    render(UnitCard, { props: { card: unitInWard3 }, target: listPane });
 
     created.clickPin("unit-exact");
     await tick();
@@ -1017,7 +1202,7 @@ describe("stale pin-hover clearing", () => {
 
   test("activating a card with the keyboard clears a stale canvas-pin hover id while selecting that unit", async () => {
     const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
-    render(UnitCard, { props: { card: unitInWard3 } });
+    render(UnitCard, { props: { card: unitInWard3 }, target: listPane });
 
     created.clickPin("unit-exact");
     await tick();
@@ -1341,7 +1526,10 @@ describe("detail close returns focus to the opening control", () => {
     store = freshStore(units);
     await store.initialize();
     render(MapView, { props: { store } });
-    for (const unit of store.units ?? []) render(UnitCard, { props: { card: unit } });
+    const listPane = chromeStub("list-pane");
+    for (const unit of store.units ?? []) {
+      render(UnitCard, { props: { card: unit }, target: listPane });
+    }
     render(DetailSlideOver, { props: { store } });
     await tick();
     const created = h.instances.at(0)!;
@@ -1545,7 +1733,10 @@ describe("dismissal state machine (one empty-canvas click-off from every reachab
     store = freshStore(units);
     await store.initialize();
     render(MapView, { props: { store } });
-    for (const unit of store.units ?? []) render(UnitCard, { props: { card: unit } });
+    const listPane = chromeStub("list-pane");
+    for (const unit of store.units ?? []) {
+      render(UnitCard, { props: { card: unit }, target: listPane });
+    }
     render(DetailSlideOver, { props: { store } });
     await tick();
     const created = h.instances.at(0)!;

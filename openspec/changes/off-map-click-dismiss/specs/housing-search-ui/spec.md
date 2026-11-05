@@ -4,7 +4,7 @@
 
 ### Requirement: Unit detail slide-over
 
-Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value. Clicking empty map canvas SHALL close the panel the same way its close control does; a click-drag or tap-drag pan SHALL NOT close it. A click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL close the panel the same way, without pulling keyboard focus off whatever the click activated.
+Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value. Clicking empty map canvas SHALL close the panel the same way its close control does; a click-drag or tap-drag pan SHALL NOT close it. While the map is presented, a click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL close the panel the same way, without pulling keyboard focus off whatever the click activated.
 
 #### Scenario: Detail opened from pin
 - **WHEN** a user clicks a map pin
@@ -40,7 +40,7 @@ Selecting a card or pin SHALL open a detail panel sliding over the card list whi
 
 ### Requirement: Pin activity label
 
-The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time. Clicking empty map canvas SHALL dismiss the label together with its selection; a click-drag or tap-drag pan SHALL NOT dismiss anything. A click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL dismiss the label the same way.
+The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time. Clicking empty map canvas SHALL dismiss the label together with its selection; a click-drag or tap-drag pan SHALL NOT dismiss anything. While the map is presented, a click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL dismiss the label the same way.
 
 #### Scenario: Label appears on card hover or keyboard focus
 
