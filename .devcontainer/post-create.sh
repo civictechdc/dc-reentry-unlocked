@@ -25,14 +25,6 @@ pnpm install --frozen-lockfile
 echo "==> Installing Playwright chromium (with system dependencies)"
 pnpm -C apps/web exec playwright install --with-deps chromium
 
-echo "==> Warming the apps/web test pipeline (mount settle + optimizer cache)"
-# Fresh containers race the bind mount's eventually-consistent view: the
-# vite/rolldown dep-optimizer can fail its first tsconfig discovery. One
-# direct vitest boot settles it; safe to skip if it fails (non-fatal).
-pnpm -C apps/web exec vitest run >/dev/null 2>&1 \
-  && echo "==> Warm-up complete" \
-  || echo "==> WARNING: warm-up run failed; first test run may need a retry"
-
 echo "==> Wiring local git hooks (best-effort)"
 echo "    $(git --version)"
 if git rev-parse --git-dir >/dev/null 2>&1; then

@@ -10,6 +10,13 @@ packages:
 # sequential runs are deterministic everywhere for a modest wall-time cost.
 workspaceConcurrency: 1
 
+# Root-cause pin ahead of vite: rolldown 1.2.15 hard-fails vite's
+# dep-optimizer when tsconfig discovery misses (virtual-module resolve,
+# fixed upstream in 1.2.16). Drop this override when vite declares
+# rolldown >= 1.2.16 on its own.
+overrides:
+  rolldown: "1.2.16"
+
 # dependency-cruiser parses TypeScript through the compiler programmatic API,
 # which TypeScript 7 (Go-native) does not ship; dependency-cruiser 18 accepts
 # typescript >= 2.0.0 < 7.0.0 (verified in its generated meta.cjs) and resolves

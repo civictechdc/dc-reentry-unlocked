@@ -119,15 +119,18 @@ verification sessions:
   drives the container. `--init` doubles as zombie reaping for chromium
   (per Playwright's own Docker guidance).
 - **Root cause of the deterministic fresh-container `pnpm test`
-  failure:** the bind mount's `consistency=cached` view races tsconfck's
-  tsconfig discovery in the first minutes after container creation, and
-  rolldown 1.2.15 hard-errors by applying tsconfig resolution to
-  virtual modules — fixed upstream in rolldown 1.2.16 (released
-  2026-11-05; skips tsconfig resolution for `\0`-prefixed modules).
-  Deliberately NOT overridden today: forcing the fix would need a
-  `minimumReleaseAgeExclude` carve-out for a hours-old package, which
-  defeats the release-age policy it would sit inside. Instead, post-create
-  runs a non-fatal direct-form vitest warm-up (the empirically passing
-  form) — it settles the mount view and warms the optimizer cache before
-  the first real run. Drop the warm-up when rolldown ≥ 1.2.16 ages past
-  the release-age policy and arrives via a normal vite bump.
+  failure:** rolldown 1.2.15 hard-errors by applying tsconfig
+  resolution to virtual modules whenever tsconfig discovery misses —
+  fixed upstream in rolldown 1.2.16 (released 2026-11-05; skips
+  tsconfig resolution for `\0`-prefixed modules). The interim
+  post-create warm-up (a non-fatal direct-form vitest boot, then
+  believed to settle the bind mount's eventually-consistent view and
+  warm the optimizer cache) FAILED its own purpose: its verification
+  run hit the same failure about a minute after container create. It
+  was removed, and the root cause is handled instead: `overrides`
+  pins rolldown to 1.2.16 in `pnpm-workspace.yaml`. The feared
+  supply-chain trade-off never materialized — the empirical install
+  showed NO `minimumReleaseAge` rejection (the policy base is unset
+  in repo config; only the exclude list is populated), so no exclude
+  carve-out was needed. The override stays until vite declares
+  rolldown >= 1.2.16 on its own.

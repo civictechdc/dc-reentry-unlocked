@@ -23,8 +23,7 @@ leaves you with:
 
 Post-create runs `.devcontainer/post-create.sh` (~1 minute) and echoes
 each step: pnpm setup, `pnpm install --frozen-lockfile`, Playwright
-chromium with system dependencies, a vitest warm-up boot that settles
-the fresh container's mount view, then git-hook wiring.
+chromium with system dependencies, then git-hook wiring.
 
 ## Booting it
 
@@ -123,14 +122,16 @@ your environment.
 The end-to-end recipe, run entirely inside the container from a fresh
 clone:
 
-1. Boot it: `npx @devcontainers/cli up --workspace-folder .`
+1. Boot it: `npx @devcontainers/cli up --workspace-folder .
+   --remove-existing-container` (forces a fresh container when the
+   folder was used before)
 2. `pnpm install --frozen-lockfile`
 3. The deterministic gates: `pnpm lint`, `pnpm format:check`,
    `pnpm test`, `pnpm typecheck`, `pnpm arch:check`
 4. The three e2e suites: `pnpm -C apps/web e2e`,
    `pnpm -C apps/web e2e:bdd`, `pnpm -C apps/web e2e:prod`
 5. Dev-boot probe: `pnpm dev`, then the API `/health` endpoint and the
-   web app on 5173
+   web app on `localhost:5173`
 
 <!-- VERIFICATION-STATUS-PENDING -->
 
