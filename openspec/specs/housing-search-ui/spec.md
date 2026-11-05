@@ -43,7 +43,7 @@ Each card SHALL present the unit's essential specs (bedrooms, ward, cost, housin
 
 ### Requirement: Unit detail slide-over
 
-Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value. Clicking empty map canvas SHALL close the panel the same way its close control does; a click-drag or tap-drag pan SHALL NOT close it.
+Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value. Clicking empty map canvas SHALL close the panel the same way its close control does; a click-drag or tap-drag pan SHALL NOT close it. While the map is presented, a click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL close the panel the same way, without pulling keyboard focus off whatever the click activated.
 
 #### Scenario: Detail opened from pin
 - **WHEN** a user clicks a map pin
@@ -60,6 +60,14 @@ Selecting a card or pin SHALL open a detail panel sliding over the card list whi
 #### Scenario: Canvas click closes the detail
 - **WHEN** the detail panel is open and the user clicks empty map canvas away from any pin
 - **THEN** the panel closes and the list returns in its prior state
+
+#### Scenario: Off-map click closes the detail
+- **WHEN** the detail panel is open and the user clicks page chrome outside the map pane — for example the filter bar or the page background
+- **THEN** the panel closes and the list returns in its prior state, and keyboard focus is not pulled back to the opener: whatever the click activated keeps the focus
+
+#### Scenario: Clicks on the list and the detail keep them alive
+- **WHEN** the detail panel is open and the user clicks a unit card in the list, or clicks anywhere inside the detail panel
+- **THEN** the panel does not close (a card click selects that card instead; the detail's own content stays interactive)
 
 #### Scenario: Panning keeps the detail open
 - **WHEN** the detail panel is open and the user pans the map with a click-drag or tap-drag
@@ -139,7 +147,7 @@ Selecting a unit from the card list SHALL center the map on the selected unit's 
 
 ### Requirement: Pin activity label
 
-The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time. Clicking empty map canvas SHALL dismiss the label together with its selection; a click-drag or tap-drag pan SHALL NOT dismiss anything.
+The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time. Clicking empty map canvas SHALL dismiss the label together with its selection; a click-drag or tap-drag pan SHALL NOT dismiss anything. While the map is presented, a click outside the map pane that lands on none of the map, the card list, the detail panel, and the phone tab bar SHALL dismiss the label the same way.
 
 #### Scenario: Label appears on card hover or keyboard focus
 
@@ -178,6 +186,11 @@ The map SHALL display a text label on the active pin — a unit hovered or focus
 
 - **WHEN** a user clicks empty map canvas away from any pin, with the label (and possibly the detail) showing
 - **THEN** the selection clears, the detail slide-over closes, and no pin displays a label or highlight
+
+#### Scenario: Off-map click dismisses the label and its selection
+
+- **WHEN** the label (and possibly the detail) is showing and the user clicks page chrome outside the map pane — none of the map, the card list, the detail panel, and the phone tab bar
+- **THEN** the selection clears, the detail slide-over closes if open, and no pin displays a label or highlight
 
 #### Scenario: Panning does not dismiss
 
