@@ -3,11 +3,13 @@
 ## Why
 
 After a pin interaction the label (and the open detail) linger until an
-explicit close. Map users expect background-click dismissal — clicking empty
-canvas should clear the interaction, the way mainstream map UIs dismiss
-place cards. A related precedence defect surfaced in review: after clicking
-pin A and then selecting card B, ending a hover returns the label to A (the
-stale pin-hover id) instead of the selected unit B — the existing
+explicit close. Users expect outside-interaction dismissal — the
+tap-outside-to-dismiss pattern that Material Design and Apple's HIG
+legitimize for sheets and popovers-like surfaces (documented products such
+as Google Maps InfoWindows pair a close control with Escape rather than
+background-click). A related precedence defect surfaced in review: after
+clicking pin A and then selecting card B, ending a hover returns the label
+to A (the stale pin-hover id) instead of the selected unit B — the existing
 hover-precedence scenario is silently violated.
 
 ## What Changes

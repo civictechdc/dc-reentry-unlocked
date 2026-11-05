@@ -21,13 +21,13 @@ all three identity ids exactly like the detail-close path does. Pin clicks
 keep working through the existing layer-scoped handler (a pin hit skips the
 clear), so no propagation games between the two handlers.
 
-**D2 — Drag discrimination via MapLibre's own click semantics.** The
-handler must never fire from a pan. Verify against maplibre-gl 6.16 docs
-whether `click` is already suppressed after drag-pan/drag events; if the
-suppression is not guaranteed across mouse + touch, add explicit
-`dragstart`/`dragend` (or `movestart` with origin tracking) guarding. The
-e2e suite proves both directions with real gestures (click-off dismisses;
-drag-pan does not).
+**D2 — Drag discrimination via MapLibre's own click semantics.** RESOLVED
+by prototype: MapLibre's handler manager natively suppresses `click` after
+a drag (an 80px stepped mouse-drag emitted zero click events in a headless
+probe) — no explicit `dragstart`/`dragend` guard is needed; keep one anyway
+only if the e2e drag tests falsify the native suppression on any supported
+browser. The e2e suite proves both directions with real gestures (click-off
+dismisses; drag-pan does not).
 
 **D3 — Stale pin-hover cleared on new selection.** Whenever a selection
 lands on a unit through a NON-pin path (card click, keyboard card
@@ -39,6 +39,23 @@ card list rather than inside uiState, keeping the store dumb.
 **D4 — Detail closes through the existing mechanism.** The slide-over
 renders from `selectedUnitId`; clearing it (click-off or close control)
 closes the panel. No new close plumbing.
+
+**D5 — Behavior validated before implementation (prototype + UX check).**
+An interactive prototype (real map-config bundle, live map, Current vs
+Proposed toggle) confirmed the feel with the user, and an evidence-backed
+UX review found the pattern conforming: outside-interaction dismissal is a
+legitimized sheet/popover pattern (Material, Apple HIG) whose caveats this
+design already honors — the explicit close button stays, and the dismissed
+state is a transient selection with no user input, so accidental-dismissal
+cost is low (Apple's caveat concerns lost work; none exists here). Two
+findings recorded honestly: (a) documented map products (Google Maps
+InfoWindows) specify close-control + Escape, NOT background-click — the
+support for this behavior is the general outside-interaction pattern, not a
+map-product convention; (b) the keyboard dismissal expectation is already
+met by the existing window-Escape handler in the detail slide-over, which
+this change reuses unchanged. Prototype bonus finding: clicks pass through
+the label bubble to the pin beneath (queryRenderedFeatures does not
+occlude), so the bubble can never steal a pin's click.
 
 ## Risks / Trade-offs
 
