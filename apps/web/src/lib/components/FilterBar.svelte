@@ -135,14 +135,14 @@
     background: var(--surface-raised);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 0.75rem 1rem;
+    padding: 0.375rem 0.75rem;
     display: grid;
-    gap: 0.75rem;
+    gap: 0.375rem;
   }
   .filter-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
+    gap: 0.375rem 0.75rem;
   }
   .control {
     border: 0;
@@ -153,12 +153,16 @@
   legend,
   .control-label {
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: var(--ink);
   }
   select {
     font: inherit;
-    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    /* Hit-target floor: keep the compacted select at the 24px minimum even
+       if font or line-height drifts. */
+    min-height: 1.5rem;
+    padding: 0.125rem 0.375rem;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);
     background: var(--surface-raised);
@@ -171,8 +175,11 @@
   }
   .toggle-group button {
     font: inherit;
-    font-size: 0.875rem;
-    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    /* Hit-target floor: keep the compacted toggle at the 24px minimum even
+       if font or line-height drifts. */
+    min-height: 1.5rem;
+    padding: 0.125rem 0.5rem;
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     background: var(--surface-raised);
@@ -187,16 +194,17 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    font-size: 0.8rem;
   }
   .unsupported-notice {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: var(--ink-muted);
   }
   .clear-all {
     margin-left: auto;
     font: inherit;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     padding: 0.3rem 0.75rem;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);

@@ -111,9 +111,9 @@
        capped at 32rem so a wide map column keeps room for its aspect cap. */
     grid-template-columns: minmax(0, 1fr) minmax(26rem, 32rem);
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.75rem;
-    height: calc(100vh - 9.5rem);
-    padding: 0.75rem;
+    gap: 0.5rem;
+    height: calc(100vh - 8.25rem);
+    padding: 0.5rem;
     min-height: 0;
   }
   .filter-pane {
@@ -128,19 +128,19 @@
        map's mounted canvas and the pane can never shrink with its row. */
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
-    /* The map is height-bound (never wider than 4/3 of the pane height), so
+    /* The map is height-bound (never wider than half again the pane height), so
        wide columns center the capped map instead of stretching a wide strip. */
     justify-items: center;
     /* Size container: the map view reads the pane height through container
-       query units to hold its 4:3 cap. */
+       query units to hold its 3:2 cap. */
     container-type: size;
   }
-  /* The 4:3 width cap lives on the pane side because container query units
+  /* The 3:2 width cap lives on the pane side because container query units
      resolve against the nearest eligible ancestor — this size container.
      The phone map tab has no such container and must keep its full-width
      stretch, so the cap must not leak into the shared map component. */
   .map-pane :global(.map-view) {
-    width: min(100%, calc(100cqh * 4 / 3));
+    width: min(100%, calc(100cqh * 3 / 2));
   }
   .list-pane {
     grid-column: 2;
@@ -241,7 +241,7 @@
          bordered square never sits flush against a screen edge
          (user-confirmed look). Centered in the viewport. Container units
          resolve against the viewport's size container above; this rule must
-         stay phone-scoped (the desktop pane carries its own 4:3 cap). */
+         stay phone-scoped (the desktop pane carries its own 3:2 cap). */
       width: min(100%, calc(100cqw - 1.5rem), calc(100cqh - 1.5rem));
       height: min(calc(100cqw - 1.5rem), calc(100cqh - 1.5rem));
       justify-self: center;

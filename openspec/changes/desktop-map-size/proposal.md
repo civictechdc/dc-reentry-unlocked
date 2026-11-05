@@ -17,7 +17,7 @@ that relaxes the cap to 3:2 on top of compacted chrome: 904×651 at 1440×900
   amends the archived `map-aspect-ratio` decision — user-confirmed after the
   live A/B preview
 - Filter bar density: tighter paddings/gaps and one step down in control
-  typography so the filter controls fit one row at desktop widths (~93px
+  typography so the filter bar compacts to a dense two-row band (~93px
   instead of 193px at 1440)
 - Layout chrome: desktop grid gap and padding 0.75rem → 0.5rem; height
   overhead `calc(100vh - 9.5rem)` → `calc(100vh - 8.25rem)` (reclaims dead

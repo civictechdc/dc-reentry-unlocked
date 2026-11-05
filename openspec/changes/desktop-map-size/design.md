@@ -24,12 +24,13 @@ full-width stretch. The map stays height-bound; at 1920×1080 the cap still
 leaves a small (~80px/side) margin — accepted, square-ness was the taste the
 user confirmed, not edge-to-edge fill.
 
-**D2 — Filter bar density, one row at desktop widths.** Tighter paddings
-(0.375rem 0.75rem), tighter gaps (0.375rem / 0.375rem 0.75rem), and one
-typography step down on controls (0.8rem labels, toggles, selects, footer).
-No controls removed, no collapse affordance. Below some width the controls
-will still wrap — accepted; the compacted two-row form is still ~60px shorter
-than today's.
+**D2 — Filter bar density: a compact ~93px band at 1440-class widths.**
+Tighter paddings (0.375rem 0.75rem), tighter gaps (0.375rem / 0.375rem 0.75rem),
+and one typography step down on controls (0.8rem labels, toggles, selects,
+footer). The controls still wrap to two dense flex lines even at 1440×900 —
+a literal single line would need ~2390px of width — but the compacted band is
+~93px tall instead of today's 193px. No controls removed, no collapse
+affordance.
 
 **D3 — Layout chrome tightened.** Grid gap and padding 0.75rem → 0.5rem
 (the padding gap the user felt between map and list); height calc
@@ -49,5 +50,7 @@ leak into the shared map component, list scroll containment).
 
 - [Taste] 3:2 is less square than the archived 4:3 decision — user-confirmed
   against a live A/B preview; wrong-guess cost is one expression.
-- Filter one-row fit depends on content width; at narrower desktop widths it
-  wraps (still compacted). No fixed-height promise in tests.
+- Filter band height depends on content width and is non-monotonic: the
+  controls wrap to two dense lines at all desktop widths (~93px at
+  1440-class widths, ~112px at 1920 where the selects join the fieldsets
+  line). No fixed-height promise in tests.

@@ -16,7 +16,7 @@ The search UI SHALL present a map of unit location pins alongside the card list 
 
 #### Scenario: Desktop proportions use the viewport well
 - **WHEN** the page is viewed on a maximized desktop-width viewport
-- **THEN** the map pane is capped near 3:2 (for example roughly 1218×812 at 1920×1080, and roughly 904×651 at 1440×900 with the filter bar compacted to one row), the map's side dead margin stays small, and the card list's unscrolled window shows several units — around five — rather than around three
+- **THEN** the map pane is capped near 3:2 (for example roughly 1218×812 at 1920×1080, and roughly 904×651 at 1440×900 with the filter bar compacted to a dense two-row band (~93px)), the map's side dead margin stays small, and the card list's unscrolled window shows several units — around five — rather than around three
 
 #### Scenario: Responsive size classes render their confirmed forms
 - **WHEN** the window is resized across the size classes (phone, portrait tablet, landscape tablet, laptop, maximized desktop)
