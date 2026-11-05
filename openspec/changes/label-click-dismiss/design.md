@@ -66,6 +66,16 @@ page body after a dismissible surface closes). With no live trigger (e.g.
 the opening card left the result set), leave focus where the browser puts
 it rather than guessing.
 
+Resolution added 2026-11-04 (user-accepted): restoring focus re-fires the
+opener's focus handler, whose hover coupling re-lit the address label
+right after close — a second dismissal click was needed to clear it. The
+close-edge restore now clears the card-hover id immediately after
+`trigger.focus()`, so ANY single close (button, Escape, canvas click)
+fully dismisses selection + detail + label at once; a later genuine
+tab-to-the-card still lights the label normally. Canvas pin clicks map
+their trigger to the unit's screen-reader pin-list button (resolvable by
+`data-unit-id`), the only DOM control representing a canvas pin.
+
 ## Risks / Trade-offs
 
 - [Map-wide click vs layer clicks] Both handlers can observe one physical
@@ -74,6 +84,15 @@ it rather than guessing.
 - [Touch tap-vs-drag thresholds] MapLibre's internal threshold decides;
   if docs leave it ambiguous, the e2e tap-drag test is the arbiter and the
   guard from D2 becomes mandatory.
+- [Phone tap-off reachability — measured 2026-11-04, user-accepted] The
+  open detail bottom sheet renders at the FULL phone viewport for every
+  unit (fixed sheet anchored at y=0; the map canvas sits entirely beneath
+  it), so a tap-off has no reachable canvas while a selection is live.
+  Click-off dismissal is therefore e2e-proven on desktop only; the
+  reachable touch half (tap-drag pans, never dismisses, no phantom click)
+  is proven on the phone viewport. Making the sheet smaller to expose the
+  canvas is outside this change (non-goals: no mobile-specific UI change)
+  — surfaced as a candidate for a future change if wanted.
 - [Spec sync] Both modified requirements live in `housing-search-ui`,
   which active `map-aspect-ratio` also touches — re-run
   `openspec validate --all --strict` at archive and sync before it lands
