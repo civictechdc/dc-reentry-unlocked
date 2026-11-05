@@ -10,6 +10,12 @@ class UiState {
   hoveredPinUnitId: string | null = $state.raw(null);
   /** Unit whose detail slide-over is open (selected card or pin). */
   selectedUnitId: string | null = $state.raw(null);
+  /**
+   * The control (card button or pin button) that opened the detail slide-over.
+   * Closing hands keyboard focus back to it while it is still in the DOM;
+   * a stale element (its card left the result set) is dropped instead.
+   */
+  detailTriggerElement: HTMLElement | null = $state.raw(null);
   /** Phone-width tab state. */
   mobileTab: MobileTab = $state.raw("map");
   /** Mobile filter sheet open state. */

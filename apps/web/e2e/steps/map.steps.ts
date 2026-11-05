@@ -7,7 +7,12 @@ export const API_BASE = process.env.VITE_API_URL ?? "http://localhost:3000";
 /** flyTo lands exactly on the pin; the tolerance absorbs serialization only. */
 export const NEARNESS_TOLERANCE = 1e-4;
 
-export type CameraUnit = { id: string; coordinates: { latitude: number; longitude: number } };
+/** The unit fields the camera helpers read; the served payload is larger. */
+export type CameraUnit = {
+  id: string;
+  address: string;
+  coordinates: { latitude: number; longitude: number };
+};
 
 /**
  * The unit behind the first card: the card's heading anchor carries the unit

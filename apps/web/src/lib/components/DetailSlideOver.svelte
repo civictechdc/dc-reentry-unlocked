@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { m } from "#lib/paraglide/messages.js";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -26,6 +27,33 @@
   $effect(() => {
     if (hasSelection && store.units !== null && unit === null) {
       close();
+    }
+  });
+
+  /**
+   * Closing hands keyboard focus back to the control that opened the detail
+   * (card or pin button) instead of dropping it to the page — but only while
+   * that control is still in the DOM; a stale trigger (its card left the
+   * result set) is dropped and focus stays where the browser put it. Focus
+   * restoration completes the close's dismissal: the opener's own focus
+   * handler re-lights its hover slot (and with it the address label), so the
+   * hover state is cleared again right after `focus()` — a close fully
+   * dismisses on every path, and a later genuine focus event lights the
+   * label normally. One close edge covers every close path: close button,
+   * Escape, canvas click-off, and the contentless-panel close above.
+   */
+  let hadSelection = false;
+  $effect(() => {
+    const hasPanel = hasSelection;
+    const closedJustNow = hadSelection && !hasPanel;
+    hadSelection = hasPanel;
+    if (closedJustNow) {
+      untrack(() => {
+        const trigger = uiState.detailTriggerElement;
+        if (trigger && document.contains(trigger)) trigger.focus();
+        uiState.hoveredCardUnitId = null;
+        uiState.detailTriggerElement = null;
+      });
     }
   });
 

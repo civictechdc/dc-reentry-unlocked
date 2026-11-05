@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render } from "@testing-library/svelte";
+import { cleanup, render, screen } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
 import { aUnit } from "@dc-reentry/shared/testing";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -38,6 +39,18 @@ import {
  *   a newly added source is still settling (`_updatedSources` pending, its
  *   TileManager unloaded) — so the load handler's own `addSource`/`addLayer`
  *   calls flip it back to false for a window after load.
+ *
+ * Click dispatch mirrors the two maplibre registration shapes: layer-scoped
+ * (`on("click", layerId, fn)`) handlers land in `clickHandlers` and fire via
+ * `clickPin`; map-wide (`on("click", fn)` with no layer id) handlers land in
+ * `mapWideClickHandlers` and fire via `clickCanvas`. A real physical click
+ * fires BOTH groups — which group a test fires encodes what the hit-test
+ * found under the pointer. `queryRenderedFeatures` is a stub returning the
+ * test-settable `queryRenderedFeaturesResult` (default: no rendered features
+ * under the query) while logging each call's point and options.
+ * `dragSequence` plays a map drag: the captured pointer handlers
+ * (mousedown/mousemove/mouseup) fire, but NO click handler does — MapLibre
+ * suppresses the trailing `click` after a drag.
  */
 const h = vi.hoisted(() => ({
   instances: [] as Array<{
@@ -64,6 +77,10 @@ const h = vi.hoisted(() => ({
     currentZoom: number;
     removed: boolean;
     clickPin: (unitId: string) => void;
+    clickCanvas: (x: number, y: number) => void;
+    dragSequence: (from: { x: number; y: number }, to: { x: number; y: number }) => void;
+    queryRenderedFeaturesResult: Array<Record<string, unknown>>;
+    queryRenderedFeaturesLog: Array<{ point: unknown; options: Record<string, unknown> | null }>;
   }>,
 }));
 
@@ -79,6 +96,7 @@ vi.mock("maplibre-gl", () => {
       this.setDataCount += 1;
     }
   }
+  const pointerEventNames = new Set(["mousedown", "mousemove", "mouseup"]);
   class MockMap {
     options: Record<string, unknown>;
     sources = new Map<string, MockSource>();
@@ -109,6 +127,19 @@ vi.mock("maplibre-gl", () => {
     currentZoom = 0;
     removed = false;
     clickHandlers: unknown[] = [];
+    /** Registered map-wide click handlers: `on("click", fn)` with no layer id. */
+    mapWideClickHandlers: unknown[] = [];
+    /** Registered pointer handlers (mousedown/mousemove/mouseup), keyed by event name. */
+    pointerHandlers = new Map<string, unknown[]>([
+      ["mousedown", []],
+      ["mousemove", []],
+      ["mouseup", []],
+    ]);
+    /** Test-settable hit-test result backing `queryRenderedFeatures`; default is no hits. */
+    queryRenderedFeaturesResult: Array<Record<string, unknown>> = [];
+    /** Recorded `queryRenderedFeatures` calls: the queried point and options. */
+    queryRenderedFeaturesLog: Array<{ point: unknown; options: Record<string, unknown> | null }> =
+      [];
 
     constructor(options: Record<string, unknown>) {
       this.options = options;
@@ -121,6 +152,10 @@ vi.mock("maplibre-gl", () => {
         this.moveendHandlers.push(a as () => void);
       } else if (event === "click" && typeof b === "function") {
         this.clickHandlers.push(b);
+      } else if (event === "click" && typeof a === "function") {
+        this.mapWideClickHandlers.push(a);
+      } else if (typeof a === "function" && pointerEventNames.has(event)) {
+        this.pointerHandlers.get(event)!.push(a);
       }
     }
     /** Test helper: dispatch the captured `load` handlers once (the real `load` is one-shot). */
@@ -181,11 +216,47 @@ vi.mock("maplibre-gl", () => {
         });
       }
     }
+    /** Test helper: dispatch the captured map-wide click handlers with a pixel point. */
+    clickCanvas(x: number, y: number): void {
+      for (const handler of this.mapWideClickHandlers) {
+        (handler as (event: { point: { x: number; y: number } }) => void)({ point: { x, y } });
+      }
+    }
+    /** Test helper: fire one captured pointer-handler group with a pixel point. */
+    firePointer(event: string, point: { x: number; y: number }): void {
+      for (const handler of this.pointerHandlers.get(event) ?? []) {
+        (handler as (event: { point: { x: number; y: number } }) => void)({ point });
+      }
+    }
+    /**
+     * Test helper: play a map drag from one point to another. The captured
+     * pointer handlers receive mousedown, moves, and mouseup, but NO click
+     * handler fires — MapLibre suppresses the trailing `click` after a drag —
+     * so a drag must never reach the click-driven behavior.
+     */
+    dragSequence(from: { x: number; y: number }, to: { x: number; y: number }): void {
+      const midX = from.x + (to.x - from.x) / 2;
+      const midY = from.y + (to.y - from.y) / 2;
+      this.firePointer("mousedown", from);
+      this.firePointer("mousemove", { x: midX, y: midY });
+      this.firePointer("mousemove", to);
+      this.firePointer("mouseup", to);
+    }
+    /** The hit-test stub backing the wrapper's `queryRenderedFeatures` calls. */
+    queryRenderedFeatures(
+      point?: { x: number; y: number },
+      options?: { layers?: string[] },
+    ): unknown[] {
+      this.queryRenderedFeaturesLog.push({ point, options: options ?? null });
+      return this.queryRenderedFeaturesResult;
+    }
   }
   return { Map: MockMap, setWorkerUrl: () => {} };
 });
 
+import DetailSlideOver from "./DetailSlideOver.svelte";
 import MapView from "./MapView.svelte";
+import UnitCard from "./UnitCard.svelte";
 
 let store: HousingStore;
 const unitInWard7 = aUnit()
@@ -241,12 +312,26 @@ function lastFilterFor(created: { setFilterLog: unknown[] }, layerId: string): u
   return entries.filter((entry) => entry.layerId === layerId).at(-1)?.filter;
 }
 
+/**
+ * The card list renders one unit card per unit; each card's button is found
+ * through the unit's labelled title inside the card article. This drives the
+ * card's REAL handlers (click, pointer hover, keyboard focus) — raw uiState
+ * writes would bypass the code under test.
+ */
+function cardButtonFor(unitId: string): HTMLButtonElement {
+  const article = document.getElementById(`card-title-${unitId}`)?.closest("article");
+  const button = article?.querySelector("button");
+  if (!button) throw new Error(`card button for unit ${unitId} not found`);
+  return button as HTMLButtonElement;
+}
+
 afterEach(() => {
   cleanup();
   h.instances.length = 0;
   uiState.hoveredCardUnitId = null;
   uiState.hoveredPinUnitId = null;
   uiState.selectedUnitId = null;
+  uiState.detailTriggerElement = null;
 });
 
 describe("MapLibre map wrapper (mocked maplibre)", () => {
@@ -352,7 +437,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     });
   });
 
-  test("the keyboard pin list selects a unit (focus highlight + click opens detail)", async () => {
+  test("the keyboard pin list selects a unit (focus highlights its card, activation opens the detail, and the canvas-pin hover id clears)", async () => {
     await mountedMapWithResolvedUnits([unitInWard7]);
 
     const pinButton = document.querySelector(
@@ -364,10 +449,13 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     await tick();
     expect(uiState.hoveredCardUnitId).toBe("unit-exact");
 
+    // The pin button is a keyboard path, not a canvas pin: activation keeps
+    // focus highlight and selection, but clears any canvas-pin hover id (the
+    // selection it sets owns the label fallback itself).
     pinButton!.click();
     await tick();
     expect(uiState.selectedUnitId).toBe("unit-exact");
-    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(uiState.hoveredPinUnitId).toBeNull();
   });
 
   test("hovering a card re-renders NO pins (setFilter owns the highlight paint)", async () => {
@@ -391,6 +479,105 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     const created = h.instances.at(0)!;
     mounted.unmount();
     expect(created.removed).toBe(true);
+  });
+});
+
+describe("click-off dismissal", () => {
+  test("clicking empty canvas clears the card hover, the pin hover, and the selection, and filters the label layer to the explicit no-match", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    created.clickPin("unit-exact");
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+
+    // No pin is rendered under the click point.
+    created.queryRenderedFeaturesResult = [];
+    created.clickCanvas(20, 30);
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+  });
+
+  test("a click on a pin does not clear: the state stays with the pin-click path and the label keeps its unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    created.clickPin("unit-exact");
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+
+    // A pin IS rendered under the click point; the dismissal hit-test must
+    // consult exactly the base pin layer.
+    created.queryRenderedFeaturesResult = [{ properties: { id: "unit-exact" } }];
+    created.clickCanvas(20, 30);
+    await tick();
+
+    expect(created.queryRenderedFeaturesLog.at(-1)).toEqual({
+      point: { x: 20, y: 30 },
+      options: { layers: ["units-pins-base"] },
+    });
+    expect(uiState.hoveredCardUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    // the identity is unchanged: the card hover still wins over the selection
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("a canvas click while the map is still loading is inert: the pre-existing selection survives and the pin hit-test never runs", async () => {
+    // Raw render, no `load` fired: the pin layers do not exist yet, the way
+    // a freshly mounted map sits while its style is still loading.
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+
+    // A selection can pre-exist at mount (the map unmounts while the list
+    // tab is active and remounts with the detail still open), together with
+    // a card hover from pointer movement over the card list.
+    uiState.selectedUnitId = "unit-exact";
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+
+    created.clickCanvas(20, 30);
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    // querying a not-yet-existing layer would be a maplibre error: the
+    // hit-test must never run before the pin layer exists
+    expect(created.queryRenderedFeaturesLog).toEqual([]);
+  });
+
+  test("a map drag never dismisses: pointer movement without a trailing click keeps the selection, through the map and through the raw canvas DOM", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    created.clickPin("unit-exact");
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+
+    // MapLibre suppresses the `click` that trails a completed drag: the
+    // drag sequence fires mousedown/mousemove/mouseup and NO click.
+    created.dragSequence({ x: 10, y: 10 }, { x: 60, y: 60 });
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+
+    // Raw DOM pointer events on the canvas container (still no click) must
+    // not dismiss either — dismissal is bound to click, never to pointer
+    // events.
+    const canvas = document.querySelector(".map-canvas")!;
+    canvas.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 60, clientY: 60 }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    await tick();
+
+    expect(uiState.hoveredCardUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(uiState.selectedUnitId).toBe("unit-exact");
   });
 });
 
@@ -727,4 +914,521 @@ describe("card selection focuses the map", () => {
 
     expect(created.flyToLog).toEqual([]);
   });
+});
+
+describe("stale pin-hover clearing", () => {
+  test("after a canvas pin click and selecting another unit's card, hovering a third card and unhovering it returns the label to the selected unit", async () => {
+    const unitC = aUnit().withId("unit-ward5").inWard(5).build();
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3, unitC]);
+    // The real card call sites share the singleton uiState with the map.
+    render(UnitCard, { props: { card: unitInWard3 } });
+    render(UnitCard, { props: { card: unitC } });
+
+    // Canvas pin A clicked: the pin hover id carries unit A.
+    created.clickPin("unit-exact");
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+    // Card B is selected through the real card call site (its button click).
+    await userEvent.click(cardButtonFor(unitInWard3.id));
+    await tick();
+    expect(uiState.selectedUnitId).toBe("unit-ward3");
+    expect(uiState.hoveredPinUnitId).toBeNull();
+
+    // Hovering card C moves the label to C…
+    cardButtonFor(unitC.id).dispatchEvent(new MouseEvent("pointerenter"));
+    await tick();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(unitC.id));
+
+    // …and unhovering returns the label to the selected unit B — never to A.
+    cardButtonFor(unitC.id).dispatchEvent(new MouseEvent("pointerleave"));
+    await tick();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(unitInWard3.id));
+    expect(lastFilterFor(created, "units-pins-label")).not.toEqual(
+      pinLabelLayerFilter(unitInWard7.id),
+    );
+  });
+
+  test("clicking a card clears a stale canvas-pin hover id while selecting that unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    render(UnitCard, { props: { card: unitInWard3 } });
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+    await userEvent.click(cardButtonFor(unitInWard3.id));
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBe("unit-ward3");
+  });
+
+  test("activating a card with the keyboard clears a stale canvas-pin hover id while selecting that unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    render(UnitCard, { props: { card: unitInWard3 } });
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+    // Enter on the focused card button fires the same click handler the
+    // pointer path uses — the keyboard activation must clear the hover too.
+    cardButtonFor(unitInWard3.id).focus();
+    await userEvent.keyboard("{Enter}");
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBe("unit-ward3");
+  });
+
+  test("activating a unit's keyboard pin button clears a stale canvas-pin hover id while selecting that unit", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+    // The sr pin button for unit B is a keyboard activation path, not a
+    // canvas pin hit: it must not leave a pin hover id behind.
+    const pinButtons = document.querySelectorAll('[data-testid="map-pin-list"] button');
+    (pinButtons[1] as HTMLButtonElement).click();
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBe("unit-ward3");
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+});
+
+describe("detail close returns focus to the opening control", () => {
+  /**
+   * Mounts the map, the card list, and the detail slide-over together over a
+   * resolved store: the close-path focus proofs need the real selection call
+   * sites (card button, keyboard pin button, canvas pin) feeding the
+   * slide-over that closes, all sharing the uiState singleton.
+   */
+  async function mountedMapCardsAndDetail(units: unknown[]) {
+    store = freshStore(units);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    for (const unit of store.units ?? []) render(UnitCard, { props: { card: unit } });
+    render(DetailSlideOver, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+    return created;
+  }
+
+  /** The screen-reader pin button is the unit's pin control in the a11y tree. */
+  function srPinButtonFor(unitId: string): HTMLButtonElement {
+    const button = document.querySelector(
+      `[data-testid="map-pin-list"] button[data-unit-id="${unitId}"]`,
+    );
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error(`sr pin button for unit ${unitId} not found`);
+    }
+    return button;
+  }
+
+  function pressEscape(): void {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  }
+
+  test("closing the detail from its close button returns focus to the card button that opened it", async () => {
+    await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    // the open panel grabs focus, so the close edge must actively restore
+    expect(document.activeElement).not.toBe(opener);
+
+    await userEvent.click(screen.getByRole("button", { name: m.detail_close() }));
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("closing the detail with Escape returns focus to the card button that opened it", async () => {
+    await mountedMapCardsAndDetail([unitInWard7]);
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    pressEscape();
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("closing the detail by clicking empty canvas returns focus to the card button that opened it", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    // focus has moved on while the detail is open, so a passing proof must be
+    // active restoration — never an inherited focus the opener never lost
+    cardButtonFor(unitInWard3.id).focus();
+    await tick();
+    expect(document.activeElement).toBe(cardButtonFor(unitInWard3.id));
+
+    created.clickCanvas(12, 34); // the hit-test stub reports no pin under the point
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("closing the detail returns focus to the keyboard pin button that opened it", async () => {
+    await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const opener = srPinButtonFor(unitInWard3.id);
+    opener.focus();
+    opener.click();
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(document.activeElement).not.toBe(opener);
+
+    pressEscape();
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  test("closing the detail opened by a canvas pin click returns focus to that unit's screen-reader pin button", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    created.clickPin("unit-exact");
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    pressEscape();
+    await tick();
+
+    // a canvas pin has no DOM control of its own; the unit's pin control in
+    // the a11y tree is its screen-reader pin button
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(srPinButtonFor(unitInWard7.id));
+  });
+
+  test("closing the detail leaves focus where the browser put it when the opening control has left the DOM", async () => {
+    await mountedMapCardsAndDetail([unitInWard7]);
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    // the selection call site captured the opener as the close target
+    expect(uiState.detailTriggerElement).toBe(opener);
+
+    // the card list re-rendered without this unit: the opener is detached
+    opener.remove();
+
+    pressEscape();
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(document.body); // no forced move, no throw
+    expect(uiState.detailTriggerElement).toBeNull(); // the stale trigger is dropped
+  });
+
+  test("closing the detail returns focus to the opener card without re-lighting its label", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const opener = cardButtonFor(unitInWard7.id);
+    await userEvent.click(opener);
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: m.detail_close() }));
+    await tick();
+
+    // focus lands back on the opener card…
+    expect(document.activeElement).toBe(opener);
+    // …but the card's focus handler must not re-light the hover state the
+    // close just dismissed: no card hover and no address label survive close
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+  });
+
+  test("closing the detail returns focus to the opener pin button without re-lighting its label", async () => {
+    const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const opener = srPinButtonFor(unitInWard3.id);
+    opener.focus();
+    opener.click();
+    await tick();
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(document.activeElement).not.toBe(opener);
+
+    pressEscape();
+    await tick();
+
+    // focus lands back on the pin button…
+    expect(document.activeElement).toBe(opener);
+    // …and the close's dismissal still wins over the button's focus handler:
+    // no hover state and no address label survive the keyboard close
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+  });
+
+  test("switching selections while the detail stays open retargets focus return to the latest opening control", async () => {
+    await mountedMapCardsAndDetail([unitInWard7, unitInWard3]);
+    const openerA = cardButtonFor(unitInWard7.id);
+    const openerB = cardButtonFor(unitInWard3.id);
+    await userEvent.click(openerA);
+    await tick();
+    await userEvent.click(openerB);
+    await tick();
+    // A → B keeps the panel open: no close edge fired between the selections
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    // the keyboard user has moved into the open panel, so closing must
+    // actively restore focus — inheriting openerB's focus would prove nothing
+    screen.getByRole("button", { name: m.detail_close() }).focus();
+    await tick();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: m.detail_close() }));
+
+    pressEscape();
+    await tick();
+
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(openerB);
+  });
+});
+
+describe("dismissal state machine (one empty-canvas click-off from every reachable state)", () => {
+  const unitWard5 = aUnit().withId("unit-ward5").inWard(5).withCoordinates(38.9, -77.03).build();
+
+  /**
+   * Mounts the map, every unit's card, and the detail slide-over together:
+   * the dismissal proofs need the real selection call sites (canvas pin,
+   * card button, keyboard pin button) feeding the slide-over that closes,
+   * all sharing the uiState singleton. A bare canvas-pin hover without a
+   * selection is not a reachable interaction state (the canvas pin click
+   * path always selects), so the pin-hover lineage appears inside the rows
+   * that start from a canvas pin click.
+   */
+  async function mountedMapCardsAndDetail(units: unknown[]) {
+    store = freshStore(units);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    for (const unit of store.units ?? []) render(UnitCard, { props: { card: unit } });
+    render(DetailSlideOver, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+    return created;
+  }
+
+  /** The screen-reader pin button is the unit's pin control in the a11y tree. */
+  function srPinButtonFor(unitId: string): HTMLButtonElement {
+    const button = document.querySelector(
+      `[data-testid="map-pin-list"] button[data-unit-id="${unitId}"]`,
+    );
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error(`sr pin button for unit ${unitId} not found`);
+    }
+    return button;
+  }
+
+  type MountedMap = Awaited<ReturnType<typeof mountedMapCardsAndDetail>>;
+
+  /**
+   * The one all-dismissed terminal state: no hover, no selection, no detail
+   * panel, no address label, no highlight — and nothing left over (the focus
+   * return trigger is dropped, and one more settle proves the restore cannot
+   * re-light a hover or a label).
+   */
+  async function expectAllDismissedTerminalState(created: MountedMap): Promise<void> {
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(uiState.detailTriggerElement).toBeNull();
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(highlightLayerFilter(null));
+    // the stored label layer mirrors the latest call, like the real map
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(null));
+    // the focus restore must not re-light anything: one more settle keeps the
+    // cleared hover and the no-match filters in place
+    await tick();
+    expect(uiState.hoveredCardUnitId).toBeNull();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(highlightLayerFilter(null));
+  }
+
+  /**
+   * Every reachable interaction state the dismissal must converge from,
+   * each reached through the real handlers (mock map click dispatch, DOM
+   * clicks, hovers, focus) — never raw uiState writes — and asserted to be
+   * the state it claims before the click-off acts.
+   */
+  const dismissalRows: Array<{
+    initialState: string;
+    arrange: (created: MountedMap) => Promise<void>;
+  }> = [
+    {
+      initialState: "a card hover label on unit-exact",
+      arrange: async (created) => {
+        cardButtonFor(unitInWard7.id).dispatchEvent(new MouseEvent("pointerenter"));
+        await tick();
+        expect(uiState.hoveredCardUnitId).toBe(unitInWard7.id);
+        expect(uiState.selectedUnitId).toBeNull();
+        expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard7.id),
+        );
+      },
+    },
+    {
+      initialState: "a keyboard focus label on unit-exact",
+      arrange: async (created) => {
+        cardButtonFor(unitInWard7.id).focus();
+        await tick();
+        expect(uiState.hoveredCardUnitId).toBe(unitInWard7.id);
+        expect(uiState.selectedUnitId).toBeNull();
+        expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard7.id),
+        );
+      },
+    },
+    {
+      initialState: "a canvas pin click with the detail open on unit-exact",
+      arrange: async (created) => {
+        created.clickPin(unitInWard7.id);
+        await tick();
+        expect(uiState.hoveredPinUnitId).toBe(unitInWard7.id);
+        expect(uiState.selectedUnitId).toBe(unitInWard7.id);
+        expect(uiState.detailTriggerElement).toBe(srPinButtonFor(unitInWard7.id));
+        expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard7.id),
+        );
+      },
+    },
+    {
+      initialState: "a card click with the detail open on unit-ward3",
+      arrange: async (created) => {
+        cardButtonFor(unitInWard3.id).click();
+        await tick();
+        expect(uiState.selectedUnitId).toBe(unitInWard3.id);
+        expect(uiState.hoveredCardUnitId).toBeNull();
+        expect(uiState.detailTriggerElement).toBe(cardButtonFor(unitInWard3.id));
+        expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard3.id),
+        );
+      },
+    },
+    {
+      initialState: "a keyboard pin activation with the detail open on unit-ward5",
+      arrange: async (created) => {
+        const pinButton = srPinButtonFor(unitWard5.id);
+        pinButton.focus();
+        pinButton.click();
+        await tick();
+        expect(uiState.selectedUnitId).toBe(unitWard5.id);
+        expect(uiState.hoveredPinUnitId).toBeNull();
+        // the freshly opened panel grabbed focus, so the pin button's blur
+        // cleared its hover slot: the label rides the selection fallback
+        expect(uiState.hoveredCardUnitId).toBeNull();
+        expect(uiState.detailTriggerElement).toBe(pinButton);
+        expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitWard5.id),
+        );
+      },
+    },
+    {
+      initialState: "a canvas pin click on unit-exact followed by selecting unit-ward3's card",
+      arrange: async (created) => {
+        created.clickPin(unitInWard7.id);
+        await tick();
+        cardButtonFor(unitInWard3.id).click();
+        await tick();
+        expect(uiState.selectedUnitId).toBe(unitInWard3.id);
+        // the stale canvas-pin hover id did not survive the card selection
+        expect(uiState.hoveredPinUnitId).toBeNull();
+        expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard3.id),
+        );
+      },
+    },
+    {
+      initialState: "a card hover on unit-ward5 over the open unit-ward3 selection",
+      arrange: async (created) => {
+        cardButtonFor(unitInWard3.id).click();
+        await tick();
+        cardButtonFor(unitWard5.id).dispatchEvent(new MouseEvent("pointerenter"));
+        await tick();
+        // the live hover owns the label while the selection stays open
+        expect(uiState.hoveredCardUnitId).toBe(unitWard5.id);
+        expect(uiState.selectedUnitId).toBe(unitInWard3.id);
+        expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitWard5.id),
+        );
+      },
+    },
+    {
+      initialState:
+        "the focus-restored state after closing unit-ward3's detail with the close button",
+      arrange: async (created) => {
+        cardButtonFor(unitInWard3.id).click();
+        await tick();
+        screen.getByRole("button", { name: m.detail_close() }).click();
+        await tick();
+        expect(uiState.hoveredCardUnitId).toBeNull();
+        expect(uiState.hoveredPinUnitId).toBeNull();
+        expect(uiState.selectedUnitId).toBeNull();
+        expect(uiState.detailTriggerElement).toBeNull();
+        expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+        expect(document.activeElement).toBe(cardButtonFor(unitInWard3.id));
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+      },
+    },
+    {
+      initialState: "the focus-restored state after closing unit-ward5's detail with Escape",
+      arrange: async (created) => {
+        const pinButton = srPinButtonFor(unitWard5.id);
+        pinButton.focus();
+        pinButton.click();
+        await tick();
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        await tick();
+        expect(uiState.hoveredCardUnitId).toBeNull();
+        expect(uiState.hoveredPinUnitId).toBeNull();
+        expect(uiState.selectedUnitId).toBeNull();
+        expect(uiState.detailTriggerElement).toBeNull();
+        expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+        expect(document.activeElement).toBe(pinButton);
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+      },
+    },
+  ];
+
+  for (const row of dismissalRows) {
+    test(`one empty-canvas click-off from ${row.initialState} converges to the all-dismissed state`, async () => {
+      const created = await mountedMapCardsAndDetail([unitInWard7, unitInWard3, unitWard5]);
+      await row.arrange(created);
+
+      // the single action under proof: one map-wide canvas click that lands
+      // on no pin (the hit-test stub reports no rendered features under the
+      // click point)
+      created.queryRenderedFeaturesResult = [];
+      created.clickCanvas(12, 34);
+      await tick();
+
+      await expectAllDismissedTerminalState(created);
+    });
+  }
 });

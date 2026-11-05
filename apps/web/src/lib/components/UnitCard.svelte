@@ -31,7 +31,15 @@
       : m.card_badge_needs_verification(),
   );
 
-  function selectCard(): void {
+  function selectCard(event: MouseEvent): void {
+    // Remember the activating button: closing the detail hands keyboard focus
+    // back to this control while it is still in the DOM.
+    uiState.detailTriggerElement =
+      event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    // Card selection supersedes any earlier canvas-pin hover identity: the
+    // selected unit owns the label fallback, so a stale pin hover id from a
+    // previous canvas pin click must not outlive this selection.
+    uiState.hoveredPinUnitId = null;
     uiState.selectedUnitId = card.id;
   }
 </script>

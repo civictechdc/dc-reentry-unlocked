@@ -36,6 +36,7 @@
    * required attribution, and pin↔card cross-highlighting in both directions.
    */
   let container: HTMLElement | undefined = $state();
+  let pinList: HTMLElement | undefined = $state();
   let map: MapLibreMap | null = null;
   let highlightedUnitId = $state<string | null>(null);
   // Camera observability (e2e/debug hook, not user-facing): center serialized
@@ -73,6 +74,29 @@
       const center = map.getCenter();
       cameraCenterAttribute = `${center.lng},${center.lat}`;
       cameraZoomAttribute = String(map.getZoom());
+    });
+    // Click-off dismissal: a canvas click that lands on NO pin clears the
+    // card hover, the pin hover, and the selection (closing the detail and
+    // filtering the label layer back to the explicit no-match). A pin hit
+    // leaves the state alone — the layer-scoped click handler inside `load`
+    // owns pin clicks, and clicks pass through the label bubble to the pin
+    // beneath it. Panning safety needs no drag guard here: MapLibre
+    // natively suppresses the `click` that would trail a completed drag, so
+    // dismissal stays strictly click-bound.
+    map.on("click", (event) => {
+      if (!map) return;
+      // Before `load` attaches the pin layers, a click is inert: the
+      // hit-test layer does not exist (querying it would be a maplibre
+      // error), and live selection state must not be dismissed by clicks
+      // the pin layers could not have participated in.
+      if (!map.getLayer("units-pins-base")) return;
+      const pinHits = map.queryRenderedFeatures(event.point, {
+        layers: ["units-pins-base"],
+      });
+      if (pinHits.length > 0) return;
+      uiState.hoveredCardUnitId = null;
+      uiState.hoveredPinUnitId = null;
+      uiState.selectedUnitId = null;
     });
     map.on("load", () => {
       if (!map) return;
@@ -117,6 +141,12 @@
         const id = event.features?.[0]?.properties?.id as string | undefined;
         if (id) {
           uiState.hoveredPinUnitId = id;
+          // A canvas pin has no DOM control of its own: focus return maps to
+          // the unit's screen-reader pin button, the unit's pin control in
+          // the accessibility tree.
+          uiState.detailTriggerElement =
+            pinList?.querySelector<HTMLButtonElement>(`button[data-unit-id="${CSS.escape(id)}"]`) ??
+            null;
           uiState.selectedUnitId = id;
         }
       });
@@ -203,16 +233,29 @@
 >
   <div class="map-canvas" bind:this={container}></div>
   <!-- Keyboard-reachable pin selection: every unit pin has a focusable button. -->
-  <ul class="sr-pins" aria-label={m.map_region_label()} data-testid="map-pin-list">
+  <ul
+    class="sr-pins"
+    aria-label={m.map_region_label()}
+    data-testid="map-pin-list"
+    bind:this={pinList}
+  >
     {#each store.units ?? [] as unit (unit.id)}
       <li>
         <button
           type="button"
           aria-label={m.map_select_pin({ address: unit.address })}
+          data-unit-id={unit.id}
           onfocus={() => (uiState.hoveredCardUnitId = unit.id)}
           onblur={() => (uiState.hoveredCardUnitId = null)}
-          onclick={() => {
-            uiState.hoveredPinUnitId = unit.id;
+          onclick={(event) => {
+            // The pin button is a keyboard activation path, not a canvas
+            // pin hit: it selects the unit, clears any canvas-pin hover
+            // id so the label falls back to this selection (never to a
+            // stale pin hover from an earlier canvas pin click), and
+            // remembers this button as the detail's focus-return target.
+            uiState.hoveredPinUnitId = null;
+            uiState.detailTriggerElement =
+              event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
             uiState.selectedUnitId = unit.id;
           }}
         >
