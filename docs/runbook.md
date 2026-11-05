@@ -1,10 +1,12 @@
 # Runbook — running DC Reentry Housing Discovery
 
-The complete run story for the prototype: development without Docker, the
-Compose boot, and dataset regeneration. Every command here is verified to
-run as written. Prerequisites: Node ≥ 22.12, pnpm ≥ 12
-(`corepack enable pnpm`), git ≥ 2.54 — and for the Compose section, a
-running Docker daemon (the build uses BuildKit).
+The complete run story for the prototype: development without Docker, in
+a dev container, the Compose boot, and dataset regeneration. Every
+command here is verified to run as written. Prerequisites: Node ≥ 22.12,
+pnpm ≥ 12 (`corepack enable pnpm`), git ≥ 2.54 — and for the Compose
+section, a running Docker daemon (the build uses BuildKit). The dev
+container path replaces those manual prerequisites with Docker/Podman
+plus a dev-container-supporting editor.
 
 For API environment variables, the published filter contract, and endpoint
 semantics see [api.md](api.md); for the synthetic-data policy see
@@ -44,7 +46,25 @@ lsof -nP -iTCP:3000 -iTCP:5173 -sTCP:LISTEN
 and kill the listening PID(s) found there (`lsof` shows no listeners when
 both servers are really stopped).
 
-## 2. Compose boot
+## 2. Development in a dev container
+
+No local Node/pnpm toolchain at all is fine: the repo's `.devcontainer/`
+config boots a container with the whole toolchain ready (Node 24,
+pnpm 12.15.0, Playwright chromium, git hooks wired), supported by VS Code
+Dev Containers, Zed, and GitHub Codespaces. Boot it from your editor
+(_Reopen in Container_ in VS Code, the space-creation flow in Codespaces,
+Zed's dev-container flow) or headless:
+
+```sh
+npx @devcontainers/cli up --workspace-folder .
+```
+
+Post-create finishes in about a minute, and the forwarded ports match the
+dev boot above (3000 API, 5173 web, 4317 e2e prod probe). The full story
+— per-editor notes, ports behavior, git hooks, trust model, verification
+recipe — lives in [dev-container.md](dev-container.md).
+
+## 3. Compose boot
 
 The stack ships `compose.yaml` (service definitions) and per-workspace
 Dockerfiles (`apps/api/Dockerfile`, `apps/web/Dockerfile`) running as the
@@ -106,7 +126,7 @@ docker builder prune
 After the teardown the container listing shows no dc-reentry containers —
 only its column header row with zero rows beneath it.
 
-## 3. Dataset regeneration
+## 4. Dataset regeneration
 
 The frozen dataset (`data/units.v2.json`, committed) must stay byte-identical
 across regenerations — the generator is deterministic with a fixed seed, so

@@ -49,6 +49,11 @@ pnpm dev
 [localhost:5173](http://localhost:5173/) and the API at
 [localhost:3000](http://localhost:3000/) (`/health`, `/units`, `/filters`).
 
+The same stack also boots with zero local toolchain in a dev container —
+VS Code Dev Containers, Zed, or GitHub Codespaces, needing only Docker or
+Podman plus a supporting editor. See the runbook's container section and
+[docs/dev-container.md](docs/dev-container.md).
+
 The same stack can run from the built images instead of the dev servers:
 
 ```sh

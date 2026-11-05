@@ -133,7 +133,17 @@ clone:
 5. Dev-boot probe: `pnpm dev`, then the API `/health` endpoint and the
    web app on `localhost:5173`
 
-<!-- VERIFICATION-STATUS-PENDING -->
+Verified end-to-end 2026-11-05 (fresh clone + fresh container of the
+`typescript-node:24-trixie` image, reference CLI 0.90.0, 8 CPU / 12.5 GB
+VM): every gate passed in the documented order — frozen install
+(supply-chain policy clean), `lint`, `format:check`, `test` (384 tests),
+`typecheck`, `arch:check`, then the three e2e suites (28 + 8 + 4, each
+running one worker via the container's `PLAYWRIGHT_WORKERS=1`) and the
+dev-boot probe (API `/health` and the web app on 5173). Wall time ~16
+minutes. The CLI run exercises the same engine VS Code's Dev Containers
+extension uses; the VS Code GUI attach and the Zed flow were not driven
+headlessly in this session — the Zed notes above come from its current
+docs and first-party source.
 
 ## Troubleshooting
 

@@ -33,6 +33,7 @@ pnpm monorepo (Node ≥ 22.12, pnpm ≥ 12):
 | `tools/datagen`      | Deterministic synthetic dataset generator (fixed seed)                                                                           |
 | `data/`              | Frozen generated dataset (`data/units.v2.json`, committed) — regeneration must stay byte-identical. Never hand-edit              |
 | `compose.yaml`       | The Compose boot: API + production-built web images, healthchecked (build story in `docs/runbook.md`)                            |
+| `.devcontainer/`     | Dev container config (VS Code/Zed/Codespaces) — see docs/dev-container.md                                                        |
 | `docs/`              | Human-facing docs: glossary, runbook, api, data-synthetic, shared-contracts, `architecture.md` (system diagram + seams)          |
 | `openspec/`          | In-repo OpenSpec planning workspace (`openspec/changes/`, `openspec/specs/`) — validated by the CI `openspec validate` gate      |
 | `.github/workflows/` | CI: PR gate (`pr.yml`), full suite on manual dispatch (`full.yml`) — e2e compose matrix, mutation runs, openspec + diagram gates |
@@ -144,7 +145,8 @@ stay out of all hook configs.
 `scripts/agent-hooks/nudge.mjs`, `.claude/settings.json`, `.codex/hooks.json`,
 `.codex/config.toml`, `.codex/agents/*`, `.mcp.json`, `opencode.jsonc`,
 `.opencode/svelte.json`, `.github/hooks/agent-nudges.json`,
-`.claude/agents/*`, `.agents/skills/**`, and `skills-lock.json` inject
+`.claude/agents/*`, `.agents/skills/**`, `.devcontainer/**`, and
+`skills-lock.json` inject
 executable configuration or agent instructions into every agent session
 in this repo. Treat changes to any of them as security-sensitive: review
 them as you would review a shell hook — no input ever reaches the emitted

@@ -10,6 +10,10 @@ enforce everything the hooks do, but local feedback will skip them.
 
 ## One-time setup (per worktree)
 
+Inside a dev container this wiring happens automatically at post-create
+(see [dev-container.md](dev-container.md)); the manual command below
+remains the host path.
+
 ```sh
 git config --local include.path "$(git rev-parse --show-toplevel)/gitconfig/hooks.config"
 ```
