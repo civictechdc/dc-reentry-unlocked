@@ -104,3 +104,30 @@ Fixes (user-approved option): `workspaceConcurrency: 1` repo-wide in
 runs everywhere), and a `PLAYWRIGHT_WORKERS` env knob in
 `apps/web/playwright.config.ts` set to `1` via `containerEnv`
 (container-only effect; host/CI default unchanged).
+
+## Amendment 2026-11-05 — fresh-container mount race and env delivery
+
+Two follow-ups settled the same day, from the same fresh-container
+verification sessions:
+
+- **`containerEnv` does not reach the container under the devcontainer
+  CLI (0.90).** `docker inspect` on the created container showed the
+  variable absent from the container's env — the property is an
+  editor-integration hint the CLI path never applies. Replacement
+  (user-approved): `runArgs: ["--init", "--env", "PLAYWRIGHT_WORKERS=1"]`
+  — docker-level flags, so the env lands regardless of which consumer
+  drives the container. `--init` doubles as zombie reaping for chromium
+  (per Playwright's own Docker guidance).
+- **Root cause of the deterministic fresh-container `pnpm test`
+  failure:** the bind mount's `consistency=cached` view races tsconfck's
+  tsconfig discovery in the first minutes after container creation, and
+  rolldown 1.2.15 hard-errors by applying tsconfig resolution to
+  virtual modules — fixed upstream in rolldown 1.2.16 (released
+  2026-11-05; skips tsconfig resolution for `\0`-prefixed modules).
+  Deliberately NOT overridden today: forcing the fix would need a
+  `minimumReleaseAgeExclude` carve-out for a hours-old package, which
+  defeats the release-age policy it would sit inside. Instead, post-create
+  runs a non-fatal direct-form vitest warm-up (the empirically passing
+  form) — it settles the mount view and warms the optimizer cache before
+  the first real run. Drop the warm-up when rolldown ≥ 1.2.16 ages past
+  the release-age policy and arrives via a normal vite bump.
