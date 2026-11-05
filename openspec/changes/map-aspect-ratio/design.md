@@ -45,6 +45,31 @@ user confirms the set; the confirmed set is written into this change's spec
 delta before any mid-width implementation. The desktop proportions fix
 (D1–D4) proceeds regardless and must not break the confirmed mobile form.
 
+**D6 — Confirmed set (user, 2026-11-05, visual-companion walkthrough).**
+Desktop/laptop/landscape-tablet (>900px): desktop grid with a 4:3-capped
+map pane centered in its column, list column `minmax(26rem, 32rem)`
+(preview: map ≈987×704 at 1920×1080, 5 cards visible). Phones and portrait
+tablets (≤900px): tabbed list-first form — the phone breakpoint moves from
+768px to 900px so portrait tablets stop falling into a tall-sliver grid.
+Survey fixes that land with it: the card list's implicit grid
+track propagated the full ~117k-px card stack into page scroll geometry
+despite `overflow-y: auto` (Chrome extends ancestor scrollable overflow
+through clipped grid tracks) — fixed with `contain: layout` on the card
+list; the map canvas's `min-height: 24rem` becomes a clamp; the map
+pane's implicit grid track needs `minmax(0, 1fr)` so a capped pane
+actually resizes (MapLibre's mount-time inline canvas width otherwise
+deadlocks the track size).
+
+**D7 — Phone map tab amendment (user, 2026-11-05, walkthrough adjust).**
+The phone map tab gets the same square-ish treatment: portrait
+square-capped (preview: canvas ≈390×353), landscape square-capped with
+slimmer chrome — the tab bar floats over the map so the pane earns real
+height (preview: canvas ≈270×196, ratio ≈1.4 vs today's 8:1 strip; a
+plain square cap without the chrome change collapses to a ~48px sliver
+because the legend wraps tall in narrow maps). A small border frames the
+map pane (design tokens) so the centered map reads as a pane. List tab,
+filter sheet, and detail sheet forms are unchanged.
+
 ## Risks / Trade-offs
 
 - [Taste] "Square-like" is a product-voice call; wrong-guess cost is one

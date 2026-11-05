@@ -149,11 +149,18 @@ test.describe("canvas click dismissal and drag pan on desktop", () => {
     const canvasBox = await (await mapCanvas(page)).boundingBox();
     const startX = canvasBox!.x + canvasBox!.width / 2;
     const startY = canvasBox!.y + canvasBox!.height / 2;
+    // The pan drag stays inside the canvas: MapLibre abandons the gesture
+    // once the pointer leaves the map, so the drag length is proportional to
+    // the actual (aspect-capped) canvas rather than fixed pixels that could
+    // exit a narrow pane.
+    const dragRamp = 0.4;
+    const dragX = canvasBox!.width * dragRamp;
+    const dragY = canvasBox!.height * dragRamp;
     const centerBeforePan = await mapCenter(page);
     await page.mouse.move(startX, startY);
     await page.mouse.down();
-    await page.mouse.move(startX + 80, startY + 40, { steps: 5 });
-    await page.mouse.move(startX + 300, startY + 150, { steps: 12 });
+    await page.mouse.move(startX + dragX / 2, startY + dragY / 2, { steps: 5 });
+    await page.mouse.move(startX + dragX, startY + dragY, { steps: 12 });
     await page.mouse.up();
     const centerAfterPan = await awaitCameraStill(page);
     await settleMap(page);

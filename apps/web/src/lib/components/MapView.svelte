@@ -343,8 +343,19 @@
   .map-view {
     position: relative;
     display: grid;
-    grid-template-rows: 1fr auto;
+    /* Shrinkable single column: MapLibre pins an inline pixel width on its
+       canvas at mount — an implicit auto track would size to that stale
+       width, and the map could never shrink with its pane again. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
     min-height: 0;
+    /* Framed pane: a small border follows the map pane wherever it renders
+       (desktop capped map, phone square). Overflow clips the canvas into the
+       rounded corners; fixed-position descendants (the sr-pin focus bubble)
+       are not clipped by it. */
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
   .sr-pins {
     position: absolute;
@@ -355,7 +366,27 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* Ancestor clip-path subtree-clips EVERYTHING under it — including the
+     focused pin button's position:fixed bubble — which would hide the bubble
+     from paint and hit-testing entirely. Release the clip only while a pin
+     is focused: the other buttons stay screen-hidden by the 1px overflow box,
+     and the clip returns the moment focus leaves. */
+  .sr-pins:has(button:focus-visible) {
+    clip-path: none;
+  }
   .sr-pins button:focus-visible {
+    /* Viewport-anchored in Chromium: containment (the map pane / map viewport
+       size containers) does not re-anchor fixed-position descendants —
+       verified live, the bubble renders at the viewport corner. Spec-literal
+       engines may disagree: css-contain-2 layout containment establishes a
+       fixed-position containing block, so a container-anchored bubble is
+       possible there. The phone map tab's top: 15rem offset clears the
+       floating bar under either reading — container-top + 240px still lands
+       below the bar band. Two further traps need the rules below: the list's
+       clip-path subtree-clips even fixed descendants (the :has rule releases
+       it while a pin is focused), and a contained ancestor's stacking context
+       pins the bubble below page chrome on the phone map tab (the page rule
+       drops the bubble below the floating bar's strip instead). */
     position: fixed;
     width: auto;
     height: auto;
@@ -370,14 +401,22 @@
     color: var(--ink);
   }
   .pin-label {
+    /* Display artifact of the focus bubble only — never an interaction
+       target, so hit-tests at the bubble resolve to the button itself. */
     display: none;
+    pointer-events: none;
   }
   .sr-pins button:focus-visible .pin-label {
     display: inline;
   }
   .map-canvas {
-    min-height: 24rem;
+    /* No fixed floor: the pane's grid row is the height authority (the row
+       can be shorter than any pixel minimum on short viewports, and a floor
+       here would overflow it). On the phone tab the pane itself is sized to
+       the viewport, so height 100% still fills it. */
+    min-height: 0;
     height: 100%;
+    width: 100%;
   }
   .map-legend {
     margin: 0;

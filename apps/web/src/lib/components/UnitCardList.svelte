@@ -78,6 +78,11 @@
     align-content: start;
     min-height: 0;
     overflow-y: auto;
+    /* Layout containment: an oversized inner track (the full card stack)
+       must not extend this pane's scrollable overflow into the page — the
+       overflow-y clip alone does not stop that propagation in every engine,
+       and this pane is the card stack's only scroll boundary. */
+    contain: layout;
     padding: 0.5rem;
   }
   .cards {

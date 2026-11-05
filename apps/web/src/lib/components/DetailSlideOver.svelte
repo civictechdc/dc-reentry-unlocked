@@ -200,8 +200,11 @@
     padding: 1rem;
     z-index: 30;
   }
-  /* Phone width: the same slide-over renders as a full-screen bottom sheet. */
-  @media (max-width: 768px) {
+  /* Phone width: the same slide-over renders as a full-screen bottom sheet.
+     Tracks the tabbed-form breakpoint exactly (899.98 = 900px boundary,
+     desktop owns 900) — a wider gap would leave in-between widths a tabbed
+     list with a desktop slide-over. */
+  @media (max-width: 899.98px) {
     .detail {
       position: fixed;
       inset: auto 0 0 0;

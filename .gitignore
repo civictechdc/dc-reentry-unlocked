@@ -42,6 +42,7 @@ pnpm-debug.log*
 # Local-only agent context (never tracked)
 .superpowers/
 .agents/local/
+.audit/
 AGENTS.local.md
 
 # NOTE: data/ (the frozen synthetic dataset, e.g. data/units.v2.json) is
