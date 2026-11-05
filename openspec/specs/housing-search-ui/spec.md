@@ -7,7 +7,7 @@ Defines the user-facing display application: available housing units on an inter
 
 ### Requirement: Map + card list layout
 
-The search UI SHALL present a map of unit location pins alongside the card list of the same result set. On first load with no filters set, every available unit SHALL have a pin and the full list SHALL display. Across window sizes the layout SHALL render each size class's confirmed form: on desktop-width viewports a map pane capped near 4:3 with the card list's scroll window using the viewport height well, and no whole-page scroll or map-pane overflow anywhere.
+The search UI SHALL present a map of unit location pins alongside the card list of the same result set. On first load with no filters set, every available unit SHALL have a pin and the full list SHALL display. Across window sizes the layout SHALL render each size class's confirmed form: on desktop-width viewports a map pane capped near 3:2 with the card list's scroll window using the viewport height well, and no whole-page scroll or map-pane overflow anywhere.
 
 #### Scenario: Pin-card cross-highlighting
 - **WHEN** a pin or its card is hovered or selected
@@ -19,11 +19,11 @@ The search UI SHALL present a map of unit location pins alongside the card list 
 
 #### Scenario: Desktop proportions use the viewport well
 - **WHEN** the page is viewed on a maximized desktop-width viewport
-- **THEN** the map pane is capped near 4:3 (for example roughly 987×704 at 1920×1080, versus today's roughly 2:1 strip), and the card list's unscrolled window shows several units — around five — rather than around three
+- **THEN** the map pane is capped near 3:2 (for example roughly 1218×812 at 1920×1080, and roughly 904×651 at 1440×900 with the filter bar compacted to a dense two-row band (~93px)), the map's side dead margin stays small, and the card list's unscrolled window shows several units — around five — rather than around three
 
 #### Scenario: Responsive size classes render their confirmed forms
 - **WHEN** the window is resized across the size classes (phone, portrait tablet, landscape tablet, laptop, maximized desktop)
-- **THEN** each size renders its confirmed preferred layout form: at and below the 900px breakpoint (phones and portrait tablets) the tabbed list-first form with on-demand map; above it the desktop grid with the 4:3-capped map and a 26–32rem list column — with no broken intermediate states between classes
+- **THEN** each size renders its confirmed preferred layout form: at and below the 900px breakpoint (phones and portrait tablets) the tabbed list-first form with on-demand map; above it the desktop grid with the 3:2-capped map and a 26–32rem list column — with no broken intermediate states between classes
 
 #### Scenario: Phone map tab renders square-ish in both orientations
 - **WHEN** the phone map tab is viewed in portrait or landscape
