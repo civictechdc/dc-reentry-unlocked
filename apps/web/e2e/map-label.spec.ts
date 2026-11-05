@@ -5,6 +5,7 @@ import {
   expectLabelGeometry,
   labelGeometry,
   mapCanvas,
+  pinCanvasPoint,
   settleMap,
 } from "./steps/label-pixels.ts";
 import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts";
@@ -64,6 +65,37 @@ test.describe("the pin address label renders on the map canvas", () => {
     const withoutLabel = await canvasShot(page);
 
     expectLabelGeometry(await labelGeometry(page, withLabel, withoutLabel));
+  });
+
+  test("hovering a canvas pin paints its address label and moving the pointer away erases it", async ({
+    page,
+  }) => {
+    await openApp(page);
+    await expectResultsLoaded(page);
+
+    // The initial no-selection view: blue circles only. The camera
+    // attributes are recorded before the hover — hovering a pin must never
+    // move the camera the way a selection does.
+    const canvasBox = await (await mapCanvas(page)).boundingBox();
+    const pinPoint = await pinCanvasPoint(page);
+    const centerBefore = await page.getByTestId("map-view").getAttribute("data-map-center");
+    const zoomBefore = await page.getByTestId("map-view").getAttribute("data-map-zoom");
+
+    await page.mouse.move(canvasBox!.x + pinPoint.x, canvasBox!.y + pinPoint.y);
+    // The settle wait covers the enter intent delay (tens of milliseconds)
+    // plus glyph rasterization and tile settling before the label shot.
+    await settleMap(page);
+    const withLabel = await canvasShot(page);
+
+    await page.mouse.move(0, 0);
+    await settleMap(page);
+    const withoutLabel = await canvasShot(page);
+
+    expectLabelGeometry(await labelGeometry(page, withLabel, withoutLabel));
+    // A hover never selects: no detail opened and the camera stayed put.
+    await expect(page.getByTestId("unit-detail")).toHaveCount(0);
+    expect(await page.getByTestId("map-view").getAttribute("data-map-center")).toBe(centerBefore);
+    expect(await page.getByTestId("map-view").getAttribute("data-map-zoom")).toBe(zoomBefore);
   });
 
   test("keyboard-focusing a map pin button paints its address label and blurring it erases it", async ({

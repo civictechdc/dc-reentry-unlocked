@@ -134,6 +134,16 @@ export function basePinLayerPaint(): Record<string, unknown> {
   };
 }
 
+/**
+ * How long the pointer must rest on a pin before its address label lights:
+ * short enough to feel immediate, long enough that sweeping the pointer
+ * across several pins does not flicker a label on each one. Tens of
+ * milliseconds; deliberately a single named constant so tuning the feel is
+ * a one-line change (user-accepted 30 ms in the 2026-11-04 interactive
+ * demo).
+ */
+export const PIN_HOVER_INTENT_DELAY_MS = 30;
+
 /** Highlight layer paint (selected/hovered unit's pin). */
 export function highlightPinLayerPaint(): Record<string, unknown> {
   return {

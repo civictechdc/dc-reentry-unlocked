@@ -23,6 +23,7 @@
     pinLabelBubbleImageMetadata,
     pinLabelLayerDefinition,
     pinLabelLayerFilter,
+    PIN_HOVER_INTENT_DELAY_MS,
     unitsToFeatureCollection,
   } from "#lib/map/map-config.ts";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
@@ -61,6 +62,15 @@
       ? pinCoordinatesFor(focusedUnit)
       : [DC_MAP_CENTER.lng, DC_MAP_CENTER.lat];
     const initialZoom = focusedUnit ? CARD_FOCUS_ZOOM : DC_MAP_ZOOM;
+    // The pending enter-intent timer for the map created below: effect-local
+    // so each map instance owns exactly one slot and the teardown closes over
+    // it (a pending timer must never outlive the map that registered it).
+    // The sibling id records WHICH pin the slot is armed (or last fired) for
+    // — the layer-scoped mousemove correction below compares against it; it
+    // never needs clearing beyond the timer itself (the whole closure dies
+    // with the map).
+    let pinHoverIntentTimer: number | null = null;
+    let pinHoverIntentTargetId: string | null = null;
     map = new MapLibreMap({
       container,
       style: createMapStyle(),
@@ -150,8 +160,64 @@
           uiState.selectedUnitId = id;
         }
       });
+      // Pointer hover on a canvas pin: the pointer entering the base pin
+      // layer carries the queried feature under it, so the unit id is read
+      // from `features[0]`. The sibling `mouseleave` event has NO `features`
+      // — the leave path knows what to clear without consulting the event.
+      // The id lights only after a short intent delay, so sweeping the
+      // pointer across pins never flickers a label under each one.
+      //
+      // Arming is shared by the enter path and the mousemove correction
+      // below: cancel whatever is pending, then arm the full intent delay
+      // for the given pin — the same delay applies to a correction of an
+      // already-live label.
+      const armPinHoverIntent = (id: string): void => {
+        if (pinHoverIntentTimer !== null) window.clearTimeout(pinHoverIntentTimer);
+        pinHoverIntentTargetId = id;
+        pinHoverIntentTimer = window.setTimeout(() => {
+          pinHoverIntentTimer = null;
+          uiState.hoveredPinUnitId = id;
+        }, PIN_HOVER_INTENT_DELAY_MS);
+      };
+      map.on("mouseenter", "units-pins-base", (event) => {
+        const id = event.features?.[0]?.properties?.id as string | undefined;
+        if (!id) return;
+        armPinHoverIntent(id);
+      });
+      // Pin-to-pin travel inside the layer: MapLibre's layer-scoped
+      // `mouseenter` does NOT re-fire when the pointer crosses between
+      // features of the same layer, so the timer armed on the pin crossed
+      // off would otherwise fire while the pointer rests on the next pin.
+      // The layer-scoped `mousemove` (which DOES carry `features`, like the
+      // enter event) re-checks the pin under the pointer and re-arms the
+      // intent for a CHANGED id only — same-id traffic is a no-op, never a
+      // timer restart. A label already live from the crossed-off pin stays
+      // until the new intent elapses, then switches to the rested pin. A
+      // features-less event is ignored: the leave handler owns clearing.
+      map.on("mousemove", "units-pins-base", (event) => {
+        const id = event.features?.[0]?.properties?.id as string | undefined;
+        if (!id || id === pinHoverIntentTargetId) return;
+        armPinHoverIntent(id);
+      });
+      map.on("mouseleave", "units-pins-base", () => {
+        if (pinHoverIntentTimer !== null) {
+          window.clearTimeout(pinHoverIntentTimer);
+          pinHoverIntentTimer = null;
+        }
+        // Cleared unconditionally — safe by identity precedence: a hover id
+        // that came from a pin click falls back to the still-open selection
+        // (same unit), and with no selection the label goes no-match.
+        uiState.hoveredPinUnitId = null;
+      });
     });
     return () => {
+      // The pending enter intent dies with the map that registered it: a
+      // timer left running would write a hover id into the shared ui state
+      // after unmount.
+      if (pinHoverIntentTimer !== null) {
+        window.clearTimeout(pinHoverIntentTimer);
+        pinHoverIntentTimer = null;
+      }
       map?.remove();
       map = null;
     };

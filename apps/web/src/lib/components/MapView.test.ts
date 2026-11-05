@@ -16,6 +16,7 @@ import {
   OSM_ATTRIBUTION,
   OSM_TILE_URL,
   pinCoordinatesFor,
+  PIN_HOVER_INTENT_DELAY_MS,
   pinLabelLayerFilter,
   unitsToFeatureCollection,
 } from "#lib/map/map-config.ts";
@@ -78,6 +79,9 @@ const h = vi.hoisted(() => ({
     removed: boolean;
     clickPin: (unitId: string) => void;
     clickCanvas: (x: number, y: number) => void;
+    firePinHover: (unitId: string) => void;
+    firePinMove: (unitId: string) => void;
+    firePinLeave: () => void;
     dragSequence: (from: { x: number; y: number }, to: { x: number; y: number }) => void;
     queryRenderedFeaturesResult: Array<Record<string, unknown>>;
     queryRenderedFeaturesLog: Array<{ point: unknown; options: Record<string, unknown> | null }>;
@@ -129,6 +133,17 @@ vi.mock("maplibre-gl", () => {
     clickHandlers: unknown[] = [];
     /** Registered map-wide click handlers: `on("click", fn)` with no layer id. */
     mapWideClickHandlers: unknown[] = [];
+    /** Captured layer-scoped `mouseenter` handlers: `on("mouseenter", layerId, fn)`. */
+    mouseEnterHandlers: Array<(event: { features: unknown[] }) => void> = [];
+    /** Captured layer-scoped `mousemove` handlers: like `mouseenter`, the event carries `features`. */
+    mouseMoveHandlers: Array<(event: { features: unknown[] }) => void> = [];
+    /**
+     * Captured layer-scoped `mouseleave` handlers. The real `mouseleave` is
+     * a layer mouse event WITHOUT `features` — the queried feature set is
+     * empty off-layer — and the component's leave handler ignores the event
+     * entirely.
+     */
+    mouseLeaveHandlers: Array<(event: { features?: undefined }) => void> = [];
     /** Registered pointer handlers (mousedown/mousemove/mouseup), keyed by event name. */
     pointerHandlers = new Map<string, unknown[]>([
       ["mousedown", []],
@@ -154,6 +169,12 @@ vi.mock("maplibre-gl", () => {
         this.clickHandlers.push(b);
       } else if (event === "click" && typeof a === "function") {
         this.mapWideClickHandlers.push(a);
+      } else if (event === "mouseenter" && typeof b === "function") {
+        this.mouseEnterHandlers.push(b as (event: { features: unknown[] }) => void);
+      } else if (event === "mouseleave" && typeof b === "function") {
+        this.mouseLeaveHandlers.push(b as (event: { features?: undefined }) => void);
+      } else if (event === "mousemove" && typeof b === "function") {
+        this.mouseMoveHandlers.push(b as (event: { features: unknown[] }) => void);
       } else if (typeof a === "function" && pointerEventNames.has(event)) {
         this.pointerHandlers.get(event)!.push(a);
       }
@@ -220,6 +241,36 @@ vi.mock("maplibre-gl", () => {
     clickCanvas(x: number, y: number): void {
       for (const handler of this.mapWideClickHandlers) {
         (handler as (event: { point: { x: number; y: number } }) => void)({ point: { x, y } });
+      }
+    }
+    /**
+     * Test helper: dispatch the captured layer-scoped `mouseenter` handlers
+     * with one queried pin feature — the real event carries the `features`
+     * under the pointer.
+     */
+    firePinHover(unitId: string): void {
+      for (const handler of this.mouseEnterHandlers) {
+        handler({ features: [{ properties: { id: unitId } }] });
+      }
+    }
+    /**
+     * Test helper: dispatch the captured layer-scoped `mouseleave` handlers.
+     * The real `mouseleave` carries no `features` — the handler must already
+     * know what it is clearing.
+     */
+    firePinLeave(): void {
+      for (const handler of this.mouseLeaveHandlers) handler({});
+    }
+    /**
+     * Test helper: dispatch the captured layer-scoped `mousemove` handlers
+     * with one queried pin feature. MapLibre's layer-scoped `mouseenter`
+     * does NOT re-fire when the pointer crosses between features of the
+     * same layer — pin-to-pin travel inside one layer arrives as plain
+     * `mousemove` events carrying the feature now under the pointer.
+     */
+    firePinMove(unitId: string): void {
+      for (const handler of this.mouseMoveHandlers) {
+        handler({ features: [{ properties: { id: unitId } }] });
       }
     }
     /** Test helper: fire one captured pointer-handler group with a pixel point. */
@@ -1001,6 +1052,284 @@ describe("stale pin-hover clearing", () => {
   });
 });
 
+describe("canvas pin hover intent delay", () => {
+  /**
+   * Mounts the map and the detail slide-over over a resolved store: the
+   * hover proofs assert both the map-side label filters and that no detail
+   * selection state or panel opens from a hover alone.
+   */
+  async function mountedMapWithDetail(units: unknown[]) {
+    store = freshStore(units);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    render(DetailSlideOver, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+    return created;
+  }
+
+  test("resting the pointer on a pin past the intent delay labels that pin without selecting it or opening the detail", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    // A generous advance: far past any tens-of-milliseconds intent delay.
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-ward3");
+      vi.advanceTimersByTime(250);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBe("unit-ward3");
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(uiState.detailTriggerElement).toBeNull();
+    expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+    // A hover never moves the camera — selection owns the flyTo path.
+    expect(created.flyToLog).toEqual([]);
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-ward3"),
+    );
+  });
+
+  test("before the intent delay elapses the resting pin stays unlabeled", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-ward3");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 1);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    // No identity change has happened, so the no-match state is the filters
+    // the layers ATTACHED with — read from the stored layers, not from a
+    // setFilter log entry that does not exist yet.
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(null));
+    const highlightLayer = created.layers.find((layer) => layer.id === "units-pins-highlight");
+    expect(highlightLayer?.filter).toEqual(highlightLayerFilter(null));
+  });
+
+  test("sweeping across a pin without resting never labels it, and a later rest labels only the rested pin", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    vi.useFakeTimers();
+    try {
+      // The pointer enters a pin and moves on before the intent delay
+      // elapses; the leave must cancel the pending enter outright.
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 1);
+      created.firePinLeave();
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS * 2);
+      await tick();
+      expect(uiState.hoveredPinUnitId).toBeNull();
+      const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+      expect(labelLayer?.filter).toEqual(pinLabelLayerFilter(null));
+
+      // Resting on another pin AFTER the sweep: only that pin's label lights
+      // — the canceled sweep timer must not fire its own unit underneath.
+      created.firePinHover("unit-ward3");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBe("unit-ward3");
+    const labelLayer = created.layers.find((layer) => layer.id === "units-pins-label");
+    expect(labelLayer?.filter).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("crossing from one pin onto an overlapping pin without leaving the layer re-arms the intent: the label lands on the pin now under the pointer, never the pin crossed off", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    vi.useFakeTimers();
+    try {
+      // The pointer enters pin A and, still inside the layer (no
+      // `mouseleave` fires between features of one layer), crosses onto the
+      // overlapping pin B: layer-scoped travel arrives as `mousemove`, and
+      // B's intent timer replaces A's pending one.
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(10);
+      created.firePinMove("unit-ward3");
+      // A's original deadline passes with the pointer resting on B: the
+      // crossed-off pin never labels.
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 10);
+      expect(uiState.hoveredPinUnitId).toBeNull();
+
+      // B's own intent elapses — only then does the label land on B.
+      vi.advanceTimersByTime(10);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBe("unit-ward3");
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+    expect(lastFilterFor(created, "units-pins-label")).not.toEqual(
+      pinLabelLayerFilter("unit-exact"),
+    );
+  });
+
+  test("a live wrong label corrects: after the first pin labeled, resting on a second pin switches the label to that pin once its own intent elapses", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+      created.firePinMove("unit-ward3");
+      // The already-live label keeps showing until the new intent elapses —
+      // no flicker to empty and no immediate switch mid-travel.
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 1);
+      expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+      vi.advanceTimersByTime(1);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBe("unit-ward3");
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-ward3"));
+  });
+
+  test("same-id mousemove traffic over an already-armed pin never restarts the intent timer", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(20);
+      // Mousemove jitter over the SAME pin must not push the deadline out:
+      // the original arming still fires exactly on time.
+      created.firePinMove("unit-exact");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 20);
+      expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+  });
+
+  test("leaving a labeled pin clears the hover id: an open selection keeps its label, no selection goes no-match", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    // Case A: the pin was CLICKED (hover id and selection both carry the
+    // unit, detail open), then the pointer moves off the pin. The leave
+    // clears the hover id; the label falls back to the still-open selection
+    // — the same unit stays highlighted and labeled.
+    created.clickPin("unit-exact");
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+
+    created.firePinLeave();
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(
+      highlightLayerFilter("unit-exact"),
+    );
+
+    // Case B: a pure hover label (delay elapsed, no selection anywhere), then
+    // the pointer leaves. Nothing else holds the identity: the label goes to
+    // the explicit no-match. Case A's selection is cleared first so nothing
+    // stands behind the hover.
+    uiState.selectedUnitId = null;
+    await tick();
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-ward3");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-ward3");
+
+    created.firePinLeave();
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+    expect(uiState.selectedUnitId).toBeNull();
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter(null));
+    expect(lastFilterFor(created, "units-pins-highlight")).toEqual(highlightLayerFilter(null));
+  });
+
+  test("clicking a hovered pin selects and opens the detail exactly like the bare pin click path", async () => {
+    const created = await mountedMapWithDetail([unitInWard7, unitInWard3]);
+
+    // The pointer rests on the pin past the intent delay first.
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+
+    // The click on that hovered pin follows the same layer-scoped click
+    // handler as ever: hover id and selection both carry the unit, the
+    // detail opens, and the camera flies to the pin.
+    created.clickPin("unit-exact");
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBe("unit-exact");
+    expect(uiState.selectedUnitId).toBe("unit-exact");
+    expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
+    expect(uiState.detailTriggerElement).toBe(
+      document.querySelector('[data-testid="map-pin-list"] button[data-unit-id="unit-exact"]'),
+    );
+    expect(created.flyToLog.at(-1)).toEqual({
+      center: pinCoordinatesFor(unitInWard7),
+      zoom: CARD_FOCUS_ZOOM,
+    });
+    expect(lastFilterFor(created, "units-pins-label")).toEqual(pinLabelLayerFilter("unit-exact"));
+  });
+
+  test("unmounting while an enter intent is still pending leaves no post-unmount hover write", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    const mounted = render(MapView, { props: { store } });
+    await tick();
+    const created = h.instances.at(0)!;
+    created.styleLoaded = true;
+    created.fireLoad();
+    await tick();
+
+    // The pointer enters a pin and the component unmounts BEFORE the intent
+    // delay elapses: the pending timer must die with the map, never fire its
+    // write into the shared ui state afterwards.
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-exact");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS - 1);
+      mounted.unmount();
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS * 2);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+
+    expect(uiState.hoveredPinUnitId).toBeNull();
+  });
+});
+
 describe("detail close returns focus to the opening control", () => {
   /**
    * Mounts the map, the card list, and the detail slide-over together over a
@@ -1207,10 +1536,10 @@ describe("dismissal state machine (one empty-canvas click-off from every reachab
    * Mounts the map, every unit's card, and the detail slide-over together:
    * the dismissal proofs need the real selection call sites (canvas pin,
    * card button, keyboard pin button) feeding the slide-over that closes,
-   * all sharing the uiState singleton. A bare canvas-pin hover without a
-   * selection is not a reachable interaction state (the canvas pin click
-   * path always selects), so the pin-hover lineage appears inside the rows
-   * that start from a canvas pin click.
+   * all sharing the uiState singleton. The canvas-pin hover row reaches a
+   * bare live hover without a selection through the intent-delay path (a
+   * pointer resting on a pin that was never clicked); every other row starts
+   * from a click/keyboard lineage.
    */
   async function mountedMapCardsAndDetail(units: unknown[]) {
     store = freshStore(units);
@@ -1376,6 +1705,25 @@ describe("dismissal state machine (one empty-canvas click-off from every reachab
         expect(screen.getByTestId("unit-detail")).toBeInTheDocument();
         expect(lastFilterFor(created, "units-pins-label")).toEqual(
           pinLabelLayerFilter(unitWard5.id),
+        );
+      },
+    },
+    {
+      initialState: "a live canvas pin hover (the enter intent delay elapsed)",
+      arrange: async (created) => {
+        vi.useFakeTimers();
+        try {
+          created.firePinHover(unitInWard7.id);
+          vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+        } finally {
+          vi.useRealTimers();
+        }
+        await tick();
+        expect(uiState.hoveredPinUnitId).toBe(unitInWard7.id);
+        expect(uiState.selectedUnitId).toBeNull();
+        expect(screen.queryByTestId("unit-detail")).not.toBeInTheDocument();
+        expect(lastFilterFor(created, "units-pins-label")).toEqual(
+          pinLabelLayerFilter(unitInWard7.id),
         );
       },
     },

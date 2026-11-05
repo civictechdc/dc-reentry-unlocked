@@ -391,3 +391,90 @@ export async function pinFreeCanvasPoint(
     await scratch.close();
   }
 }
+
+/**
+ * A screen-position ON a pin's canvas circle, for pointer-hover proofs: a
+ * scan for the base pin's blue paint family (`#0b5fab` — the only blue of
+ * that family over the OSM raster; water blues are far lighter with high
+ * green), kept to points whose whole small disk is solid pin blue, so the
+ * returned point sits within a few pixels of a circle's center and a
+ * `mouse.move` onto it lands INSIDE the pin's hit geometry. The scan runs
+ * on the initial no-selection view (blue circles only, no highlight rings,
+ * no label bubble). Like the sibling pin-free scan, screenshot pixels are
+ * returned as canvas-LOCAL coordinates on the desktop-chrome project's
+ * deviceScaleFactor 1 (add the canvas bounding box origin to obtain page
+ * coordinates).
+ */
+export async function pinCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+  // The first canvas frame after load can still be settling (tile fade-in,
+  // a compositor frame with a cleared WebGL buffer — this proof's first
+  // shot happens on a quiescent canvas, with no camera move to guarantee a
+  // fresh paint): a scan that finds no pin re-settles the map and rescans a
+  // bounded number of times before failing.
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await settleMap(page);
+    try {
+      return await scanPinCanvasPoint(page);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
+/** One scan pass of {@link pinCanvasPoint}: shot, decode, classify, pick. */
+async function scanPinCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+  const shot = await canvasShot(page);
+  const scratch = await page.context().newPage();
+  try {
+    return await scratch.evaluate(async (base64: string) => {
+      const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("2D canvas context unavailable for the pin scan");
+      context.drawImage(bitmap, 0, 0);
+      const image = context.getImageData(0, 0, canvas.width, canvas.height);
+      const width = image.width;
+      const height = image.height;
+      const channel = (x: number, y: number, offset: number): number => {
+        const index = (y * width + x) * 4 + offset;
+        return image.data[index]!;
+      };
+      const isPinBlue = (x: number, y: number): boolean => {
+        if (x < 0 || y < 0 || x >= width || y >= height) return false;
+        const red = channel(x, y, 0);
+        const green = channel(x, y, 1);
+        const blue = channel(x, y, 2);
+        return blue >= 130 && blue - red >= 70 && green >= 50 && green <= 140;
+      };
+      // A fully-blue disk of this radius proves the point sits well inside
+      // a circle (base radius 6 CSS px + stroke): at most ~3 px off center.
+      const solidRadius = 3;
+      const sitsOnPin = (x: number, y: number): boolean => {
+        for (let dy = -solidRadius; dy <= solidRadius; dy += 2) {
+          for (let dx = -solidRadius; dx <= solidRadius; dx += 2) {
+            if (dx * dx + dy * dy > solidRadius * solidRadius) continue;
+            if (!isPinBlue(x + dx, y + dy)) return false;
+          }
+        }
+        return true;
+      };
+      let best: { x: number; y: number; edgeDistance: number } | null = null;
+      for (let y = 20; y < height - 20; y += 2) {
+        for (let x = 20; x < width - 20; x += 2) {
+          if (!sitsOnPin(x, y)) continue;
+          const edgeDistance = Math.min(x, width - x, y, height - y);
+          if (!best || edgeDistance > best.edgeDistance) best = { x, y, edgeDistance };
+        }
+      }
+      if (!best) throw new Error("the canvas scan found no visible pin to hover");
+      return { x: best.x, y: best.y };
+    }, shot.toString("base64"));
+  } finally {
+    await scratch.close();
+  }
+}
