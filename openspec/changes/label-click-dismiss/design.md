@@ -93,6 +93,19 @@ their trigger to the unit's screen-reader pin-list button (resolvable by
   is proven on the phone viewport. Making the sheet smaller to expose the
   canvas is outside this change (non-goals: no mobile-specific UI change)
   — surfaced as a candidate for a future change if wanted.
+
+**D7 — Canvas pin hover shows a transient label (added 2026-11-04, user
+request).** Layer-scoped `mouseenter`/`mouseleave` on the pin layer set
+and clear `hoveredPinUnitId` — the slot already sits at its precedence
+position (card hover above, selection below), so the highlight and label
+filters need no new plumbing. A short enter intent-delay (tens of
+milliseconds; initial 30 ms, final value tuned in the interactive user
+demo) keeps a pointer sweeping across pins from flickering labels; a
+leave cancels any pending enter timer and clears immediately. Pin hover
+never selects the unit nor opens the detail; clicking a hovered pin
+selects exactly as today. Touch has no hover concept — the proof surface
+is the desktop pointer. The feel and the final delay value are verified
+in an interactive demo with the user before the task is ticked.
 - [Spec sync] Both modified requirements live in `housing-search-ui`,
   which active `map-aspect-ratio` also touches — re-run
   `openspec validate --all --strict` at archive and sync before it lands

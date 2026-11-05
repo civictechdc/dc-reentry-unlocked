@@ -32,6 +32,13 @@ The map SHALL display a text label on the active pin — a unit hovered or focus
 - **WHEN** a different unit's card is hovered while another unit is selected
 - **THEN** the hovered unit's pin carries the label, and the selected unit's label returns when hover ends
 
+#### Scenario: Label appears on canvas pin hover, transiently
+
+- **WHEN** a user rests the pointer on a map pin, for an intent delay short enough to feel immediate
+- **THEN** that unit's pin displays its address label without selecting the unit or opening the detail
+- **AND WHEN** the pointer leaves the pin
+- **THEN** the label disappears unless a card hover or an open selection keeps another identity active
+
 #### Scenario: Click off dismisses the label and its selection
 
 - **WHEN** a user clicks empty map canvas away from any pin, with the label (and possibly the detail) showing
