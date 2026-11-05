@@ -57,6 +57,15 @@ this change reuses unchanged. Prototype bonus finding: clicks pass through
 the label bubble to the pin beneath (queryRenderedFeatures does not
 occlude), so the bubble can never steal a pin's click.
 
+**D6 — Focus returns to the trigger on every close path.** Track the
+trigger element when a selection opens the detail (the card button or pin
+button that carried the interaction); on close — close button, Escape, or
+the new canvas click — restore focus to it if it is still in the DOM
+(keyboard-accessibility expectation: focus should not silently drop to the
+page body after a dismissible surface closes). With no live trigger (e.g.
+the opening card left the result set), leave focus where the browser puts
+it rather than guessing.
+
 ## Risks / Trade-offs
 
 - [Map-wide click vs layer clicks] Both handlers can observe one physical

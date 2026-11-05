@@ -21,6 +21,9 @@ hover-precedence scenario is silently violated.
   label returns when hover ends" holds after mixed pin/card interactions
   (aligns the implementation with the existing scenario; no wording change)
 - No new UI chrome; the close button and existing detail-close paths stay
+- Closing the detail (close button, Escape, or canvas click) returns focus
+  to the trigger that opened it — the card or pin button — instead of
+  dropping focus to the page
 
 ## Capabilities
 
@@ -36,8 +39,9 @@ hover-precedence scenario is silently violated.
 
 - **Code:** `apps/web` only — `MapView.svelte` (map-wide click handler with
   drag discrimination + no-pin-hit check; selection paths clear the stale
-  pin-hover id), `MapView.test.ts` (click-off, drag non-dismissal, stale-pin
-  precedence), browser e2e additions
+  pin-hover id), `DetailSlideOver.svelte` (focus return to the trigger on
+  every close path), `MapView.test.ts` (click-off, drag non-dismissal,
+  stale-pin precedence), browser e2e additions
 - **APIs / Dependencies:** none
 - **Docs:** none expected
 - **Sequencing:** none (builds on the landed pin-selection-label; the

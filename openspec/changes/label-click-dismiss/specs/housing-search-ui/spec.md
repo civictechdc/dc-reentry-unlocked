@@ -65,3 +65,7 @@ Selecting a card or pin SHALL open a detail panel sliding over the card list whi
 #### Scenario: Panning keeps the detail open
 - **WHEN** the detail panel is open and the user pans the map with a click-drag or tap-drag
 - **THEN** the panel stays open
+
+#### Scenario: Closing returns focus to the trigger
+- **WHEN** the detail panel closes by its close button, the Escape key, or an empty-canvas click
+- **THEN** keyboard focus returns to the control that opened it — the unit's card button or pin button — rather than dropping to the page

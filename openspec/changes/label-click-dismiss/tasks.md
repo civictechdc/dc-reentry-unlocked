@@ -6,6 +6,8 @@
 - [ ] 1.2 Clear the stale pin-hover id on non-pin selections (card click, keyboard card activation, keyboard pin-button activation paths clear `hoveredPinUnitId`; canvas pin click keeps setting both) and cover with the precedence test: pin A clicked, card B selected, hover on/off card C — the label returns to the selected unit B, never to A
 - [ ] 1.3 Prove in a real browser: click-off dismisses label + detail on desktop, tap-off dismisses on the phone viewport, click-drag and tap-drag pans never dismiss, and the pin A → card B → hover-off precedence holds; `pnpm -C apps/web e2e` + `e2e:bdd` + `e2e:prod` + `pnpm -C apps/web test` + root `pnpm typecheck` + `pnpm lint` + `pnpm format:check` pass
 
+- [ ] 1.4 Return focus to the trigger when the detail closes: track the opening control (card button or pin button) at selection time and restore focus on every close path (close button, Escape, canvas click) when the trigger is still in the DOM; cover with jsdom tests asserting focus lands back on the trigger for each close path, and an e2e keyboard test (open via card Enter, Escape, focus returns to the card button)
+
 ## Workflow follow-up
 
 - After all tasks complete: run code review per project policy, resolve findings, then archive (`openspec archive`) — re-run `openspec validate --all --strict` first: `housing-search-ui` is also modified by active `map-aspect-ratio`, so sync order matters.
