@@ -27,7 +27,7 @@ Each card SHALL present the unit's essential specs (bedrooms, ward, cost, housin
 
 ### Requirement: Unit detail slide-over
 
-Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value.
+Selecting a card or pin SHALL open a detail panel sliding over the card list while the map remains visible, and closing it SHALL return to the list in its prior state. The panel SHALL show the unit's specs, the program's policies, and the provider's contact block, with unknown fields displayed as "not publicly listed" rather than a fabricated value. Clicking empty map canvas SHALL close the panel the same way its close control does; a click-drag or tap-drag pan SHALL NOT close it.
 
 #### Scenario: Detail opened from pin
 - **WHEN** a user clicks a map pin
@@ -40,6 +40,18 @@ Selecting a card or pin SHALL open a detail panel sliding over the card list whi
 #### Scenario: Honest unknowns in detail
 - **WHEN** a policy field is unknown at the source
 - **THEN** the detail panel displays "not publicly listed" for that field
+
+#### Scenario: Canvas click closes the detail
+- **WHEN** the detail panel is open and the user clicks empty map canvas away from any pin
+- **THEN** the panel closes and the list returns in its prior state
+
+#### Scenario: Panning keeps the detail open
+- **WHEN** the detail panel is open and the user pans the map with a click-drag or tap-drag
+- **THEN** the panel stays open
+
+#### Scenario: Closing returns focus to the trigger
+- **WHEN** the detail panel closes by its close button, the Escape key, or an empty-canvas click
+- **THEN** keyboard focus returns to the control that opened it — the unit's card button or pin button — rather than dropping to the page
 
 ### Requirement: Mobile responsive behavior
 
@@ -111,7 +123,7 @@ Selecting a unit from the card list SHALL center the map on the selected unit's 
 
 ### Requirement: Pin activity label
 
-The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time.
+The map SHALL display a text label on the active pin — a unit hovered or focused via its card, hovered via its pin, or selected — so the highlighted pin is identifiable without relying on colour perception. The label SHALL accompany the colour/size highlight rather than replace it, and exactly one pin SHALL carry a label at a time. Clicking empty map canvas SHALL dismiss the label together with its selection; a click-drag or tap-drag pan SHALL NOT dismiss anything.
 
 #### Scenario: Label appears on card hover or keyboard focus
 
@@ -138,3 +150,20 @@ The map SHALL display a text label on the active pin — a unit hovered or focus
 
 - **WHEN** a different unit's card is hovered while another unit is selected
 - **THEN** the hovered unit's pin carries the label, and the selected unit's label returns when hover ends
+
+#### Scenario: Label appears on canvas pin hover, transiently
+
+- **WHEN** a user rests the pointer on a map pin, for an intent delay short enough to feel immediate
+- **THEN** that unit's pin displays its address label without selecting the unit or opening the detail
+- **AND WHEN** the pointer leaves the pin
+- **THEN** the label disappears unless a card hover or an open selection keeps another identity active
+
+#### Scenario: Click off dismisses the label and its selection
+
+- **WHEN** a user clicks empty map canvas away from any pin, with the label (and possibly the detail) showing
+- **THEN** the selection clears, the detail slide-over closes, and no pin displays a label or highlight
+
+#### Scenario: Panning does not dismiss
+
+- **WHEN** a user click-drags or tap-drags the map (panning) that starts on empty canvas
+- **THEN** the selection, detail, and label state are unchanged
