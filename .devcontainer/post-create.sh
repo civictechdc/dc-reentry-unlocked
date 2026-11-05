@@ -11,13 +11,13 @@ else
   echo "==> Corepack path did not yield pnpm ${PNPM_VERSION}; installing via npm"
   sudo npm install --global "pnpm@${PNPM_VERSION}"
   echo "==> Verifying pnpm version after npm install"
-  [ "$(pnpm --version)" = "${PNPM_VERSION}" ]
+  [ "$(pnpm --version)" = "${PNPM_VERSION}" ] \
+    || { echo "==> ERROR: pnpm ${PNPM_VERSION} unavailable via both corepack and npm"; exit 1; }
   echo "==> pnpm ${PNPM_VERSION} ready via npm"
 fi
 
-echo "==> Ensuring Playwright browser cache is owned by the node user"
-sudo mkdir -p "${PLAYWRIGHT_CACHE_DIR}"
-sudo chown -R node:node "${PLAYWRIGHT_CACHE_DIR}"
+echo "==> Ensuring Playwright browser cache directory exists (owned by node)"
+sudo install -d -o node -g node -m 0755 "${PLAYWRIGHT_CACHE_DIR}"
 
 echo "==> Installing workspace dependencies"
 pnpm install --frozen-lockfile
@@ -29,7 +29,7 @@ echo "==> Wiring local git hooks (best-effort)"
 echo "    $(git --version)"
 if git rev-parse --git-dir >/dev/null 2>&1; then
   hooks_config="$(git rev-parse --show-toplevel)/gitconfig/hooks.config"
-  if git config --local --get-all include.path 2>/dev/null | grep -Fxq "${hooks_config}"; then
+  if [ -n "$(git config --local --get-all include.path 2>/dev/null | grep -Fx "${hooks_config}" || true)" ]; then
     echo "==> include.path already wired; skipping"
   else
     git config --local include.path "${hooks_config}" \
@@ -37,5 +37,5 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
       || echo "==> WARNING: could not write include.path; hooks stay unwired (non-fatal)"
   fi
 else
-  echo "==> Not inside a git work tree; skipping hooks wiring"
+  echo "==> git work tree not usable; skipping hooks wiring"
 fi

@@ -1,6 +1,6 @@
 {
   "name": "dc-reentry-unlocked",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-trixie",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24-trixie",
   "remoteUser": "node",
   "forwardPorts": [3000, 5173, 4317],
   "portsAttributes": {
@@ -13,7 +13,9 @@
     "memory": "8gb",
     "storage": "32gb"
   },
-  "mounts": ["source=playwright-browsers,target=/home/node/.cache/ms-playwright,type=volume"],
+  "mounts": [
+    "source=dc-reentry-unlocked-playwright-browsers,target=/home/node/.cache/ms-playwright,type=volume"
+  ],
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
     "vscode": {

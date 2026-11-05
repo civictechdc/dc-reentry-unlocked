@@ -7,10 +7,14 @@ devcontainers image catalog, Playwright docs, and Node corepack docs.
 ## Decisions
 
 1. **Base: plain `image`, no Compose, no repo Dockerfile.**
-   `mcr.microsoft.com/devcontainers/typescript-node:22-trixie`
-   (floating). Ships Node 22.x (≥ 22.12), non-root `node` user with
-   passwordless sudo, git. Dev container runs no long-running services —
-   e2e suites self-boot servers; production Compose boot untouched.
+   `mcr.microsoft.com/devcontainers/typescript-node:24-trixie`
+   (floating; user-confirmed 2026-11-05 after fresh-container
+   verification: the vite 8/rolldown toolchain fails `pnpm test` on
+   node 22.23.4 in-container while passing 210/210 on node 24.22.2,
+   and 24-trixie matches CI's `node@24` runtime exactly). Ships Node
+   24.x, non-root `node` user with passwordless sudo, git. Dev
+   container runs no long-running services — e2e suites self-boot
+   servers; production Compose boot untouched.
 2. **pnpm: corepack-first, npm fallback.** Post-create runs
    `sudo corepack enable pnpm`; exact `pnpm@12.15.0` activates from the
    `packageManager` field (parity with README/runbook). If activation or
@@ -22,9 +26,11 @@ devcontainers image catalog, Playwright docs, and Node corepack docs.
    `pnpm -C apps/web exec playwright install --with-deps chromium` —
    follows the lockfile-pinned Playwright version (image-baking risks
    browser/runtime drift on dep bumps). Named volume
-   `playwright-browsers` → `/home/node/.cache/ms-playwright` so
-   VS Code-local rebuilds skip the browser re-download; ownership of the
-   fresh volume directory ensured in the post-create script.
+   `dc-reentry-unlocked-playwright-browsers` (globally-unique name
+   avoids cross-repo volume sharing on a shared daemon) →
+   `/home/node/.cache/ms-playwright` so VS Code-local rebuilds skip
+   the browser re-download; ownership of the fresh volume directory
+   ensured in the post-create script.
 4. **Ports:** `forwardPorts` 3000 (API), 5173 (web dev), 4317 (prod
    probe), labeled via `portsAttributes`. Zed publishes `-p port:port`
    rather than localhost-tunneling — recorded as a per-editor note.
@@ -75,6 +81,13 @@ devcontainers image catalog, Playwright docs, and Node corepack docs.
 
 ## Open items settled empirically by fresh-container verification
 
-- git version in the floating `22-trixie` tag (expect ≥ 2.56)
-- corepack ↔ pnpm 12.15.0 signature compatibility (fallback ready)
-- Node version in the floating tag (expect latest 22.x ≥ 22.12)
+All three settled 2026-11-05:
+
+- git version in the floating tag: 2.56.0 ✓ (≥ 2.54, hooks-safe)
+- corepack ↔ pnpm 12.15.0 signature compatibility: corepack activates
+  pnpm 12.15.0 ✓ (npm fallback retained as insurance)
+- Node version in the floating tag: 24.x ✓ (engines floor
+  `>=22.12.0` met). Honest note: the repo-level engines floor has
+  become practically stale for `pnpm test` under vite 8 (node 22
+  fails in-container; see decision 1) — recorded as a possible
+  separate follow-up, out of scope here.
