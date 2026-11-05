@@ -91,3 +91,16 @@ All three settled 2026-11-05:
   become practically stale for `pnpm test` under vite 8 (node 22
   fails in-container; see decision 1) — recorded as a possible
   separate follow-up, out of scope here.
+
+## Amendment 2026-11-05 — gate parallelism in containers
+
+Plain `pnpm test` and `pnpm -C apps/web e2e` failed deterministically
+in fresh containers (4/4 and 2/2 runs) under pnpm's default recursive
+workspace parallelism and Playwright's default worker count — memory
+(7.8 vs 12.5 GB) was NOT the discriminator; the verified passing forms
+were `--workspace-concurrency 1` (2/2) and `--workers=1` (28/28).
+Fixes (user-approved option): `workspaceConcurrency: 1` repo-wide in
+`pnpm-workspace.yaml` (pnpm's sanctioned key, serializes recursive
+runs everywhere), and a `PLAYWRIGHT_WORKERS` env knob in
+`apps/web/playwright.config.ts` set to `1` via `containerEnv`
+(container-only effect; host/CI default unchanged).

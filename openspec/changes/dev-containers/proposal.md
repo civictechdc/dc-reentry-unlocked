@@ -36,7 +36,10 @@ every contributor/agent on the same toolchain.
 
 - **Code:** none (product untouched)
 - **Build/tooling:** `.devcontainer/` (+ image/compose assets it
-  references); no change to the production Compose boot or CI gates
+  references); plus `pnpm-workspace.yaml` (serialized recursive runs)
+  and `apps/web/playwright.config.ts` (env-gated e2e workers knob) so
+  the documented gate commands pass inside the container; no change to
+  the production Compose boot or CI gates
 - **Docs:** `docs/runbook.md` (container onboarding path)
 - **Sequencing:** independent of active product changes
 

@@ -2,6 +2,7 @@
   "name": "dc-reentry-unlocked",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:24-trixie",
   "remoteUser": "node",
+  "containerEnv": { "PLAYWRIGHT_WORKERS": "1" },
   "forwardPorts": [3000, 5173, 4317],
   "portsAttributes": {
     "3000": { "label": "Housing API" },

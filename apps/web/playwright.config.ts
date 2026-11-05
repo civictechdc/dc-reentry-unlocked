@@ -12,6 +12,10 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],
+  // Timing-budget specs (perf, a11y) go unstable under parallel workers in
+  // slower environments (e.g. dev containers); PLAYWRIGHT_WORKERS=1 opts in
+  // there. Unset elsewhere → Playwright's default.
+  workers: process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : undefined,
   webServer: [
     {
       command: "pnpm -C apps/api dev",
