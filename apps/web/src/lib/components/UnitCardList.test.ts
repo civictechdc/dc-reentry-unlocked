@@ -54,18 +54,58 @@ describe("zero-bedroom presentation vocabulary", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("presents a zero-bedroom shared-room as the honest numeric bedroom count on the card", () => {
+  test("presents a zero-bedroom shared-room as the bed-available vocabulary on the card", () => {
     store.units = [aUnit().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build()];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
     const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
     expect(
-      within(card as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 0 })),
+      within(card as HTMLElement).getByText(m.bedrooms_value_bed_available()),
     ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(m.card_bedrooms({ bedrooms: 0 })),
+    ).not.toBeInTheDocument();
     expect(
       within(card as HTMLElement).queryByText(m.bedrooms_value_studio()),
     ).not.toBeInTheDocument();
+  });
+
+  test("presents a one-bedroom private-room as the numeric bedroom count on the card", () => {
+    store.units = [
+      aUnit().withId("private-1").withBedrooms(1).withRoomType("private-room").build(),
+    ];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 1 })),
+    ).toBeInTheDocument();
+  });
+
+  test("presents a two-bedroom apartment as the numeric bedroom count on the card", () => {
+    store.units = [aUnit().withId("apartment-1").withBedrooms(2).withRoomType("apartment").build()];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 2 })),
+    ).toBeInTheDocument();
+  });
+
+  test("presents a one-bedroom shared-room as the numeric bedroom count on the card", () => {
+    store.units = [
+      aUnit().withId("shared-1br").withBedrooms(1).withRoomType("shared-room").build(),
+    ];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 1 })),
+    ).toBeInTheDocument();
   });
 });
 

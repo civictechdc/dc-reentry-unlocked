@@ -32,6 +32,7 @@
   "card_ward": "Ward {ward}",
   "card_bedrooms": "Bedrooms: {bedrooms}",
   "bedrooms_value_studio": "Studio",
+  "bedrooms_value_bed_available": "Bed available",
   "card_cost": "${cost} per month",
   "card_housing_type": "Housing type: {type}",
   "card_room_type": "Room type",

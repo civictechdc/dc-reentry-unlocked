@@ -58,7 +58,7 @@ describe("zero-bedroom presentation vocabulary", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("presents a zero-bedroom shared-room as the honest numeric bedroom count in the detail bedrooms row", () => {
+  test("presents a zero-bedroom shared-room as the bed-available vocabulary in the detail bedrooms row", () => {
     store.units = [aUnit().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build()];
     uiState.selectedUnitId = "shared-1";
     render(DetailSlideOver, { props: { store } });
@@ -66,11 +66,54 @@ describe("zero-bedroom presentation vocabulary", () => {
     const detail = screen.getByTestId("unit-detail");
     const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
     expect(
-      within(bedroomsRow as HTMLElement).getByText(m.detail_bedrooms_value({ bedrooms: 0 })),
+      within(bedroomsRow as HTMLElement).getByText(m.bedrooms_value_bed_available()),
     ).toBeInTheDocument();
+    expect(
+      within(bedroomsRow as HTMLElement).queryByText(m.detail_bedrooms_value({ bedrooms: 0 })),
+    ).not.toBeInTheDocument();
     expect(
       within(bedroomsRow as HTMLElement).queryByText(m.bedrooms_value_studio()),
     ).not.toBeInTheDocument();
+  });
+
+  test("presents a one-bedroom private-room as the numeric bedroom count in the detail bedrooms row", () => {
+    store.units = [
+      aUnit().withId("private-1").withBedrooms(1).withRoomType("private-room").build(),
+    ];
+    uiState.selectedUnitId = "private-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
+    expect(
+      within(bedroomsRow as HTMLElement).getByText(m.detail_bedrooms_value({ bedrooms: 1 })),
+    ).toBeInTheDocument();
+  });
+
+  test("presents a two-bedroom apartment as the numeric bedroom count in the detail bedrooms row", () => {
+    store.units = [aUnit().withId("apartment-1").withBedrooms(2).withRoomType("apartment").build()];
+    uiState.selectedUnitId = "apartment-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
+    expect(
+      within(bedroomsRow as HTMLElement).getByText(m.detail_bedrooms_value({ bedrooms: 2 })),
+    ).toBeInTheDocument();
+  });
+
+  test("presents a one-bedroom shared-room as the numeric bedroom count in the detail bedrooms row", () => {
+    store.units = [
+      aUnit().withId("shared-1br").withBedrooms(1).withRoomType("shared-room").build(),
+    ];
+    uiState.selectedUnitId = "shared-1br";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const bedroomsRow = within(detail).getByText(m.detail_bedrooms()).closest(".row");
+    expect(
+      within(bedroomsRow as HTMLElement).getByText(m.detail_bedrooms_value({ bedrooms: 1 })),
+    ).toBeInTheDocument();
   });
 });
 
