@@ -449,13 +449,13 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     expect(paint["circle-radius"]).toBe(6);
   });
 
-  test("the legend lists only the exact-address pin meaning", async () => {
+  test("the legend lists only the available-unit pin meaning", async () => {
     await mountedMapWithResolvedUnits([unitInWard7]);
 
     const legend = document.querySelector(".map-legend")!;
     expect(legend.querySelectorAll(".legend-item")).toHaveLength(1);
     expect(legend.querySelector(".pin.approximate")).toBeNull();
-    expect(legend.textContent).toContain(m.map_legend_exact());
+    expect(legend.textContent).toContain(m.map_legend_unit());
     expect(legend.textContent ?? "").not.toMatch(/approximate/i);
   });
 

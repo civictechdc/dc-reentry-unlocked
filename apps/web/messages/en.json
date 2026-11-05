@@ -40,7 +40,7 @@
   "card_room_type_efficiency": "Efficiency unit",
   "card_room_type_apartment": "Apartment",
   "map_region_label": "Map of available housing units",
-  "map_legend_exact": "Exact address",
+  "map_legend_unit": "Available unit",
   "map_legend_title": "What the pins mean",
   "map_select_pin": "Select housing unit at {address}",
   "detail_close": "Close unit details",

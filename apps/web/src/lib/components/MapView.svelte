@@ -334,7 +334,7 @@
     <strong>{m.map_legend_title()}</strong>
     <span class="legend-item">
       <span class="pin exact" aria-hidden="true"></span>
-      {m.map_legend_exact()}
+      {m.map_legend_unit()}
     </span>
   </p>
 </section>
