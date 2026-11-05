@@ -106,6 +106,11 @@ never selects the unit nor opens the detail; clicking a hovered pin
 selects exactly as today. Touch has no hover concept — the proof surface
 is the desktop pointer. The feel and the final delay value are verified
 in an interactive demo with the user before the task is ticked.
+Refinement (review finding, fixed 2026-11-05): MapLibre's layer-scoped
+`mouseenter` does not re-fire for pin-to-pin travel inside one layer, so
+a layer-scoped `mousemove` re-arms the intent timer whenever the feature
+under the pointer changes — overlapping or abutting pins can never leave
+a wrong-name label resting beyond one delay.
 - [Spec sync] Both modified requirements live in `housing-search-ui`,
   which active `map-aspect-ratio` also touches — re-run
   `openspec validate --all --strict` at archive and sync before it lands
