@@ -36,10 +36,13 @@ every contributor/agent on the same toolchain.
 
 - **Code:** none (product untouched)
 - **Build/tooling:** `.devcontainer/` (+ image/compose assets it
-  references); plus `pnpm-workspace.yaml` (serialized recursive runs)
-  and `apps/web/playwright.config.ts` (env-gated e2e workers knob) so
-  the documented gate commands pass inside the container; no change to
-  the production Compose boot or CI gates
+  references); plus `pnpm-workspace.yaml` (serialized recursive runs,
+  and a rolldown `~1.2.16` override lifting the stale 1.2.15
+  resolution), `apps/web/playwright.config.ts` (env-gated e2e workers
+  knob), and the `svelte-kit sync &&` prefix on apps/web's test script
+  (fresh-clone gate self-sufficiency) so the documented gate commands
+  pass inside the container; no change to the production Compose boot
+  or CI gates
 - **Docs:** `docs/runbook.md` (container onboarding path)
 - **Sequencing:** independent of active product changes
 

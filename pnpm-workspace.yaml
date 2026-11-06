@@ -4,18 +4,25 @@ packages:
   - packages/shared
   - tools/datagen
 
-# Serialize recursive workspace runs: the vite/rolldown dep-optimizer in
-# apps/web's vitest startup fails under pnpm's default parallel recursive
-# execution in slower environments (verified in dev containers), and
-# sequential runs are deterministic everywhere for a modest wall-time cost.
+# Serialize recursive workspace runs: deterministic run order everywhere
+# for a modest wall-time cost. The original rationale — the vite/rolldown
+# dep-optimizer failing under pnpm's default parallel recursive execution
+# — was superseded: the deterministic fresh-container failure was
+# root-caused to the stale rolldown 1.2.15 resolution (see the override
+# below), not to parallelism itself. Serialization is kept for its
+# determinism value alone.
 workspaceConcurrency: 1
 
-# Root-cause pin ahead of vite: rolldown 1.2.15 hard-fails vite's
+# Root-cause resolution floor: rolldown 1.2.15 hard-fails vite's
 # dep-optimizer when tsconfig discovery misses (virtual-module resolve,
-# fixed upstream in 1.2.16). Drop this override when vite declares
-# rolldown >= 1.2.16 on its own.
+# fixed upstream in 1.2.16). vite 8.3.5 declares rolldown "~1.2.14" — a
+# range that already admits 1.2.16 — so the override exists to force the
+# lockfile off the stale 1.2.15 resolution. Drop this override after any
+# vite bump refreshes the resolution floor: a plain
+# `pnpm update rolldown` then lands the current 1.2.x. The override pins
+# the floor; the lockfile pins the exact version.
 overrides:
-  rolldown: "1.2.16"
+  rolldown: "~1.2.16"
 
 # dependency-cruiser parses TypeScript through the compiler programmatic API,
 # which TypeScript 7 (Go-native) does not ship; dependency-cruiser 18 accepts

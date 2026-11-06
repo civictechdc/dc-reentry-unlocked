@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  rolldown: 1.2.16
+  rolldown: ~1.2.16
 
 packageExtensionsChecksum: sha256-vHPUH2L6TvFejp67xCFyUQzl4w1cVHg46WiMW4SAviA=
 

@@ -7,6 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const repoRoot = join(import.meta.dirname, "..", "..");
 
+const workersEnv = Number(process.env.PLAYWRIGHT_WORKERS);
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
@@ -15,7 +17,7 @@ export default defineConfig({
   // Timing-budget specs (perf, a11y) go unstable under parallel workers in
   // slower environments (e.g. dev containers); PLAYWRIGHT_WORKERS=1 opts in
   // there. Unset elsewhere → Playwright's default.
-  workers: process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : undefined,
+  workers: Number.isInteger(workersEnv) && workersEnv > 0 ? workersEnv : undefined,
   webServer: [
     {
       command: "pnpm -C apps/api dev",

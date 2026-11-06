@@ -145,6 +145,12 @@ extension uses; the VS Code GUI attach and the Zed flow were not driven
 headlessly in this session — the Zed notes above come from its current
 docs and first-party source.
 
+One caveat on the container-only knobs: the `PLAYWRIGHT_WORKERS` env
+and `--init` ride Docker-level `runArgs`, verified through the
+reference CLI — whether Zed and Codespaces pass `runArgs` through is
+unverified, so if a consumer ignores it, e2e timing specs may need
+`--workers=1` by hand.
+
 ## Troubleshooting
 
 - **Config changes not applied:** rebuild the container — that picks up

@@ -110,14 +110,21 @@ runs everywhere), and a `PLAYWRIGHT_WORKERS` env knob in
 Two follow-ups settled the same day, from the same fresh-container
 verification sessions:
 
-- **`containerEnv` does not reach the container under the devcontainer
-  CLI (0.90).** `docker inspect` on the created container showed the
-  variable absent from the container's env — the property is an
-  editor-integration hint the CLI path never applies. Replacement
-  (user-approved): `runArgs: ["--init", "--env", "PLAYWRIGHT_WORKERS=1"]`
-  — docker-level flags, so the env lands regardless of which consumer
-  drives the container. `--init` doubles as zombie reaping for chromium
-  (per Playwright's own Docker guidance).
+- **`containerEnv` did not reach the container in our 0.90 CLI run.**
+  The CLI's source does iterate `containerEnv` into `docker run -e`,
+  so the property is not a never-applied hint — but `docker inspect`
+  on the created container showed the variable absent from the
+  container's env, unexplained (possibly a recreate-timing or
+  container-identity artifact). The replacement (user-approved):
+  `runArgs: ["--init", "--env", "PLAYWRIGHT_WORKERS=1"]` — docker-level
+  flags, so the env lands regardless of which consumer drives the
+  container — was chosen as the empirically verified delivery.
+  `--init` doubles as zombie reaping for chromium (per Playwright's own
+  Docker guidance). The dev container spec also defines a first-class
+  `"init": true` property as the cross-orchestrator form of zombie
+  reaping; this config deliberately uses the Docker-level `--init` in
+  `runArgs` because that is what the verification exercised — revisit
+  if Codespaces/Zed parity for init matters.
 - **Root cause of the deterministic fresh-container `pnpm test`
   failure:** rolldown 1.2.15 hard-errors by applying tsconfig
   resolution to virtual modules whenever tsconfig discovery misses —
