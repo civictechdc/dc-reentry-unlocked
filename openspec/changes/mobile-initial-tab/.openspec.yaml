@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-06
+goal: "Spec fix: phone form is map-first (finding DM-12 of docs/domain-review.md)"
+skip_specs: true

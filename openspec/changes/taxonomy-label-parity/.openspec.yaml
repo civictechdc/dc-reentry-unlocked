@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-11-06
+goal: Guard taxonomy label parity between contract and catalog (finding CO-5 of
+  docs/domain-review.md)
+skip_specs: true

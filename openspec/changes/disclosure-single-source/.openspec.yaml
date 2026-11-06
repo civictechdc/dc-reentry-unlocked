@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-11-06
+goal: Single-source the synthetic disclosure sentence (finding CO-3 of
+  docs/domain-review.md)
+skip_specs: true
