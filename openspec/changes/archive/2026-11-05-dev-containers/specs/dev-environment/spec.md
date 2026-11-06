@@ -1,5 +1,9 @@
 # Spec Delta
 
+## Purpose
+
+Defines the reproducible containerized development environment: one command from any spec-consuming editor or service provisions the full toolchain, with the repo's gates runnable inside the container.
+
 ## ADDED Requirements
 
 ### Requirement: Containerized development environment
