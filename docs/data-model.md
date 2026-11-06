@@ -5,11 +5,11 @@
 > truth; hand edits will be overwritten by the next regeneration.
 > Regenerate with `pnpm docgen:model` and commit the result.
 
-Schema version: `2.0`
+Schema version: `0.2`
 
 ## Coordinates
 
-Exact street-level coordinates for a unit's location — required and non-null on every unit and card (exact addresses only; the approximate-location representation was removed in schema version 2.0, user decision 2026-10-31).
+Exact street-level coordinates for a unit's location — required and non-null on every unit and card (exact addresses only; the approximate-location representation was removed in the 2026-10-31 revision, user decision).
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ The flattened self-contained unit card: unit fields joined with the owning progr
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
-| `schemaVersion` | string | required | const "2.0" | The shared-contract schema version this payload speaks. |
+| `schemaVersion` | string | required | const "0.2" | The shared-contract schema version this payload speaks. |
 | `id` | string | required |  | Stable unit identifier. |
 | `programId` | string | required |  | Identifier of the owning program. |
 | `address` | string | required | minLength 1 | Exact street address (never empty; exact addresses only). |
@@ -101,7 +101,7 @@ Worked example:
 
 ```json
 {
-  "schemaVersion": "2.0",
+  "schemaVersion": "0.2",
   "id": "u-1001",
   "programId": "p-2001",
   "address": "1234 Example Street NW",
@@ -218,7 +218,7 @@ Successful units listing (only available units reach this envelope). Both synthe
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
-| `schemaVersion` | string | required | const "2.0" | The shared-contract schema version this payload speaks. |
+| `schemaVersion` | string | required | const "0.2" | The shared-contract schema version this payload speaks. |
 | `synthetic` | boolean | required | const true | Hard marker: this payload describes fictional data only. |
 | `disclosure` | string | required | minLength 1 | The one-sentence synthetic-data disclaimer, verbatim from the dataset. |
 | `units` | array of object — see [UnitCard](#unitcard) | required |  | The available unit cards (only available units reach this envelope). |
@@ -229,7 +229,7 @@ Successful filter-schema response: the published list of filter definitions.
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
-| `schemaVersion` | string | required | const "2.0" | The shared-contract schema version this payload speaks. |
+| `schemaVersion` | string | required | const "0.2" | The shared-contract schema version this payload speaks. |
 | `filters` | array of object — see [FilterDefinition](#filterdefinition) | required |  | The published filter definitions — the single source of truth for what filters exist. |
 
 ## ErrorEnvelope
@@ -238,7 +238,7 @@ Stable error envelope: machine code + human message + correlation id. Internal d
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
-| `schemaVersion` | string | required | const "2.0" | The shared-contract schema version this payload speaks. |
+| `schemaVersion` | string | required | const "0.2" | The shared-contract schema version this payload speaks. |
 | `code` | enum | required | `not-found` (Unknown route (there is no per-unit detail view on this listing API yet).) · `service-unavailable` (The API cannot serve the data right now — safe to retry later.) · `invalid-filter` (A filter name or value the published filter schema does not define.) · `invalid-request` (A malformed request that is not a filter problem.) · `internal-error` (Something failed server-side; detail stays in server logs.) · `rate-limited` (Too many requests — slow down, and honor the Retry-After response header.) | Stable machine-readable error codes — status codes may evolve, these identifiers are the consumer-stable vocabulary. Additive-only: new codes must never break an existing consumer's switch, so unknown codes degrade to a generic failure rendering. |
 | `message` | string | required |  | Human-readable error message. |
 | `correlationId` | string | optional |  | Correlation id echoed into structured request logs, so bug reports stay traceable. |
@@ -247,7 +247,7 @@ Worked example:
 
 ```json
 {
-  "schemaVersion": "2.0",
+  "schemaVersion": "0.2",
   "code": "not-found",
   "message": "Unit not found.",
   "correlationId": "req-7f3a9c"

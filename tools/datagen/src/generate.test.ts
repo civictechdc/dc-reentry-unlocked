@@ -61,7 +61,7 @@ test("the dataset carries the synthetic disclosure in a fixed header block", () 
 
 test("the frozen dataset file matches regeneration byte for byte", async () => {
   const dataset = generateDataset(DEFAULT_SEED, corpus);
-  const target = fileURLToPath(new URL("../../../data/units.v2.json", import.meta.url));
+  const target = fileURLToPath(new URL("../../../data/units.json", import.meta.url));
   const frozen = await readFile(target, "utf8");
   expect(
     frozen,
@@ -114,7 +114,7 @@ test("the exact-shape oracle rejects a generator unit carrying a stray locationP
   const expectedKeys = Object.keys(UnitSchema.properties).sort();
   expect(
     Object.keys(unit).sort(),
-    "the untouched generator unit carries exactly the v2 field set",
+    "the untouched generator unit carries exactly the contract field set",
   ).toEqual(expectedKeys);
   const stray: Record<string, unknown> = structuredClone(unit);
   stray.locationPrecision = "approximate";

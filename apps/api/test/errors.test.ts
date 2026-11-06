@@ -41,7 +41,7 @@ test("an unknown route answers with the stable not-found envelope and its correl
 
   expect(response.statusCode).toBe(404);
   expect(payload.code).toBe("not-found");
-  expect(payload.schemaVersion).toBe("2.0");
+  expect(payload.schemaVersion).toBe("0.2");
   expect(payload.correlationId).toEqual(response.headers["x-request-id"]);
   expect(String(payload.correlationId)).toMatch(UUID_LIKE);
   await app.close();
@@ -122,7 +122,7 @@ test("the default per-client request budget answers 429 with the envelope and Re
   expect(second.statusCode).toBe(429);
   const payload = second.json();
   expect(payload.code).toBe("rate-limited");
-  expect(payload.schemaVersion).toBe("2.0");
+  expect(payload.schemaVersion).toBe("0.2");
   expect(second.headers["retry-after"]).toBeTruthy();
   expect(second.headers["x-ratelimit-limit"]).toBe("1");
   expect(second.headers["x-ratelimit-remaining"]).toBe("0");

@@ -103,7 +103,7 @@ export const ErrorEnvelopeSchema = Type.Object(
       "diagnostic detail is logged server-side, never exposed in the envelope.",
     examples: [
       {
-        schemaVersion: "2.0",
+        schemaVersion: SCHEMA_VERSION,
         code: "not-found",
         message: "Unit not found.",
         correlationId: "req-7f3a9c",

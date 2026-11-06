@@ -5,7 +5,7 @@ types and JSON Schema, so frontend, API, and the data generator share one
 source of truth. Validation runs through `Value` (re-exported from the
 package, so consumers take no second dependency): `Value.Check(schema,
 value)`. Unit cards and API envelopes carry `schemaVersion` (`SCHEMA_VERSION`,
-currently `"2.0"`); contract changes are additive-first — new fields and enum
+currently `"0.2"`); contract changes are additive-first — new fields and enum
 values must be ignorable by old consumers, and breaking changes are versioned.
 
 The systematic field-by-field reference — every schema, field table, enum
@@ -32,8 +32,8 @@ Value.Check(UnitSchema, someUnit); // true for ANY availability state —
 
 A `UnitCard` joins unit fields with the owning program's policies and the
 provider's contacts — a consumer needs no further lookups. Every location is
-exact: `coordinates` are required and non-null on every unit and card (schema
-version 2.0 removed the earlier approximate-location representation — the
+exact: `coordinates` are required and non-null on every unit and card (the
+2026-10-31 revision removed the earlier approximate-location representation — the
 `locationPrecision` field and null `coordinates` — exact street addresses
 only). Unit size is square footage plus room type. The `verificationBadge`
 carries confirmed vs needs-verification for available units.

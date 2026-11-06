@@ -17,7 +17,7 @@ test("a listing without filters returns every available unit and conveys the con
   const payload = response.json();
 
   expect(response.statusCode).toBe(200);
-  expect(payload.schemaVersion).toBe("2.0");
+  expect(payload.schemaVersion).toBe("0.2");
   expect(payload.units.length).toBe(fixtureDataset.length - 4); // two taken, two holds
   expect(payload.units.map((unit: UnitCard) => unit.availabilityState)).not.toContain(
     "not-available",

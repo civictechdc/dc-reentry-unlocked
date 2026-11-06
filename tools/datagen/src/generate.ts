@@ -6,7 +6,7 @@
  *
  * Determinism contract: the output bytes are a pure function of (seed,
  * corpus). No wall-clock, no crypto, no Math.random anywhere on this path.
- * The bytes are consumed by serializeDataset → data/units.v2.json.
+ * The bytes are consumed by serializeDataset → data/units.json.
  */
 import type {
   AvailabilityState,

@@ -64,7 +64,7 @@ test("example 1 compiles: entity schemas validate real providers, programs, unit
 });
 
 // Example 2: the flattened unit card
-test("example 2 compiles: the unit card validates a fluent-built v2 card", () => {
+test("example 2 compiles: the unit card validates a fluent-built unit card", () => {
   const validCard: UnitCard = aUnit().inWard(5).build();
 
   expect(validCard.coordinates).toEqual({ latitude: 38.913, longitude: -77.032 });
@@ -109,14 +109,14 @@ test("example 6 compiles: filter definitions validate as data", () => {
 // Example 7: API envelopes
 test("example 7 compiles: envelopes validate real payloads", () => {
   const payloadFromApi = {
-    schemaVersion: "2.0",
+    schemaVersion: "0.2",
     synthetic: true as const,
     disclosure: "Synthetic prototype data — fictional providers. Never contact.",
     units: [aUnit().build()],
   };
-  const schemaPayloadFromApi = { schemaVersion: "2.0", filters: UNIT_FILTERS };
+  const schemaPayloadFromApi = { schemaVersion: "0.2", filters: UNIT_FILTERS };
   const errorFromApi = {
-    schemaVersion: "2.0",
+    schemaVersion: "0.2",
     code: "not-found",
     message: "Unit not found.",
   };

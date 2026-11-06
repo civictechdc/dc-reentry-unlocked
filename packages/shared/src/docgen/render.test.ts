@@ -64,7 +64,7 @@ test("the unit card marks program and provider required and pins the schema vers
   expect(providerRow?.[1]).toContain("[Provider](#provider)");
 
   const schemaVersionRow = rows.get("schemaVersion");
-  expect(schemaVersionRow?.[3]).toBe('const "2.0"');
+  expect(schemaVersionRow?.[3]).toBe('const "0.2"');
 });
 
 test("the error codes section lists every ERROR_CODES value with its annotated meaning", () => {
@@ -140,7 +140,7 @@ test("the pinned filter table renders exactly the eleven filters in pinned order
 
 test("the renderer throws with the schema path on a construct it cannot render", () => {
   const broken: ModelReferenceInput = {
-    schemaVersion: "2.0",
+    schemaVersion: "0.2",
     blocks: [
       {
         kind: "schemas",
@@ -154,7 +154,7 @@ test("the renderer throws with the schema path on a construct it cannot render",
 
 /** A one-property reference input around the given property schema. */
 const inputWithProperty = (title: string, field: string, schema: TSchema): ModelReferenceInput => ({
-  schemaVersion: "2.0",
+  schemaVersion: "0.2",
   blocks: [{ kind: "schemas", entries: [{ title, schema: Type.Object({ [field]: schema }) }] }],
 });
 

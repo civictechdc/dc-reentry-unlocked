@@ -13,7 +13,7 @@ test("the filter-schema endpoint serves the shared definitions exactly", async (
   const payload = response.json();
 
   expect(response.statusCode).toBe(200);
-  expect(payload).toEqual({ schemaVersion: "2.0", filters: UNIT_FILTERS });
+  expect(payload).toEqual({ schemaVersion: "0.2", filters: UNIT_FILTERS });
   expect(payload.filters).toEqual(UNIT_FILTERS);
 
   await app.close();

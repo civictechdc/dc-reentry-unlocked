@@ -55,7 +55,7 @@ publicly listed" — distinct from yes and no:
 
 The model is versioned and additive-tolerant: new fields and enum values are
 ignorable by existing consumers; breaking changes are versioned, and unit
-cards and API envelopes carry `schemaVersion` `"2.0"`. Every unit and card
+cards and API envelopes carry `schemaVersion` `"0.2"`. Every unit and card
 carries required, non-null coordinates — exact street addresses only. Ward
 and quadrant are core (required DC fields for this prototype); future
 jurisdiction-specific concepts land as additive extension fields, not

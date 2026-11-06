@@ -113,7 +113,7 @@ export const UnitCardSchema = Type.Object(
       "badge exposes source-confirmation status.",
     examples: [
       {
-        schemaVersion: "2.0",
+        schemaVersion: SCHEMA_VERSION,
         id: "u-1001",
         programId: "p-2001",
         address: "1234 Example Street NW",

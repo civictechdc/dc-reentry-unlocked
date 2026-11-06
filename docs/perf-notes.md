@@ -19,7 +19,7 @@ the JSON card payload).
   (`e2e/perf-payload.spec.ts`); `bytesOnWire` counts the encoded BODY chunks
   on the socket — response headers (content-length, transfer framing) are
   excluded. Brotli decode is for the card count only (wire bytes stay the compressed size).
-- Served dataset: 932 available unit cards (frozen synthetic dataset v2, seed
+- Served dataset: 932 available unit cards (frozen synthetic dataset, seed
   20261029 — every card carries map coordinates).
 
 | Number                          | Value         |

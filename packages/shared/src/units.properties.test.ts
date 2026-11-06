@@ -13,7 +13,7 @@ import { aUnit } from "./testing";
  * a shrunk counterexample, not a hand-picked case.
  */
 
-/** DC-bounded exact coordinates; the v2 contract requires them on every unit. */
+/** DC-bounded exact coordinates; the contract requires them on every unit. */
 const coordinatesArb = fc.record({
   latitude: fc.double({ min: 38.79, max: 38.99, noNaN: true, noDefaultInfinity: true }),
   longitude: fc.double({ min: -77.12, max: -76.9, noNaN: true, noDefaultInfinity: true }),

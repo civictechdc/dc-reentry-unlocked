@@ -12,7 +12,7 @@ import Type, { type Static } from "typebox";
  */
 
 /** Version of the shared contract carried by card and envelope payloads. */
-export const SCHEMA_VERSION = "2.0";
+export const SCHEMA_VERSION = "0.2";
 
 export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION, {
   description: "The shared-contract schema version this payload speaks.",
@@ -60,8 +60,8 @@ export type Quadrant = Static<typeof QuadrantSchema>;
 /**
  * Geo coordinates for a unit's exact street-level location. Every unit and
  * card carries coordinates — exact addresses only; the approximate-location
- * representation (precision flag, null coordinates) was removed in schema
- * version 2.0 (user decision 2026-10-31).
+ * representation (precision flag, null coordinates) was removed in the
+ * 2026-10-31 revision (user decision).
  */
 export const CoordinatesSchema = Type.Object(
   {
@@ -72,7 +72,7 @@ export const CoordinatesSchema = Type.Object(
     description:
       "Exact street-level coordinates for a unit's location — required and non-null on every " +
       "unit and card (exact addresses only; the approximate-location representation was " +
-      "removed in schema version 2.0, user decision 2026-10-31).",
+      "removed in the 2026-10-31 revision, user decision).",
   },
 );
 export type Coordinates = Static<typeof CoordinatesSchema>;

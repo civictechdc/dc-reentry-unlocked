@@ -1,5 +1,5 @@
 /**
- * CLI entry point: regenerates the frozen dataset at data/units.v2.json from
+ * CLI entry point: regenerates the frozen dataset at data/units.json from
  * the committed corpus with the fixed default seed. Deterministic — running
  * this twice must produce byte-identical output (the tests assert it too).
  */
@@ -14,7 +14,7 @@ const dataDir = fileURLToPath(new URL("../../../data/", import.meta.url));
 const corpus = await getCorpus();
 const dataset = generateDataset(DEFAULT_SEED, corpus);
 await mkdir(dataDir, { recursive: true });
-const target = path.join(dataDir, "units.v2.json");
+const target = path.join(dataDir, "units.json");
 // Atomic write: an interrupted run must never leave a truncated dataset.
 // The temp name is unique per process so concurrent writers cannot race on
 // a shared temp file; the rename makes publication all-or-nothing.
