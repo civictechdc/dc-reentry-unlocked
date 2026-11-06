@@ -17,6 +17,8 @@ stryker-tmp/
 reports/
 test-results/
 playwright-report/
+# MCP browser-server scratch: Firefox isolated profile, verification screenshots
+.scratch/
 # Generated bdd tests (bddgen output of apps/web/e2e/features — never edited)
 .features-gen/
 

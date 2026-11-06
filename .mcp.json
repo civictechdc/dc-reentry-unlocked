@@ -4,6 +4,48 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@sveltejs/mcp@0.1.28"]
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@1.12.0",
+        "--no-usage-statistics",
+        "--no-performance-crux",
+        "--isolated"
+      ],
+      "env": {
+        "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1",
+        "CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY": "1"
+      }
+    },
+    "firefox-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mozilla/firefox-devtools-mcp@0.10.7",
+        "--tools",
+        "pages",
+        "snapshot",
+        "screenshot",
+        "console",
+        "network",
+        "debugging",
+        "profiler",
+        "script",
+        "--profile-path",
+        ".scratch"
+      ],
+      "env": {
+        "CONNECT_EXISTING": "0",
+        "ACCEPT_INSECURE_CERTS": "0",
+        "UNRESTRICTED_SAVE_PATHS": "0",
+        "ENABLE_PRIVILEGED_CONTEXT": "0",
+        "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "0",
+        "NODE_ENV": "production"
+      }
     }
   }
 }

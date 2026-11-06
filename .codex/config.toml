@@ -6,3 +6,58 @@
 [mcp_servers.svelte]
 command = "npx"
 args = ["-y", "@sveltejs/mcp@0.1.28"]
+
+# Chrome DevTools MCP — live Chrome inspection for agents (Google ChromeDevTools org)
+# Version pinned (npm-verified 2026-11-05) for supply-chain review — bump
+# deliberately via review. Google telemetry off at startup: no usage-statistics
+# collection, no CrUX trace-URL lookups, no npm update checks. --isolated gives
+# a session-scoped Chrome profile (cleaned when the browser closes — no
+# persistent cross-session state); CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY=1
+# ignores discovered config files that could otherwise alter posture.
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = [
+  "-y",
+  "chrome-devtools-mcp@1.12.0",
+  "--no-usage-statistics",
+  "--no-performance-crux",
+  "--isolated",
+]
+
+[mcp_servers.chrome-devtools.env]
+CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS = "1"
+CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY = "1"
+
+# Firefox DevTools MCP — live Firefox inspection for agents (Mozilla)
+# PUBLIC npm build pinned (@mozilla/firefox-devtools-mcp@0.10.7,
+# npm-verified 2026-11-05): it strips the privileged-context/prefs/launch
+# modules that exist only in Mozilla's internal "-moz" build — never swap to
+# that name. Node >= 20.19 + system Firefox required. Explicit --tools list
+# (least surface, no preset) with the risk env pinned off. Always launched on
+# the isolated, gitignored .scratch profile — never the user's real Firefox
+# profile.
+[mcp_servers.firefox-devtools]
+command = "npx"
+args = [
+  "-y",
+  "@mozilla/firefox-devtools-mcp@0.10.7",
+  "--tools",
+  "pages",
+  "snapshot",
+  "screenshot",
+  "console",
+  "network",
+  "debugging",
+  "profiler",
+  "script",
+  "--profile-path",
+  ".scratch",
+]
+
+[mcp_servers.firefox-devtools.env]
+CONNECT_EXISTING = "0"
+ACCEPT_INSECURE_CERTS = "0"
+UNRESTRICTED_SAVE_PATHS = "0"
+ENABLE_PRIVILEGED_CONTEXT = "0"
+MOZ_REMOTE_ALLOW_SYSTEM_ACCESS = "0"
+NODE_ENV = "production"

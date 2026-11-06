@@ -16,12 +16,15 @@ AGENTS.md "MCP decisions". Both candidate servers are vendor-sanctioned:
   npm update checks by default (`CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS`
   disables); performance tools may query Google CrUX
   (`--no-performance-crux` disables).
-- `@mozilla/firefox-devtools-mcp-moz` — Mozilla's firefox-devtools-mcp;
-  run via npx; drives Firefox over WebDriver BiDi (Classic fallback);
+- `@mozilla/firefox-devtools-mcp` (PUBLIC npm build; Mozilla's
+  firefox-devtools-mcp — user decision 2026-11-05: the `-moz` name is
+  the internal build and was rejected at review) — run via npx; drives
+  Firefox over WebDriver BiDi (Classic fallback);
   requirements: Node ≥ 20.19.0 and a system Firefox (any channel). Options
-  include `--headless`, `--viewport`, `--firefox-path`, `--profile-path`.
-  Includes privileged-context script evaluation aimed at Firefox-chrome
-  debugging (not applicable to web-app use, noted in trust notes).
+  include `--headless`, `--viewport`, `--firefox-path`, `--profile-path`,
+  `--tools`. The public build strips the privileged-context/prefs/launch/bidi
+  modules that exist only in the internal `-moz` build (verified from the
+  published artifact at implementation time).
 
 ## Decisions
 
@@ -51,11 +54,12 @@ only, so a fresh clone reviews before trusting.
 **D4 — Document both in AGENTS.md MCP decisions** with trust notes:
 chrome-devtools-mcp exposes browser content to the agent and launches a
 local Chrome (no network ingress); telemetry explicitly disabled here;
-Firefox server drives a local Firefox via WebDriver and includes
-privileged-context tools that are out of scope for web-app debugging (do
-not use `evaluate_privileged_script` against anything but a scratch
-profile; prefer `--profile-path` isolation so the agent never touches the
-user's real Firefox profile).
+Firefox server drives a local Firefox via WebDriver — pin the PUBLIC
+build (`@mozilla/firefox-devtools-mcp`), whose internal-only
+privileged-context/prefs/launch/bidi modules are stripped at the source
+level (the `-moz` internal build was rejected at review, user decision
+2026-11-05); prefer `--profile-path` isolation so the agent never touches
+the user's real Firefox profile.
 
 **D5 — Verified boot, not just config.** Acceptance: each server starts
 from the repo config and completes one trivial live inspection (navigate

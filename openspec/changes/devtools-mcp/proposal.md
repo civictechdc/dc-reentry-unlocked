@@ -17,9 +17,11 @@ handled (2026-11-05: desktop map sizing, verified by measured preview).
   Apache-2.0, npm `chrome-devtools-mcp`) as an MCP server across the repo's
   agent configs — pinned version, NOT `@latest`, and started with
   `--no-usage-statistics` (Google telemetry is default-on)
-- Install and pin `@mozilla/firefox-devtools-mcp-moz` (Mozilla's
-  firefox-devtools-mcp; requires Node ≥ 20.19 and a system Firefox) the same
-  way
+- Install and pin `@mozilla/firefox-devtools-mcp` (Mozilla's PUBLIC
+  firefox-devtools-mcp npm build — user decision 2026-11-05, after
+  security review found the originally named `-moz` package is the
+  internal build that ships privileged-context modules; requires Node
+  ≥ 20.19 and a system Firefox) the same way
 - Wire both into the repo's agent config surfaces following the Svelte MCP
   precedent (`.mcp.json`, `.codex/config.toml`, opencode config — exact
   opencode wiring verified against current docs at implementation time)

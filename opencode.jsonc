@@ -12,4 +12,61 @@
   // untouched (per the plugin doc). Autoupdate is additionally disabled in
   // .opencode/svelte.json. Bump deliberately via review.
   "plugin": ["@sveltejs/opencode@0.1.17"],
+  // Browser-inspection MCP servers (native opencode `mcp` shape, local stdio).
+  // Versions pinned (npm-verified 2026-11-05) for supply-chain review — bumps
+  // are deliberate, reviewed changes. chrome-devtools runs with Google
+  // telemetry and npm update checks disabled, on an isolated session-scoped
+  // Chrome profile (--isolated; cleaned when the browser closes), ignoring
+  // discovered config files that could alter posture
+  // (CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY=1). firefox-devtools runs the
+  // PUBLIC Mozilla npm build (never the internal "-moz" twin) on an explicit
+  // least-surface --tools list with the risk env pinned off, always on the
+  // isolated, gitignored .scratch profile (never the user's real Firefox
+  // profile). Requires Node >= 20.19 + system Firefox.
+  "mcp": {
+    "servers": {
+      "chrome-devtools": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "chrome-devtools-mcp@1.12.0",
+          "--no-usage-statistics",
+          "--no-performance-crux",
+          "--isolated",
+        ],
+        "environment": {
+          "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1",
+          "CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY": "1",
+        },
+      },
+      "firefox-devtools": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@mozilla/firefox-devtools-mcp@0.10.7",
+          "--tools",
+          "pages",
+          "snapshot",
+          "screenshot",
+          "console",
+          "network",
+          "debugging",
+          "profiler",
+          "script",
+          "--profile-path",
+          ".scratch",
+        ],
+        "environment": {
+          "CONNECT_EXISTING": "0",
+          "ACCEPT_INSECURE_CERTS": "0",
+          "UNRESTRICTED_SAVE_PATHS": "0",
+          "ENABLE_PRIVILEGED_CONTEXT": "0",
+          "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "0",
+          "NODE_ENV": "production",
+        },
+      },
+    },
+  },
 }

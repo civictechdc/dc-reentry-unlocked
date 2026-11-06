@@ -234,7 +234,7 @@ behavior, re-verify against the Copilot hooks reference first.
 
 ## MCP decisions — dev workflow tooling
 
-Final (user confirmed 2026-10-29):
+Decision log (per-entry provenance dates below):
 
 - **Svelte MCP server (local stdio via `@sveltejs/mcp`) — ADOPTED** (user
   request 2026-10-29, restored from the prior prototype): project dev
@@ -245,6 +245,53 @@ Final (user confirmed 2026-10-29):
   subagent is available to Claude Code (`.claude/agents/`) and Codex
   (`.codex/agents/`); delegate Svelte component/module edits to it. See the
   Svelte tooling section above for the usage instructions.
+
+- **chrome-devtools-mcp (local stdio, ChromeDevTools org) — ADOPTED** (user
+  decision 2026-11-05): live Chrome inspection for agents against the dev
+  servers — DOM, console, network, screenshots, performance traces. Pinned
+  `chrome-devtools-mcp@1.12.0` (npm-verified 2026-11-05; never `@latest` —
+  bumps are deliberate, reviewed changes). Started with Google telemetry
+  off: `--no-usage-statistics` (usage-statistics collection),
+  `--no-performance-crux` (CrUX trace-URL lookups),
+  `CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS=1` (npm update checks). Runs with
+  `--isolated`: a session-scoped Chrome profile, cleaned when the browser
+  closes — no persistent cross-session state. Runs with
+  `CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY=1`: disables discovered config
+  files (`$PLUGIN_DATA/cd4a.config.json`, `~/.config/cd4a/config.json`)
+  that could otherwise alter posture. Trust: the server exposes everything
+  in the browser instance it launches (pages, cookies, storage) to the
+  agent — it launches its own isolated Chrome, never the user's browsing
+  profile; `evaluate_script` is exposed, and page content read through the
+  server is untrusted input (prompt-injection surface). Wired via
+  `.mcp.json`, `.codex/config.toml`, and `opencode.jsonc` (`mcp.servers`).
+
+- **@mozilla/firefox-devtools-mcp (local stdio, Mozilla) — ADOPTED** (user
+  decision 2026-11-05): Firefox inspection for agents — navigation,
+  snapshot, screenshot, console, network, debugging, profiler, script
+  evaluation — via an explicit `--tools` list (least-surface; no preset).
+  Pinned `@mozilla/firefox-devtools-mcp@0.10.7` (npm-verified 2026-11-05).
+  This is Mozilla's PUBLIC npm build: it strips the
+  privileged-context/prefs/launch/bidi modules that exist only in the
+  internal `-moz` build — never swap to `-moz` or rely on its env expansion
+  without security review. Requires Node ≥ 20.19 and a system Firefox (100+).
+  Always started with `--profile-path .scratch` so Firefox runs in the
+  isolated, gitignored `.scratch/firefox_devtools_mcp_profile` (path
+  resolves against the server's working directory, the repo root; treat
+  any committed `.scratch` content as suspect) — never the user's real
+  Firefox profile. The scratch profile persists across sessions and restarts
+  (unlike Chrome's session-scoped `--isolated`), and a marked profile is
+  reused as-is — delete `.scratch/` to reset it. Under the pinned path jail
+  (`UNRESTRICTED_SAVE_PATHS=0`), `screenshot_page` cannot `saveTo` repo
+  paths — consume the returned base64 image instead. Risk switches are
+  pinned off in the server env
+  (`CONNECT_EXISTING=0`, `ACCEPT_INSECURE_CERTS=0`,
+  `UNRESTRICTED_SAVE_PATHS=0`, `ENABLE_PRIVILEGED_CONTEXT=0`,
+  `MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=0`, `NODE_ENV=production`).
+  `evaluate_script` is exposed — browse only local dev servers or trusted
+  pages. Bumps are deliberate,
+  reviewed changes; re-scan dependency advisories at bump time (0.10.7's
+  transitive MCP SDK carries HTTP/OAuth advisories that are unreachable
+  over local stdio).
 
 - **Docs-lookup MCP (Context7-style) — ADOPTED.** Library facts (Fastify,
   Svelte 5 runes, MapLibre, TypeBox) drift; fetching current docs beats
