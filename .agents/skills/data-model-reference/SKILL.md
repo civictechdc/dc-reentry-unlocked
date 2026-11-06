@@ -13,7 +13,10 @@ Sourced from the capability specs in the in-repo OpenSpec planning
 workspace (`openspec/`). The
 TypeBox schemas in `packages/shared` are the contract's source of truth
 and their tests assert the full filter set described here; this skill is
-the pinned orientation reference.
+the pinned orientation reference. For the systematic field-by-field
+reference — every schema's field table, enum values with their meanings,
+constraints, and worked examples — see `docs/data-model.md`, which is
+generated from those schemas (`pnpm docgen:model`).
 
 ## Three-layer hierarchy
 

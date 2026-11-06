@@ -19,6 +19,10 @@
     // frozen generated dataset: byte-identical regeneration is the contract;
     // the formatter must not touch it
     "data",
+    // generated data-model reference: byte-identical regeneration is the
+    // contract (the `pnpm docgen:model` + git diff drift gate); the formatter
+    // must not touch it
+    "docs/data-model.md",
     // in-repo OpenSpec planning artifacts: their markdown is produced and
     // maintained by the openspec workflow itself — reformatted copies would
     // fork them from the openspec tooling conventions they follow

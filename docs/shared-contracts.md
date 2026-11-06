@@ -8,6 +8,11 @@ value)`. Unit cards and API envelopes carry `schemaVersion` (`SCHEMA_VERSION`,
 currently `"2.0"`); contract changes are additive-first — new fields and enum
 values must be ignorable by old consumers, and breaking changes are versioned.
 
+The systematic field-by-field reference — every schema, field table, enum
+value with its meaning, and worked example — is generated from these schemas:
+see the [data-model reference](data-model.md). This page keeps the narrative
+and curated examples; the generated reference owns the field lists.
+
 ## Example 1 — Entity schemas (Provider → Program → Unit)
 
 The inventory is a three-layer hierarchy: every program owns its policy
@@ -133,16 +138,8 @@ Value.Check(ErrorEnvelopeSchema, errorFromApi); // code is one of the ERROR_CODE
 
 The pinned code vocabulary (`ERROR_CODES`, additive-only — new codes must
 never break an existing consumer's `switch`, so unknown codes degrade to a
-generic failure rendering):
-
-| Code                  | Meaning on the wire                                                        |
-| --------------------- | -------------------------------------------------------------------------- |
-| `not-found`           | Unknown route (there is no per-unit detail view on this listing API yet)   |
-| `service-unavailable` | The API cannot serve the data right now — safe to retry later              |
-| `invalid-filter`      | A filter name or value the published filter schema does not define         |
-| `invalid-request`     | A malformed request that is not a filter problem                           |
-| `internal-error`      | Something failed server-side; detail stays in server logs                  |
-| `rate-limited`        | Too many requests — slow down, and honor the `Retry-After` response header |
+generic failure rendering) is documented with per-code meanings in the
+generated [data-model reference](data-model.md#error-codes).
 
 ## Example 8 — Test-only domain builders
 

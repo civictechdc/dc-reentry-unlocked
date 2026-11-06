@@ -5,11 +5,24 @@ import Type, { type Static } from "typebox";
  * Provider → Program → Unit hierarchy. Contact details are optional strings
  * — a missing contact is absent, never fabricated.
  */
-export const ProviderSchema = Type.Object({
-  id: Type.String(),
-  organization: Type.String(),
-  phone: Type.Optional(Type.String()),
-  email: Type.Optional(Type.String()),
-  website: Type.Optional(Type.String({ pattern: "^https?://" })),
-});
+export const ProviderSchema = Type.Object(
+  {
+    id: Type.String({ description: "Stable provider identifier." }),
+    organization: Type.String({ description: "Organization name shown as the contact." }),
+    phone: Type.Optional(Type.String({ description: "Contact phone, when publicly listed." })),
+    email: Type.Optional(Type.String({ description: "Contact email, when publicly listed." })),
+    website: Type.Optional(
+      Type.String({
+        pattern: "^https?://",
+        description: "Contact website URL (http/https), when publicly listed.",
+      }),
+    ),
+  },
+  {
+    description:
+      "Housing provider: the contact-bearing organization at the top of the " +
+      "Provider → Program → Unit hierarchy. A missing contact field is absent — " +
+      "never fabricated.",
+  },
+);
 export type Provider = Static<typeof ProviderSchema>;

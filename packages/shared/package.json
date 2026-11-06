@@ -10,13 +10,16 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "docgen:model": "tsx src/docgen/cli.ts"
   },
   "dependencies": {
     "typebox": "^1.4.3"
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.5.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }

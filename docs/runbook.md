@@ -141,3 +141,22 @@ Both commands exit 0 when the frozen dataset is intact after regeneration.
 If the diff exits nonzero, regeneration changed the output — investigate
 the generator change before committing anything under `data/` (dataset
 files are never hand-edited).
+
+## 5. Model-doc regeneration
+
+The generated model reference (`docs/data-model.md`, committed) is rendered
+from the TypeBox schemas in `packages/shared` — never hand-edit it. Like the
+dataset, regeneration must stay byte-identical; a schema change without a
+regenerated doc fails the gate:
+
+```sh
+pnpm docgen:model
+git diff --exit-code -- docs/data-model.md
+```
+
+Both commands exit 0 when the committed reference matches the schemas. If
+the diff exits nonzero, a schema change reached the doc — regenerate and
+commit the updated reference together with the schema change. Schema prose
+(field meanings, enum meanings, worked examples) lives in the schemas'
+`description` / `examples` annotations, so the doc carries it on every
+regeneration.

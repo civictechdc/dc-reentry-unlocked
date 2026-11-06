@@ -10,14 +10,24 @@ import { GENDERS, HOUSING_TYPES, LENGTHS_OF_STAY, POPULATIONS } from "./program"
 
 export const FILTER_CONTROLS = ["boolean", "single-select", "multi-select"] as const;
 
-export const FilterControlSchema = Type.Enum([...FILTER_CONTROLS]);
+export const FilterControlSchema = Type.Enum([...FILTER_CONTROLS], {
+  description: "The kind of filter control a definition declares.",
+  "x-enum-meanings": {
+    boolean: 'Yes/no control (unknown values match "no" selections).',
+    "single-select": "One value from the option list.",
+    "multi-select": "Multiple values from the option list (chips).",
+  },
+});
 export type FilterControl = Static<typeof FilterControlSchema>;
 
 /** Human display pairing for an enumeration option. */
-export const FilterOptionSchema = Type.Object({
-  value: Type.String(),
-  label: Type.String(),
-});
+export const FilterOptionSchema = Type.Object(
+  {
+    value: Type.String({ description: "The machine value the filter matches on." }),
+    label: Type.String({ description: "The display label." }),
+  },
+  { description: "Human display pairing for an enumeration option." },
+);
 export type FilterOption = Static<typeof FilterOptionSchema>;
 
 /** Fields a filter definition may target (pinned — new fields extend it). */
@@ -35,16 +45,29 @@ export const FILTER_TARGETS = [
   "program.housingVouchersAccepted",
 ] as const;
 
-export const FilterTargetSchema = Type.Enum([...FILTER_TARGETS]);
+export const FilterTargetSchema = Type.Enum([...FILTER_TARGETS], {
+  description: "The field a filter definition targets (pinned vocabulary — new fields extend it).",
+});
 export type FilterTarget = Static<typeof FilterTargetSchema>;
 
-export const FilterDefinitionSchema = Type.Object({
-  id: Type.String(),
-  label: Type.String(),
-  control: FilterControlSchema,
-  target: FilterTargetSchema,
-  options: Type.Optional(Type.Array(FilterOptionSchema)),
-});
+export const FilterDefinitionSchema = Type.Object(
+  {
+    id: Type.String({ description: "Stable filter identifier." }),
+    label: Type.String({ description: "Display label." }),
+    control: FilterControlSchema,
+    target: FilterTargetSchema,
+    options: Type.Optional(
+      Type.Array(FilterOptionSchema, {
+        description: "Option list for enum controls; absent for boolean filters.",
+      }),
+    ),
+  },
+  {
+    description:
+      "One published filter definition: id, display label, control type, target field, and " +
+      "option list where applicable.",
+  },
+);
 export type FilterDefinition = Static<typeof FilterDefinitionSchema>;
 
 export const wardOptions: FilterOption[] = Array.from({ length: 8 }, (_, i) => ({

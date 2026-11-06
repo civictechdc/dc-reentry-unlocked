@@ -4,8 +4,8 @@
 #   probe (`e2e:prod`, which builds the adapter-node output and serves it on
 #   a scratch port against the compose API)
 # - `pnpm audit` against the lockfile
-# - datagen determinism diff (regenerate the frozen dataset; the working
-#   tree must stay byte-identical)
+# - datagen + model-doc determinism diffs (regenerate the frozen dataset and
+#   the generated model reference; the working tree must stay byte-identical)
 # - StrykerJS mutation testing scoped to packages/shared, apps/api and
 #   tools/datagen. Report-only thresholds for now
 #   (thresholds.break: null) — scores are observations, not gates, until a
@@ -104,7 +104,7 @@ jobs:
         run: pnpm audit
 
   determinism:
-    name: Datagen determinism (frozen dataset diff)
+    name: Datagen + model-doc determinism (frozen diffs)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -124,8 +124,14 @@ jobs:
       - name: Regenerate the dataset
         run: pnpm datagen
 
-      - name: Assert byte-identical regeneration
+      - name: Assert byte-identical dataset regeneration
         run: git diff --exit-code -- data/
+
+      - name: Regenerate the model reference
+        run: pnpm docgen:model
+
+      - name: Assert byte-identical model-doc regeneration
+        run: git diff --exit-code -- docs/data-model.md
 
   mutation:
     name: StrykerJS mutation (report-only)

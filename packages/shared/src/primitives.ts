@@ -14,7 +14,9 @@ import Type, { type Static } from "typebox";
 /** Version of the shared contract carried by card and envelope payloads. */
 export const SCHEMA_VERSION = "2.0";
 
-export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION);
+export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION, {
+  description: "The shared-contract schema version this payload speaks.",
+});
 
 /**
  * Tri-state policy value: known yes / known no / unknown ("not publicly
@@ -23,17 +25,36 @@ export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION);
  */
 export const POLICY_STATES = ["yes", "no", "unknown"] as const;
 
-export const PolicyStateSchema = Type.Enum([...POLICY_STATES]);
+export const PolicyStateSchema = Type.Enum([...POLICY_STATES], {
+  description: 'Tri-state policy value: known yes / known no / unknown ("not publicly listed").',
+  "x-enum-meanings": {
+    yes: "The policy applies.",
+    no: "The policy does not apply.",
+    unknown: "Not publicly listed — never fabricated as yes or no.",
+  },
+});
 export type PolicyState = Static<typeof PolicyStateSchema>;
 
 /** The 8 DC wards (numbers validated by range, not by a type alias). */
-export const WardSchema = Type.Integer({ minimum: 1, maximum: 8 });
+export const WardSchema = Type.Integer({
+  minimum: 1,
+  maximum: 8,
+  description: "DC ward number, 1–8; the synthetic dataset covers every ward.",
+});
 export type Ward = Static<typeof WardSchema>;
 
 /** DC address quadrants. */
 export const QUADRANTS = ["NW", "NE", "SW", "SE"] as const;
 
-export const QuadrantSchema = Type.Enum([...QUADRANTS]);
+export const QuadrantSchema = Type.Enum([...QUADRANTS], {
+  description: "DC address quadrant.",
+  "x-enum-meanings": {
+    NW: "Northwest.",
+    NE: "Northeast.",
+    SW: "Southwest.",
+    SE: "Southeast.",
+  },
+});
 export type Quadrant = Static<typeof QuadrantSchema>;
 
 /**
@@ -42,10 +63,18 @@ export type Quadrant = Static<typeof QuadrantSchema>;
  * representation (precision flag, null coordinates) was removed in schema
  * version 2.0 (user decision 2026-10-31).
  */
-export const CoordinatesSchema = Type.Object({
-  latitude: Type.Number(),
-  longitude: Type.Number(),
-});
+export const CoordinatesSchema = Type.Object(
+  {
+    latitude: Type.Number({ description: "Latitude in decimal degrees." }),
+    longitude: Type.Number({ description: "Longitude in decimal degrees." }),
+  },
+  {
+    description:
+      "Exact street-level coordinates for a unit's location — required and non-null on every " +
+      "unit and card (exact addresses only; the approximate-location representation was " +
+      "removed in schema version 2.0, user decision 2026-10-31).",
+  },
+);
 export type Coordinates = Static<typeof CoordinatesSchema>;
 
 /**
@@ -59,7 +88,16 @@ export const AVAILABILITY_STATES = [
   "unverified-availability",
 ] as const;
 
-export const AvailabilityStateSchema = Type.Enum([...AVAILABILITY_STATES]);
+export const AvailabilityStateSchema = Type.Enum([...AVAILABILITY_STATES], {
+  description:
+    "Per-unit availability state. Only `available` units ever surface — that gating is the " +
+    "DataSource/API layer's job, but the schema represents every state.",
+  "x-enum-meanings": {
+    available: "The unit is available.",
+    "not-available": "The unit is not available.",
+    "unverified-availability": "Availability has not been verified with the source.",
+  },
+});
 export type AvailabilityState = Static<typeof AvailabilityStateSchema>;
 
 /**
@@ -68,5 +106,11 @@ export type AvailabilityState = Static<typeof AvailabilityStateSchema>;
  */
 export const VERIFICATION_BADGES = ["confirmed", "needs-verification"] as const;
 
-export const VerificationBadgeSchema = Type.Enum([...VERIFICATION_BADGES]);
+export const VerificationBadgeSchema = Type.Enum([...VERIFICATION_BADGES], {
+  description: "Displayable confirmation badge for available units.",
+  "x-enum-meanings": {
+    confirmed: "Availability was confirmed with the source.",
+    "needs-verification": "Availability still needs verification.",
+  },
+});
 export type VerificationBadge = Static<typeof VerificationBadgeSchema>;

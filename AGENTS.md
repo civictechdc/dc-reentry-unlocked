@@ -55,21 +55,22 @@ first; e2e commands boot their own servers (stop stray servers first), and
 the `-C apps/web` matrix variants assume a running Compose boot ([runbook
 recipes](docs/runbook.md)).
 
-| Command                                  | Checks (use before claiming done)                                                    |
-| ---------------------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm lint`                              | oxlint (JS/TS/Svelte) + ESLint (JSON only)                                           |
-| `pnpm format:check`                      | oxfmt formatting (run `pnpm format` to fix)                                          |
-| `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)              |
-| `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                     |
-| `pnpm arch:check`                        | dependency-cruiser architecture rules                                                |
-| `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)         |
-| `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                       |
-| `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app) |
-| `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)      |
-| `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty      |
-| `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                    |
-| `node scripts/run-mutation.mjs`          | Stryker mutation runs over shared/api/datagen (report-only; minutes-long)            |
-| `openspec validate --all --strict`       | The OpenSpec gate: all changes + specs, strict mode                                  |
+| Command                                  | Checks (use before claiming done)                                                             |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `pnpm lint`                              | oxlint (JS/TS/Svelte) + ESLint (JSON only)                                                    |
+| `pnpm format:check`                      | oxfmt formatting (run `pnpm format` to fix)                                                   |
+| `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)                       |
+| `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                              |
+| `pnpm arch:check`                        | dependency-cruiser architecture rules                                                         |
+| `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)                  |
+| `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                                |
+| `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app)          |
+| `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)               |
+| `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty               |
+| `pnpm docgen:model`                      | Regenerate the model reference — `git diff --exit-code -- docs/data-model.md` must stay empty |
+| `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                             |
+| `node scripts/run-mutation.mjs`          | Stryker mutation runs over shared/api/datagen (report-only; minutes-long)                     |
+| `openspec validate --all --strict`       | The OpenSpec gate: all changes + specs, strict mode                                           |
 
 Deterministic commands first — never assert code behavior you have not run.
 The task verification for your block's task must pass before you report done.

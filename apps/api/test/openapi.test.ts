@@ -173,7 +173,10 @@ test("the ward contract keeps its shared range inside the generated document", a
     maximum?: number;
   };
 
-  expect(wardParameter.schema.items).toEqual({
+  // Additive schema annotations (e.g. description) may appear in the served
+  // document; the contract claim is that the shared range is present and
+  // unchanged, so match the documented keys as a subset.
+  expect(wardParameter.schema.items).toMatchObject({
     type: "integer",
     minimum: wardContract.minimum,
     maximum: wardContract.maximum,
