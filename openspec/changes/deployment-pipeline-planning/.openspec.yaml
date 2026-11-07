@@ -1,0 +1,9 @@
+schema: spec-driven
+created: 2026-11-07
+goal: Research and plan the deployment pipeline for the current two-service
+  stack (adapter-node web + Fastify API containers) — a regular-cadence
+  internal release lane for the latest main-branch diffs, tagged production
+  releases, and a non-indexed internal evaluation environment — producing a
+  committed plan document and spawned implementation proposals, no pipeline
+  code
+skip_specs: true
