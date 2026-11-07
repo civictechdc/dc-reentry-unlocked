@@ -59,6 +59,7 @@ implementation change it spawns carries any capability deltas, e.g. a
 - **Code:** none (research + planning only)
 - **Docs:** `docs/deployment.md` (new, committed)
 - **Sequencing:** after `live-walkthrough-feedback` runs its first
-  session (deployment then serves the evaluation loop it opens);
-  independent of the other in-flight product changes — the internal
-  environment deploys whatever main carries
+  session (deployment then serves the evaluation loop it opens) and
+  after `ci-security-badges` lands (its scanners and badges underpin the
+  pipeline); independent of the other in-flight product changes — the
+  internal environment deploys whatever main carries

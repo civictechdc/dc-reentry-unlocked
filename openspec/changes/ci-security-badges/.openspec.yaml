@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-11-07
+goal: Add security scanning to CI beyond the existing pnpm audit (SAST,
+  secret scanning, container image scanning, SBOM — researched, then
+  user-chosen scanners landing in the workflows) and a status-badge row on
+  the README, completing before deployment-pipeline planning starts
+skip_specs: true

@@ -14,4 +14,4 @@
 ## Workflow follow-up
 
 - After all tasks complete: code review per project policy (the plan document), then archive this change (`openspec archive`) and verify the archived state.
-- The spawned implementation proposals carry all pipeline and infra work; this change never edits workflow, compose, or environment code.
+- The spawned implementation proposals carry all pipeline and infra work; this change never edits workflow, compose, or environment code (CI scanners and badges land in `ci-security-badges` instead).

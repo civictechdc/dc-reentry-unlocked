@@ -5,5 +5,5 @@ goal: Research and plan the deployment pipeline for the current two-service
   internal release lane for the latest main-branch diffs, tagged production
   releases, and a non-indexed internal evaluation environment — producing a
   committed plan document and spawned implementation proposals, no pipeline
-  code
+  code (CI scanners and badges land in ci-security-badges instead)
 skip_specs: true
