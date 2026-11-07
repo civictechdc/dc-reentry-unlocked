@@ -70,7 +70,7 @@ module.exports = {
       comment:
         "Routes reach data only through the DataSource module (the units decoration is the working seam — production route modules have no other data import). This rule is a static-import backstop: it catches statically or dynamically imported dataset paths; a computed fs pathname string is invisible to dependency analysis (which is also why the DataSource module itself reads the file with fs.readFile rather than an import).",
       from: { path: "^apps/api/", pathNot: "[Dd]ata[Ss]ource" },
-      to: { path: "(^|/)data/units\\.v\\d+\\.json$" },
+      to: { path: "(^|/)data/units\\.json$" },
     },
     {
       name: "shared-testing-subpath-not-reachable-from-non-test-files",
