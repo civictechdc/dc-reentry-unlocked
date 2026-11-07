@@ -1,5 +1,5 @@
 schema: spec-driven
 created: 2026-11-06
 goal: Strengthen weak acceptance and concurrency assertions (findings
-  DM-10/DM-11 of docs/domain-review.md)
+  DM-10/DM-11 of openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md)
 skip_specs: true

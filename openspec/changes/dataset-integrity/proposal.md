@@ -2,7 +2,7 @@
 
 ## Why
 
-Two domain-driven review findings (`docs/domain-review.md`: DM-4, CO-6)
+Two domain-driven review findings (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`: DM-4, CO-6)
 concern the frozen dataset's integrity lockstep, left behind when
 CO-1's seam-rule fix was split out to `dataset-seam-rule` (product
 decision 2026-11-06):

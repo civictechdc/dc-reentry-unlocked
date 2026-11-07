@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding CO-3) found
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding CO-3) found
 the synthetic-data provenance sentence — which the contract says is
 carried "verbatim from the dataset" — maintained in four independent
 copies: datagen (`SYNTHETIC_DISCLAIMER`), the API

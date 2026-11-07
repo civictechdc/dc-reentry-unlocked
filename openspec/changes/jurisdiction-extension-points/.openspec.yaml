@@ -1,5 +1,5 @@
 schema: spec-driven
 created: 2026-11-06
 goal: Design the jurisdiction extension mechanism for ward/quadrant (finding
-  DM-1 of docs/domain-review.md)
+  DM-1 of openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md)
 skip_specs: true

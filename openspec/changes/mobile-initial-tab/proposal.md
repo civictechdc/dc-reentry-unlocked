@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding DM-12, product
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding DM-12, product
 decision 2026-11-06) found the housing-search-ui capability requiring the
 "tabbed list-first form" at and below the 900px breakpoint — while the
 implementation initializes `mobileTab` to `"map"` and the mobile e2e

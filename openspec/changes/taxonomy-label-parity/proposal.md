@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding CO-5) found
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding CO-5) found
 all ~26 taxonomy display strings living in two hand-synchronized homes:
 as labels in the shared filter definitions (`UNIT_FILTERS`) and as
 `taxonomy_*`/`detail_policy_*` keys in the web paraglide catalog, bridged

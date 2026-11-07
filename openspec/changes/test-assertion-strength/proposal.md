@@ -2,7 +2,7 @@
 
 ## Why
 
-Two domain-driven review findings (`docs/domain-review.md`: DM-10,
+Two domain-driven review findings (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`: DM-10,
 DM-11) found acceptance and unit tests whose names claim more than their
 assertions prove:
 

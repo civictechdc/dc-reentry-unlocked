@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding DM-1, product
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding DM-1, product
 decision 2026-11-06) found the housing-inventory capability's core
 requirement — "jurisdiction-specific fields as extension points rather
 than core fields, so the same spec can be adopted by other cities" —

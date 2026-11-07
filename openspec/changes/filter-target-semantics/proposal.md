@@ -2,7 +2,7 @@
 
 ## Why
 
-Five domain-driven review findings (`docs/domain-review.md`: DM-3, DM-5,
+Five domain-driven review findings (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`: DM-3, DM-5,
 DM-9, CO-4, CO-12; decoupling confirmed by product decision 2026-11-06)
 share one root: filter semantics are keyed on the wrong thing and spread
 across the wrong sides of the seam.

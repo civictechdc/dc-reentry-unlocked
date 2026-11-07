@@ -7,7 +7,7 @@ The prototype is feature-complete and about to be pushed. Before broader exposur
 ## What Changes
 
 - A domain-driven review of the finished codebase across six axes: feature definitions (capability cohesion, bounded clarity), domain modelling (the ubiquitous language and model choices), test appropriateness (domain behavior vs implementation detail), code organization by feature seams, readability, and the flexibility/stability balance
-- A committed review document (`docs/domain-review.md`) with evidence-backed findings and a disposition per finding: no-action (rationale) or follow-up change proposal
+- A review document (`domain-review.md` in this change folder) with evidence-backed findings and a disposition per finding: no-action (rationale) or follow-up change proposal
 - Follow-up change proposals spawned for accepted findings — this change reviews and records; it does not fix code
 
 ## Capabilities
@@ -19,5 +19,5 @@ The prototype is feature-complete and about to be pushed. Before broader exposur
 ## Impact
 
 - **Code:** none (review-only; findings spawn separate changes)
-- **Docs:** `docs/domain-review.md` (new, committed)
+- **Docs:** `domain-review.md` (in this change folder; relocated from `docs/`, user decision 2026-11-06, so it archives as an internal assessment)
 - **Sequencing:** after `exact-addresses-only` and `card-map-focus` land (reviews the complete picture), before or alongside the `live-walkthrough-feedback` session; pre-push

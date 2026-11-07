@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding CO-2, product
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding CO-2, product
 decision 2026-11-06) found two linked defects in how the unit card speaks
 about program taxonomy:
 

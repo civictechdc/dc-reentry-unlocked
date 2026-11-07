@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding CO-1, product
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding CO-1, product
 decision 2026-11-06) found that the dep-cruiser rule
 `api-route-must-not-read-dataset-directly` — the executable backstop for
 the ingestion-pipeline seam — matches `data/units.v\d+\.json`, a filename

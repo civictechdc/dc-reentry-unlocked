@@ -2,7 +2,7 @@
 
 ## Why
 
-The domain-driven review (`docs/domain-review.md`, finding DM-2, product
+The domain-driven review (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`, finding DM-2, product
 decision 2026-11-06) found the inventory capability's consumer-tolerance
 promise — "consumers built against the previous revision continue to
 function … new fields/enum values are ignorable" — only half-true in the

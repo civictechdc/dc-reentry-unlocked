@@ -2,7 +2,7 @@
 
 ## Why
 
-Two domain-driven review findings (`docs/domain-review.md`: DM-8, CO-9)
+Two domain-driven review findings (`openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md`: DM-8, CO-9)
 concern the shared test builders in `packages/shared/src/testing`:
 
 - **DM-8:** `aUnit()` returns a `UnitCardBuilder` — the fixture name says

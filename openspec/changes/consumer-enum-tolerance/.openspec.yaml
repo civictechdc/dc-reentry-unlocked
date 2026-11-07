@@ -1,5 +1,5 @@
 schema: spec-driven
 created: 2026-11-06
 goal: Tolerant consumer intake for future enum values (finding DM-2 of
-  docs/domain-review.md)
+  openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md)
 skip_specs: true

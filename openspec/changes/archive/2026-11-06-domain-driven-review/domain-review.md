@@ -20,7 +20,8 @@ landed, and is outside this review.
 - "Signal" is the reviewer's rating of how much the finding matters to
   future evolvability (high / medium / low).
 - Dispositions: **follow-up proposal** (a named, scoped change to be
-  planned separately — names below are proposed, not yet created),
+  planned separately — names below exist as proposal-stage OpenSpec
+  changes, spawned in commit `f4cb74c`),
   **fold** (carried by an already-planned review), or **no-action**
   (rationale recorded here so the question stays answered).
 - Dispositions were confirmed with the product owner on 2026-11-06; the
@@ -392,15 +393,15 @@ and the Unit/UnitCard fixture conflation (DM-8).
 | CO-11   | low    | no-action: opportunistic splits listed above for next touch; nothing blocks evolvability                                                                       |
 | CO-12   | low    | follow-up: `filter-target-semantics` (align matcher with the instance schema)                                                                                  |
 
-Eleven follow-up proposals are proposed for spawning (names above are
-proposed, not yet created), two with pre-push priority
+Eleven follow-up proposals were spawned as proposal-stage OpenSpec
+changes (commit `f4cb74c`), two with pre-push priority
 (`dataset-seam-rule`, `honest-unknown-labels`):
 `jurisdiction-extension-points`, `consumer-enum-tolerance`,
 `filter-target-semantics`, `dataset-integrity`, `dataset-seam-rule`,
 `honest-unknown-labels`, `disclosure-single-source`,
 `taxonomy-label-parity`, `test-builder-vocabulary`,
 `test-assertion-strength`, `mobile-initial-tab`. Two findings fold into
-the parallel documentation review; five are recorded no-actions.
+the parallel documentation review; four are recorded no-actions.
 
 ## Product-owner resolutions (2026-11-06)
 
