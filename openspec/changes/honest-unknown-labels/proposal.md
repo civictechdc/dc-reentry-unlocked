@@ -45,6 +45,9 @@ authored in this change's planning session, which unsets it.)
 ## Impact
 
 - **Code:** `apps/web/src/lib/components/UnitCard.svelte` (+ its caller,
-  `detail-values.ts` if generalized), `apps/web/messages/en.json`
+  `apps/web/src/lib/components/detail-values.ts` if generalized),
+  `apps/web/messages/en.json`
 - **Docs:** `docs/glossary.md`, generated `docs/data-model.md`
-- **Sequencing:** pre-push priority (product decision 2026-11-06)
+- **Sequencing:** pre-push priority (product decision 2026-11-06); the
+  marker-copy decision made here gates `taxonomy-label-parity`, which
+  sequences itself after this change to avoid double-touching strings
