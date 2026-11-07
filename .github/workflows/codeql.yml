@@ -1,0 +1,53 @@
+# CodeQL static analysis (SAST) over the JavaScript/TypeScript code.
+# - `build-mode: none` — the JS/TS analysis works from source, so no pnpm
+#   install or build step is needed here.
+# - Coverage honesty: the SvelteKit app's JS/TS modules are analyzed, but
+#   CodeQL does not analyze `.svelte` template files (no Svelte/SvelteKit
+#   framework modeling).
+# - Report-only baseline: results upload to the code scanning Security tab;
+#   the workflow does not fail on findings and no branch-protection ruleset
+#   gates on it yet — that gate is deliberately deferred until the finding
+#   baseline is triaged (user decision 2026-11-07).
+# - Weekly schedule keeps the analysis current against new CodeQL query
+#   packs between PRs.
+
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Mondays 07:00 UTC
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-24.04
+    # source-only analysis (no build), but the CodeQL bundle download and
+    # the query run themselves take several minutes on hosted runners
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:javascript-typescript"
