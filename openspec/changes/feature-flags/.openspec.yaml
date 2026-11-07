@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-07
+goal: "Feature-flag functionality: command-time (and potentially run-time, dev-only) toggles; flagged features stripped from production/pre-prod/beta builds, kept for dev builds"
+skip_specs: true
