@@ -1,5 +1,7 @@
 # DC Reentry Housing Discovery
 
+![CI](https://github.com/civictechdc/dc-reentry-unlocked/actions/workflows/pr.yml/badge.svg)
+
 A display prototype for exploring reentry-housing options in Washington,
 DC: available housing units shown on an interactive map and a card list,
 with filterable results and a detail panel that ends at the provider's
