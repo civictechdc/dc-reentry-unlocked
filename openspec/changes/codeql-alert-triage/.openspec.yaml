@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-11-07
+goal: Triage the four open CodeQL baseline alerts (js/incomplete-sanitization
+  family, high severity, docgen/i18n-audit escape helpers) with documented
+  dispositions, then enable the code-scanning merge-protection ruleset
+  (high-or-worse threshold) that the report-only baseline decision deferred
+skip_specs: true
