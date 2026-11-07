@@ -23,4 +23,9 @@ The prototype has never been used by its intended audience in a guided session. 
 - **Code:** a dev-tool script under `apps/web/e2e/` (or `scripts/`) reusing Playwright to run/attach a session and emit a structured event log; no product-code changes (no app instrumentation, no analytics)
 - **APIs / Dependencies:** none (Playwright already a dev dependency)
 - **Docs:** `docs/feedback/` (new directory, one committed record per session)
-- **Sequencing:** run AFTER the two planned changes land (`exact-addresses-only`, then `card-map-focus`) so feedback reflects the improved app
+- **Sequencing:** preconditions met — `exact-addresses-only` and
+  `card-map-focus` both landed (archived 2026-11-03/2026-11-04), and the
+  capture harness (task 1.1) is built, reviewed, and committed
+  (2026-11-07). The synchronous walkthrough session (task 1.2) is the
+  next active step in the queue: `ci-security-badges` code tasks landed
+  2026-11-07, and `deployment-pipeline-planning` waits on this session.
