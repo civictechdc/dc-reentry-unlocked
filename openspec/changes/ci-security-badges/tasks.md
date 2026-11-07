@@ -3,7 +3,7 @@
 ## 1. Security scanning in CI
 
 - [x] 1.1 Research scanning gaps beyond the existing `pnpm audit`: SAST (CodeQL vs Semgrep for a TS/Node monorepo), secret scanning (gitleaks + GitHub-native push protection — what is free for this repo's visibility), container image scanning (Trivy — timed with the images the deployment pipeline will ship), and SBOM/dependency-review; verify cost and availability against current GitHub and scanner docs and cite them
-- [ ] 1.2 Add the user-chosen scanners to `pr.yml`/`full.yml` (the user picks the set first); accepted findings land on a documented ignore-list policy (same discipline as `pnpm audit`'s); verify a CI run is green with the scanners active (landed as a dedicated `.github/workflows/codeql.yml` instead — workflow-managed decision 2026-11-07)
+- [x] 1.2 Add the user-chosen scanners to `pr.yml`/`full.yml` (the user picks the set first); accepted findings land on a documented ignore-list policy (same discipline as `pnpm audit`'s); verify a CI run is green with the scanners active (landed as a dedicated `.github/workflows/codeql.yml` instead — workflow-managed decision 2026-11-07)
 
 ## 2. Status badges
 
