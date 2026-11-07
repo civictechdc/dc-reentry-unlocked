@@ -133,6 +133,13 @@ jobs:
       - name: Assert byte-identical model-doc regeneration
         run: git diff --exit-code -- docs/data-model.md
 
+      - name: Prose reference check (backticked paths in docs + planning)
+        # deterministic and dependency-free (plain Node); report-only until
+        # the planned-file references land, strict later as its own change.
+        # Sits in this job as the deterministic-gates job — this workflow
+        # has no openspec validate step to sit beside.
+        run: node scripts/check-references.mjs --report-only
+
   mutation:
     name: StrykerJS mutation (report-only)
     runs-on: ubuntu-24.04

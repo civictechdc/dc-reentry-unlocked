@@ -106,6 +106,11 @@ jobs:
       - name: OpenSpec validate gate (all changes + specs, strict)
         run: npx -y @fission-ai/openspec@1.16.0 validate --all --strict
 
+      - name: Prose reference check (backticked paths in docs + planning)
+        # report-only until the planned-file references land; flips to
+        # strict (exit 1 on stale) as its own change
+        run: node scripts/check-references.mjs --report-only
+
   e2e:
     name: Compose e2e matrix
     runs-on: ubuntu-24.04

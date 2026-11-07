@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-11-07
+goal: Deterministic existence-check for file paths referenced in planning and
+  doc markdown — closes the reference-rot surface no existing gate covers
+skip_specs: true
