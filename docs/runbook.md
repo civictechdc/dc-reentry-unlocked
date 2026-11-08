@@ -34,6 +34,27 @@ curl -sS "http://localhost:3000/units" | node -e "let s='';process.stdin.on('dat
 The health endpoint answers `{"status":"ok"}` and the units count prints the
 available-unit total (932 with the current frozen dataset).
 
+Web-only candidate features ship behind dev-only feature flags, disabled by
+default. Enable one for a dev session at launch:
+
+```sh
+VITE_FEATURE_<NAME>=1 pnpm -C apps/web dev
+```
+
+or override per page load by appending `?flags=name1,name2` to the app URL
+(registered names only; unknown names are ignored and an empty value enables
+nothing). Overrides apply on reload — change flags and reload the page, never
+restart the dev server. The registry of valid names and the full mechanism
+live in `apps/web/src/lib/flags/`. Non-development builds (`vite build` —
+the Docker image and the production e2e probe) have no flag surface: neither
+launch variables nor URL parameters enable anything there — the build-time
+environment is ignored even if the variable is set when building — and
+guarded code is eliminated by construction, because both flag globals are
+forced false in every build regardless of NODE_ENV (an empirical scan of
+the built bundle joins with the first flagged feature). When a feature
+graduates, its flag (registry entry and declaration) is removed together
+with the guard.
+
 Stopping: interrupt `pnpm dev` in its terminal (Ctrl-C). On some platforms
 killing the parent processes can leave the API's TypeScript server child
 alive and still listening on port 3000; if a subsequent boot reports port
