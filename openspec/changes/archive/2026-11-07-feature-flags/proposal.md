@@ -24,6 +24,10 @@ beta artifacts.
   from production, pre-prod, and beta builds — flagged features are kept
   only in dev builds; no flag machinery ships as a runtime toggle in
   non-dev artifacts
+- (Approved scope add, user decision 2026-11-07): the CSP
+  `allowInlineScripts` gate in the web build config moves onto the same
+  dev-server predicate the flags use, so no self-built bundle ships CSP
+  `unsafe-inline` (design D5)
 - (Mechanism — compile-time defines vs. dev-only runtime registry — is a
   planning-session decision, not fixed here)
 
@@ -46,5 +50,3 @@ beta artifacts.
   `skip_specs`). **Next up** (user decision 2026-11-07): planned and
   built in the next session(s); the walkthrough quick-wins change rides
   behind its flags as its first consumer.
-
-(Spawned at proposal stage with `skip_specs` set.)
