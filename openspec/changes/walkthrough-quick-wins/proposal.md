@@ -20,11 +20,20 @@ visible to batch invisibly into other work.
 
 - The five items above as one scoped change
 - Candidate-behavior items (zoom buttons, recenter) are trialed behind
-  the feature-flag mechanism where flags apply; unconditional fixes
-  (`tel:`, favicon, close icon) land directly — the split is a planning
-  decision against whatever the flag mechanism ends up being
-- Sequencing: after the feature-flag change lands (user decision
-  2026-11-07 — this change is its first consumer)
+  the feature-flag mechanism (now landed: per-flag compile-time defines
+  with the dev-only `?flags=` override); unconditional fixes (`tel:`,
+  favicon, close icon) land directly
+- First flag-rider duties inherited from the feature-flags change
+  (recorded in its archived design): the build-output elimination scan —
+  fails if any `vite build` output contains guarded-feature code or a
+  stray `__FLAG_*__`/`__DEV_SERVER__` identifier — a registry
+  name-shape/uniqueness unit check (the registry gains its first real
+  entries here), and a "flags are never a security boundary" line in the
+  flags module docs
+- Sequencing: feature-flags has landed (user decision 2026-11-07 — this
+  change is its first consumer); plan after `mobile-initial-tab` so the
+  `housing-search-ui` delta is authored against the corrected responsive
+  wording instead of racing another delta into the same main spec
 
 ## Capabilities
 
@@ -38,9 +47,9 @@ visible to batch invisibly into other work.
 ## Impact
 
 - **Code:** `apps/web` (map component controls, detail card, phone
-  rendering, app favicon/static assets)
-- **Docs:** none beyond the walkthrough record already committed
-- **Sequencing:** feature-flags first (user decision 2026-11-07); this
-  change follows immediately as its first rider
-
-(Spawned at proposal stage with `skip_specs` set.)
+  rendering, app favicon/static assets) plus the flag-rider duties above
+  (registry check, elimination scan, flags docs)
+- **Docs:** the flags module docs line (never a security boundary); none
+  beyond the walkthrough record already committed
+- **Sequencing:** after `mobile-initial-tab` (spec-wording fix); after
+  feature-flags (landed 2026-11-07) as its first rider
