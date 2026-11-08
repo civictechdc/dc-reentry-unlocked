@@ -2,8 +2,8 @@
 
 ## Context
 
-First guided walkthrough of the running prototype with the project's user,
-per the live-walkthrough feedback workflow. The agent drove a headed
+First guided walkthrough of the running prototype with the project's user.
+The agent drove a headed
 Playwright browser (capture harness: `apps/web/e2e/walkthrough.capture.ts`);
 the user directed the session and commented in conversation. Two streams
 were captured: the user's remarks (below, verbatim and attributed) and the
@@ -48,6 +48,9 @@ harness's structured event log; this record synthesizes both.
   shell), filter-area design, `tel:` links, tabbed detail card, tetradic
   color scheme, DESIGN.md (quotes 17–22).
 - **23:45** User ends the session ("i think that's everythign for now").
+- **post-session** While reviewing this record, the user added the
+  monkey-testing research request (quote 23); spawned as a proposal-stage
+  change. Not part of the live session; absent from the event logs.
 
 ## Friction points
 
@@ -62,11 +65,10 @@ harness's structured event log; this record synthesizes both.
   console errors and 227 aborted OpenStreetMap tile requests. CSP
   `worker-src 'self'` blocks MapLibre's blob-worker fallback
   (`src/lib/security/csp.ts`; the policy intends a bundled same-origin
-  worker). Session 2 was clean (single benign blob-worker console error,
-  no cascade) and pins rendered — so the user-visible "no pins at
-  400x685" report (quote 5) is attributed to this transient failure, not
-  the mobile profile. Session 2 also showed one `blob:` worker CSP
-  console error without user impact.
+  worker). Session 2 showed exactly two benign console errors (a favicon
+  404 and one blob-worker CSP block) with no cascade, and pins rendered —
+  so the user-visible "no pins at 400x685" report (quote 5) is attributed
+  to this transient failure, not the mobile profile.
 - **F4 — Detail card spans full screen height on large screens** (quote
   14); user wants it shorter, with candidate heights previewed during
   implementation (quote 15).
@@ -83,7 +85,7 @@ harness's structured event log; this record synthesizes both.
 - **F9 — Full-list refetch churn.** Every load and every filter clear
   refetched the full 932-unit list, twice on initial load (16 and 30
   `filter-applied` events across the sessions; steady-state API latency
-  3–40 ms, initial cold fetch 642 ms).
+  3–40 ms, initial cold fetch 613 ms).
 
 ## Positive observations
 
@@ -91,10 +93,11 @@ harness's structured event log; this record synthesizes both.
   felt natural enough that the user moved through 7+ distinct filters
   without confusion remarks.
 - Pin labels legible — the user quoted label text verbatim from the
-  screen (quote 10's example).
+  screen (the address line of quote 10's example).
 - Map focus to address level (tile zoom 17–20) exercised without remark
   — landed behavior went unremarked, i.e. usable.
-- Session 2 ran ~2 hours with one benign console error; no page errors,
+- Session 2 ran ~2 hours with two benign console errors (a favicon 404
+  and one blob-worker CSP block); no page errors,
   no failed API requests, all filters sub-100 ms.
 - No zero-result encounters in either session — also an untested surface
   (see O2).
@@ -123,6 +126,7 @@ harness's structured event log; this record synthesizes both.
 20. (23:37Z) "research if detail card should tab between main details/contact and policies tab - we should try previews to see if feasable while being accessible/navigable"
 21. (23:38Z) "research a tetradic color scheme for the web app that still follows wcag/a11y guidelines"
 22. (23:41Z) "research if https://github.com/google-labs-code/design.md will be useful"
+23. (post-session, during record review) "add a task in a separate block to research and investigate the feasability of monkey testing: https://www.testmuai.com/learning-hub/monkey-testing/, https://www.qasource.com/blog/a-complete-guide-to-monkey-testing, https://blog.testunity.com/a-complete-guide-to-monkey-testing/"
 
 ## Candidate follow-up items (phrased for citation)
 
@@ -184,9 +188,10 @@ These are inputs for future change proposals, not commitments.
   bundled same-origin worker; dev needs the same reliability.
 - **W19** Serve a favicon (404 in every boot observed).
 - **W20** Research and investigate the feasibility of monkey testing for
-  the web app — spawned during this session as a proposal-stage change
-  (named by `openspec list`); user-supplied starting guides: the TestMu,
-  QA Source, and TestUnity complete guides to monkey testing.
+  the web app — requested by the user post-session while reviewing this
+  record (quote 23); spawned as a proposal-stage change (named by
+  `openspec list`). Starting guides: the TestMu, QA Source, and TestUnity
+  complete guides to monkey testing.
 
 **Open / unverified**
 
