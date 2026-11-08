@@ -78,6 +78,21 @@ jobs:
       - name: Format check (oxfmt)
         run: pnpm format:check
 
+      - name: Compile Paraglide messages (fresh checkout has no i18n tree)
+        # src/lib/paraglide/ is generated (self-gitignored) — the vite plugin
+        # only emits it during dev/build, so a fresh checkout cannot
+        # typecheck without this compile step. The flags mirror the plugin's
+        # dev-server output; --output-structure locale-modules is the
+        # plugin's NON-production default (the CLI default is
+        # message-modules; production builds also emit message-modules) and
+        # is the structure svelte-check is verified against — keep it in
+        # sync with the plugin's dev output. The symlink guard refuses a
+        # symlinked outdir: the compiler's clean-outdir seeding follows
+        # symlinks, and a PR-supplied link must not widen it.
+        run: |
+          test ! -L apps/web/src/lib/paraglide || { echo "refusing symlinked paraglide outdir"; exit 1; }
+          pnpm -C apps/web exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy url cookie baseLocale --output-structure locale-modules --emit-ts-declarations
+
       - name: Typecheck (tsc for shared/api/datagen, tsc6 + svelte-check for web)
         run: pnpm typecheck
 
