@@ -13,6 +13,11 @@ import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts
  */
 
 test.describe("camera focus follows card selection", () => {
+  // Desktop-pinned: the CI matrix also runs this spec from a phone project,
+  // where the app renders the tab layout with the card list hidden — these
+  // scenarios exercise the desktop side-by-side surface.
+  test.use({ viewport: { width: 1280, height: 720 } });
+
   test("selecting a unit card with the mouse flies the map camera to the unit's pin at the card-focus zoom", async ({
     page,
   }) => {

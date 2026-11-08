@@ -48,12 +48,28 @@ const MIN_WHITE_ROWS_BETWEEN_INK_AND_RING = 3;
 const INK_INSIDE_BUBBLE_PADDING = 2;
 
 /**
- * The canvas repaints on requestAnimationFrame and glyph rasterization and
- * tile decode are not observable from the DOM; a bounded settle wait after
- * the camera attributes go still keeps both screenshots on the same fully
- * painted frame.
+ * The canvas repaints on requestAnimationFrame, and glyph rasterization and
+ * tile decode are not observable from the DOM — a fixed wait alone proved
+ * insufficient on CI's software-GL renderers, where tiles and glyphs kept
+ * landing AFTER the settle and polluted the label-ON/OFF diffs. The settle
+ * therefore keeps the fixed wait for the fast-renderer common case, then
+ * polls for PAINTING QUIESCENCE: two consecutive canvas screenshots that
+ * are byte-identical. Whichever poll bound ends first (sample cap or
+ * wall-clock deadline), settleMap returns anyway — the assertions, not
+ * the settle, are the proof.
  */
 const SETTLE_MS = 600;
+/** Interval between the two canvas screenshots of one quiescence sample. */
+const QUIESCENCE_SAMPLE_MS = 250;
+/** Poll bound 1: at most this many samples beyond the fixed wait. */
+const QUIESCENCE_MAX_SAMPLES = 20;
+/**
+ * Poll bound 2: at most this much wall-clock across the poll — on software
+ * renderers the two screenshots per sample dominate the cost, so the
+ * sample cap alone under-bounds a never-quiescent canvas. Whichever bound
+ * hits first ends the poll (fail-soft).
+ */
+const QUIESCENCE_DEADLINE_MS = 6_000;
 
 type Box = {
   minX: number;
@@ -83,10 +99,24 @@ export async function mapCanvas(page: Page) {
   return canvas;
 }
 
-/** Tiles fetched, camera still, glyphs rasterized: safe to screenshot. */
+/**
+ * Tiles fetched, camera still, glyphs rasterized: safe to screenshot. The
+ * fixed wait covers the fast-renderer common case; the poll then confirms
+ * the canvas has stopped changing by finding two consecutive byte-identical
+ * screenshots of the canvas element (see the settle constants above),
+ * returning bounded rather than blocking forever.
+ */
 export async function settleMap(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(SETTLE_MS);
+  const canvas = await mapCanvas(page);
+  const deadline = Date.now() + QUIESCENCE_DEADLINE_MS;
+  for (let sample = 0; sample < QUIESCENCE_MAX_SAMPLES && Date.now() < deadline; sample++) {
+    const before = await canvas.screenshot();
+    await page.waitForTimeout(QUIESCENCE_SAMPLE_MS);
+    const after = await canvas.screenshot();
+    if (before.equals(after)) return;
+  }
 }
 
 export async function canvasShot(page: Page): Promise<Buffer> {

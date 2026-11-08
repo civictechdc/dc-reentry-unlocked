@@ -31,11 +31,17 @@ import rootConfig from "./playwright.config.ts";
 const firefoxHeadedOnLinuxCi =
   process.env.CI !== undefined && process.platform === "linux" && process.env.DISPLAY !== undefined;
 
+// The CI compose boot serves the production build, so the dev-server CSP
+// spec is excluded from every project here: its inline-script relaxation is
+// a dev-only HMR need and cannot hold against the production nonce-based
+// CSP by design (the production policy is pinned by the preview-headers
+// probe). Remove this exclusion when a compose/production CSP variant spec
+// lands.
 const ciProjects = [
   {
     name: "desktop-chromium",
     testMatch: /.*\.spec\.ts/,
-    testIgnore: /preview-headers\.spec\.ts/,
+    testIgnore: /\/(?:headers-dev-csp|preview-headers)\.spec\.ts$/,
     use: {
       ...devices["Desktop Chrome"],
       launchOptions: {
@@ -48,7 +54,7 @@ const ciProjects = [
   {
     name: "desktop-firefox",
     testMatch: /.*\.spec\.ts/,
-    testIgnore: /preview-headers\.spec\.ts/,
+    testIgnore: /\/(?:headers-dev-csp|preview-headers)\.spec\.ts$/,
     use: {
       ...devices["Desktop Firefox"],
       launchOptions: { headless: !firefoxHeadedOnLinuxCi },
@@ -57,20 +63,25 @@ const ciProjects = [
   {
     name: "desktop-webkit",
     testMatch: /.*\.spec\.ts/,
-    testIgnore: /preview-headers\.spec\.ts/,
+    testIgnore: /\/(?:headers-dev-csp|preview-headers)\.spec\.ts$/,
     use: { ...devices["Desktop Safari"] },
   },
   {
     name: "mobile-chromium",
     testMatch: /.*\.spec\.ts/,
-    testIgnore: /preview-headers\.spec\.ts/,
+    testIgnore: /\/(?:headers-dev-csp|preview-headers)\.spec\.ts$/,
     // The phone layout renders no results-count line and keeps the filter
     // options behind the sheet — three desktop-layout-coupled tests would
     // only ever time out on this project (they wait for a text or control
-    // the phone layout does not expose). Phone-class behavior keeps its
-    // dedicated coverage in mobile.spec.ts (tabs, sheet, cards, detail).
+    // the phone layout does not expose). Three more desktop-canvas proofs
+    // also descope from the phone project: the label composite paints at a
+    // different offset under phone emulation, canvas hover paints nothing
+    // under touch emulation, and the click-off dismissal does not fire.
+    // Phone-class behavior keeps its dedicated coverage in the phone-native
+    // specs (mobile.spec.ts tabs/sheet/cards/detail, the map-label phone
+    // remount, map-focus phone, tap-drag pan).
     grepInvert:
-      /axe scan reports no serious violations|keyboard-only usage reaches filters|pin re-render < 100ms budget/,
+      /axe scan reports no serious violations|keyboard-only usage reaches filters|pin re-render < 100ms budget|clicking empty canvas with the detail open|selecting a unit keeps its address label painted|hovering a canvas pin paints/,
     use: {
       ...devices["Pixel 7"],
       launchOptions: {

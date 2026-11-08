@@ -303,7 +303,14 @@ test.describe("tap-drag pan on phone (touch)", () => {
 
   test("tap-dragging the phone map pans the camera without opening the detail sheet", async ({
     page,
+    browserName,
   }) => {
+    // Browser-input-level touch synthesis is Chromium-only (CDP
+    // Input.dispatchTouchEvent); Firefox and WebKit expose no equivalent
+    // injection API, and a DOM-event approximation would no longer test the
+    // real input pipeline. Skip honestly rather than fake it; remove this
+    // guard when Playwright grows cross-engine touch-drag injection.
+    test.skip(browserName !== "chromium", "touch-drag injection needs CDP (Chromium-only)");
     await openApp(page);
     await expect(page.getByTestId("map-view")).toBeVisible();
     await settleMap(page);
