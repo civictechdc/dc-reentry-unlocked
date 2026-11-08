@@ -353,18 +353,51 @@ export function expectLabelCompositePresent(stats: LabelGeometryStats): void {
  * exists; the bubble zone would otherwise swallow a whole narrow phone
  * canvas). Returns canvas-LOCAL coordinates (add the canvas bounding box
  * origin to obtain page coordinates).
+ *
+ * The point must be pin-free on two consecutive frames: a single mid-paint
+ * read can pass the scan and land the click inside a pin's hit radius
+ * (observed on the CI WebKit rasterizer). Each round picks from one frame
+ * and verifies the pick against a fresh frame; a failed verification
+ * rescans from that fresh frame, bounded to three rounds before the loud
+ * error.
  */
 export async function pinFreeCanvasPoint(
   page: Page,
   options: { excludeLabelBubble?: boolean } = {},
 ): Promise<{ x: number; y: number }> {
-  const shot = await canvasShot(page);
+  const excludeLabelBand = options.excludeLabelBubble === true;
+  let shot = await canvasShot(page);
+  for (let round = 0; round < 3; round++) {
+    const candidate = await evaluatePinFreeFrame(page, shot, excludeLabelBand);
+    if (!candidate) break;
+    const freshShot = await canvasShot(page);
+    const verified = await evaluatePinFreeFrame(page, freshShot, excludeLabelBand, candidate);
+    if (verified) return candidate;
+    shot = freshShot;
+  }
+  throw new Error("the canvas scan found no pin-free point to click");
+}
+
+/**
+ * One pass over a single canvas frame's pixels, shared by both halves of
+ * the two-frame consistency check: without a candidate it scans for the
+ * best pin-free point ({@link pinFreeCanvasPoint}); with one it re-runs the
+ * identical clearance test on just that point against the fresh frame.
+ * Returns the canvas-local point, or null when the frame holds no pin-free
+ * point (scan half) or the candidate fails the clearance test (verify
+ * half).
+ */
+async function evaluatePinFreeFrame(
+  page: Page,
+  frame: Buffer,
+  excludeLabelBand: boolean,
+  candidate?: { x: number; y: number },
+): Promise<{ x: number; y: number } | null> {
   const scratch = await page.context().newPage();
   try {
-    const excludeLabelBand = options.excludeLabelBubble === true;
     return await scratch.evaluate(
-      async ([base64, bandExcluded]) => {
-        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      async ([frameBase64, bandExcluded, point]) => {
+        const bytes = Uint8Array.from(atob(frameBase64), (character) => character.charCodeAt(0));
         const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
         const canvas = document.createElement("canvas");
         canvas.width = bitmap.width;
@@ -393,29 +426,33 @@ export async function pinFreeCanvasPoint(
         const labelBubbleZone = (x: number, y: number): boolean =>
           bandExcluded && Math.abs(x - centerX) <= 260 && y >= centerY - 110 && y <= centerY + 30;
         const clearanceRadius = 26;
+        const hasPinClearance = (x: number, y: number): boolean => {
+          for (let dy = -clearanceRadius; dy <= clearanceRadius; dy += 2) {
+            for (let dx = -clearanceRadius; dx <= clearanceRadius; dx += 2) {
+              if (dx * dx + dy * dy > clearanceRadius * clearanceRadius) continue;
+              if (isPinPaint(x + dx, y + dy)) return false;
+            }
+          }
+          return true;
+        };
+        // verify half: the identical clearance test on the picked point
+        if (point) {
+          return hasPinClearance(point.x, point.y) && !labelBubbleZone(point.x, point.y)
+            ? point
+            : null;
+        }
         let best: { x: number; y: number; edgeDistance: number } | null = null;
         for (let y = 20; y < height - 20; y += 8) {
           for (let x = 20; x < width - 20; x += 8) {
             if (labelBubbleZone(x, y)) continue;
-            let clear = true;
-            scan: for (let dy = -clearanceRadius; dy <= clearanceRadius; dy += 2) {
-              for (let dx = -clearanceRadius; dx <= clearanceRadius; dx += 2) {
-                if (dx * dx + dy * dy > clearanceRadius * clearanceRadius) continue;
-                if (isPinPaint(x + dx, y + dy)) {
-                  clear = false;
-                  break scan;
-                }
-              }
-            }
-            if (!clear) continue;
+            if (!hasPinClearance(x, y)) continue;
             const edgeDistance = Math.min(x, width - x, y, height - y);
             if (!best || edgeDistance > best.edgeDistance) best = { x, y, edgeDistance };
           }
         }
-        if (!best) throw new Error("the canvas scan found no pin-free point to click");
-        return { x: best.x, y: best.y };
+        return best ? { x: best.x, y: best.y } : null;
       },
-      [shot.toString("base64"), excludeLabelBand] as const,
+      [frame.toString("base64"), excludeLabelBand, candidate ?? null] as const,
     );
   } finally {
     await scratch.close();
