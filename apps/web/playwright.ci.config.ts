@@ -19,6 +19,18 @@ import rootConfig from "./playwright.config.ts";
  *   their own GL pipeline for the canvas assertions.
  */
 
+// Headless Firefox on Linux has no WebGL2 path — every context request is
+// refused ("AllowWebgl2:false restricts context creation on this system"),
+// MapLibre's map throws at boot, and the route collapses into the app's
+// error boundary, so the whole firefox leg times out. Headed Firefox gets
+// Mesa's llvmpipe software GL and WebGL2 works; CI wraps the suite in
+// `xvfb-run` (the workflow files) to provide the display.
+// Gated to Linux CI under an X display (the workflows wrap the suite in
+// `xvfb-run`, which sets DISPLAY): local runs, macOS, and display-less
+// Linux environments keep headless Firefox.
+const firefoxHeadedOnLinuxCi =
+  process.env.CI !== undefined && process.platform === "linux" && process.env.DISPLAY !== undefined;
+
 const ciProjects = [
   {
     name: "desktop-chromium",
@@ -37,7 +49,10 @@ const ciProjects = [
     name: "desktop-firefox",
     testMatch: /.*\.spec\.ts/,
     testIgnore: /preview-headers\.spec\.ts/,
-    use: { ...devices["Desktop Firefox"] },
+    use: {
+      ...devices["Desktop Firefox"],
+      launchOptions: { headless: !firefoxHeadedOnLinuxCi },
+    },
   },
   {
     name: "desktop-webkit",

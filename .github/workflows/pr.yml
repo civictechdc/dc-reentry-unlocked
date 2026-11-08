@@ -10,7 +10,9 @@
 #   suite and the generated BDD golden paths across Chromium/WebKit/Firefox
 #   desktop + Chromium mobile. Chromium launches with software GL
 #   (--use-gl=angle --use-angle=swiftshader) so the MapLibre WebGL2 canvas
-#   renders on runner hosts; Firefox/WebKit set mesa software-GL env.
+#   renders on runner hosts; WebKit sets the mesa software-GL env, and
+#   Firefox runs headed under Xvfb (headless Firefox on Linux has no WebGL2
+#   path).
 # - commitlint is the single engine for PR title + PR commit range
 #   (official commitlint CI pattern); e2e artifacts upload on failure only.
 
@@ -158,11 +160,19 @@ jobs:
           docker compose up -d --wait --wait-timeout 240
           docker compose ps
 
+      # Firefox runs headed under this X server: headless Firefox on Linux
+      # refuses every WebGL2 context ("AllowWebgl2:false restricts context
+      # creation on this system"), which crashes MapLibre at boot and swaps
+      # the page for the app's error boundary — every desktop-firefox spec
+      # times out. Headed Firefox under Xvfb gets Mesa's llvmpipe and WebGL2
+      # works. xvfb ships preinstalled on ubuntu-24.04 runners; the
+      # playwright CI configs flip only the firefox project to headed, and
+      # only on Linux CI. Chromium/WebKit stay headless and ignore DISPLAY.
       - name: BDD golden paths (generated from Gherkin features)
-        run: pnpm -C apps/web e2e:bdd:ci
+        run: xvfb-run -a -s "-screen 0 1920x1080x24 -nolisten tcp" pnpm -C apps/web e2e:bdd:ci
 
       - name: Spec suite across the browser matrix
-        run: pnpm -C apps/web e2e:ci
+        run: xvfb-run -a -s "-screen 0 1920x1080x24 -nolisten tcp" pnpm -C apps/web e2e:ci
 
       - name: Upload Playwright report on failure
         if: failure()
