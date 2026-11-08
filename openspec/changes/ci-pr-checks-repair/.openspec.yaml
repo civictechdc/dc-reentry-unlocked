@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-11-08
+goal: Repair the two PR-check CI gaps exposed by the repo's first pull
+  request — missing Paraglide codegen before svelte-check, and the
+  all-timeout Firefox e2e leg in the Compose matrix
+skip_specs: true
