@@ -89,8 +89,17 @@ const anchorSlug = (title: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-/** Escape a cell so it cannot break the enclosing Markdown table. */
-const tableCell = (text: string): string => text.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+/**
+ * Escape a cell so it cannot break the enclosing Markdown table. Backslashes
+ * are escaped first: an input backslash would otherwise pair with the pipe's
+ * new escape character and leave the pipe unescaped again. CR, LF, and CRLF
+ * line endings each flatten to a space so annotation prose cannot split a row.
+ */
+const tableCell = (text: string): string =>
+  text
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/\r\n?|\n/g, " ");
 
 function markdownTable(headers: string[], rows: string[][]): string {
   const head = `| ${headers.join(" | ")} |`;

@@ -189,7 +189,7 @@ test("a schema the renderer does not dispatch on (oneOf, $ref, not) throws namin
     const input = inputWithProperty("Broken", field, node as unknown as TSchema);
     expect(() => renderModelReference(input), `field ${field}`).toThrow(
       new RegExp(
-        `unhandled schema keys at Broken\\.${field.replace("$", "\\$")}: ${field.replace("$", "\\$")}`,
+        `unhandled schema keys at Broken\\.${field.replaceAll("$", "\\$")}: ${field.replaceAll("$", "\\$")}`,
       ),
     );
   }
@@ -201,6 +201,24 @@ test("an array field carrying an unhandled minItems constraint throws naming its
   expect(() => renderModelReference(input)).toThrow(
     /unhandled schema keys at Broken\.tags: minItems/,
   );
+});
+
+test("escapes a backslash before a pipe so a description cannot break its table row", () => {
+  const input = inputWithProperty(
+    "Escaping",
+    "note",
+    Type.String({ description: "ends with \\| and a bare | plus a stray\rcarriage" }),
+  );
+
+  const markdown = renderModelReference(input);
+  const rows = tableRows(markdown);
+
+  // Both pipes end up escaped (and the input backslash doubled first), and the
+  // lone carriage return flattens to a space, so no unescaped pipe or line
+  // ending survives inside the cell to split the row into columns.
+  expect(rows).toEqual([
+    ["`note`", "string", "required", "", "ends with \\\\\\| and a bare \\| plus a stray carriage"],
+  ]);
 });
 
 test("the rendered reference stays free of raw HTML and injection markers", () => {
