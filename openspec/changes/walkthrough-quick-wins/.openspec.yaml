@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-07
+goal: "Walkthrough quick wins from the 2026-11-07 record: map zoom buttons, recenter-to-locale, detail close icon, tel: links, favicon (W1, W2, W11, W13, W19) — candidate UI trialed behind feature flags where applicable"
+skip_specs: true

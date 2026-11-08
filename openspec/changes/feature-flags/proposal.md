@@ -43,6 +43,8 @@ beta artifacts.
 - **Docs:** dev-runbook note on toggling flags when the mechanism lands
 - **Sequencing:** independent; spawned from the 2026-11-07 walkthrough
   session. Planning authors specs/design/tasks (and unsets
-  `skip_specs`).
+  `skip_specs`). **Next up** (user decision 2026-11-07): planned and
+  built in the next session(s); the walkthrough quick-wins change rides
+  behind its flags as its first consumer.
 
 (Spawned at proposal stage with `skip_specs` set.)
