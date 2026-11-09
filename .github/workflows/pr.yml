@@ -112,7 +112,7 @@ jobs:
       # Scans the client output the previous step just produced (no second
       # build): any surviving flag define or data-flag marker fails the gate.
       - name: Flag-elimination scan (client build output)
-        run: pnpm -C apps/web exec node scripts/scan-flag-elimination.mjs
+        run: node apps/web/scripts/scan-flag-elimination.mjs
 
       - name: Install the diagram renderer's headless chrome
         # mermaid-cli 12.0.0 (pinned together with this puppeteer version in
