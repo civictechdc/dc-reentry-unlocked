@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-11-08
+goal: Root-cause the CI WebKit leg's raster/click fidelity gap behind the three
+  in-code exceptions from the CI repair (click-off dismissal skip, pin-scan
+  hover skip, filter-apply perf floor) and retire them
+skip_specs: true
