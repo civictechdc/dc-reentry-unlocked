@@ -13,8 +13,11 @@
  * Scope: wired into `vite.config.ts` for every NON-dev-server compile only
  * (the same `isDevServerRun` predicate that keys the defines). Dev-server
  * runs and Vitest compile the unchanged source, keeping the full runtime
- * override machinery testable. The blessed guard shape has no `{:else}` —
- * a guarded block that carries one (or an `{:else if}` branch) is a loud
+ * override machinery testable. What strips is strict: exactly the blessed
+ * guard shape (`__FLAG_<NAME>__ || (__DEV_SERVER__ && hasFlagOverride(…))`)
+ * or a bare `__FLAG_<NAME>__` identifier — any other condition referencing
+ * a flag define (a negation, a mixed disjunction, a swapped arm, …), and
+ * any guarded block carrying an `{:else}`/`{:else if}` branch, is a loud
  * error here, never a silent partial strip.
  */
 import { parse } from "svelte/compiler";
@@ -22,6 +25,12 @@ import type { PreprocessorGroup } from "svelte/compiler";
 
 /** The naming contract for define constants (`flag-globals.d.ts`): SCREAMING_SNAKE_CASE. */
 const FLAG_IDENTIFIER_PATTERN = /^__FLAG_[A-Z0-9_]+__$/;
+
+/** The dev-server marker define, exactly as it appears in the blessed shape. */
+const DEV_SERVER_MARKER = "__DEV_SERVER__";
+
+/** The page-load override helper, exactly as the blessed shape calls it. */
+const OVERRIDE_HELPER = "hasFlagOverride";
 
 /** Minimal structural shape of an AST node — offsets are all we rely on. */
 interface SvelteNode {
@@ -67,6 +76,54 @@ function flagIdentifiersIn(expression: unknown): string[] {
   return names;
 }
 
+/** An `Identifier` node whose name satisfies the define-name contract. */
+function isFlagIdentifier(node: SvelteNode | undefined): boolean {
+  return (
+    node?.type === "Identifier" &&
+    typeof node["name"] === "string" &&
+    FLAG_IDENTIFIER_PATTERN.test(node["name"])
+  );
+}
+
+/**
+ * The blessed guard shape, structurally exact: `__FLAG_<NAME>__ ||
+ * (__DEV_SERVER__ && hasFlagOverride(…))`. Only this shape folds to `false`
+ * in every build with production semantics matching a full-block strip.
+ */
+function isBlessedGuardShape(test: SvelteNode): boolean {
+  if (test.type !== "LogicalExpression" || test["operator"] !== "||") return false;
+  const left = test["left"] as SvelteNode | undefined;
+  const right = test["right"] as SvelteNode | undefined;
+  if (!isFlagIdentifier(left)) return false;
+  if (right?.type !== "LogicalExpression" || right["operator"] !== "&&") return false;
+  const overrideCall = right["right"] as SvelteNode | undefined;
+  const callee = overrideCall?.["callee"] as SvelteNode | undefined;
+  const devMarker = right["left"] as SvelteNode | undefined;
+  return (
+    devMarker?.type === "Identifier" &&
+    devMarker["name"] === DEV_SERVER_MARKER &&
+    overrideCall?.type === "CallExpression" &&
+    callee?.type === "Identifier" &&
+    callee["name"] === OVERRIDE_HELPER
+  );
+}
+
+/**
+ * A bare `__FLAG_<NAME>__` identifier guard: the define folds to `false` in
+ * every build, so stripping the whole block is exactly what production does.
+ */
+function isBareFlagIdentifier(test: SvelteNode): boolean {
+  return isFlagIdentifier(test);
+}
+
+/** The offending condition's own source text, for loud-error messages. */
+function conditionSlice(source: string, test: SvelteNode): string {
+  if (typeof test.start === "number" && typeof test.end === "number") {
+    return source.slice(test.start, test.end);
+  }
+  return "<condition source unavailable>";
+}
+
 /**
  * Remove every `[start, end)` range from `source`, highest offset first so
  * earlier offsets stay valid. Only OUTERmost ranges are passed in — inner
@@ -85,9 +142,17 @@ function removeRanges(source: string, ranges: Array<{ start: number; end: number
  * only (guarded blocks nested inside another guarded block disappear with
  * it). Sources with no flag-guarded block come back byte-identical.
  *
- * Throws on a guarded block carrying an `{:else}`/`{:else if}` branch —
- * the blessed guard shape (see `./README.md`) has no else, and an
- * `{:else if}` chain would leave dangling markup behind a partial strip.
+ * Stripping keys on the condition shape, not on a flag identifier merely
+ * appearing: a block strips only when its test is exactly the blessed
+ * shape (see `./README.md`) or a bare `__FLAG_<NAME>__` identifier. Any
+ * other test referencing a flag define — a negation, a comparison, a
+ * mixed disjunction, an out-of-shape `hasFlagOverride` call — throws a
+ * loud error naming the file and the offending condition, because its
+ * production semantics (often "render") must not be silently deleted.
+ *
+ * Also throws on a guarded block carrying an `{:else}`/`{:else if}`
+ * branch — the blessed guard shape has no else, and an `{:else if}`
+ * chain would leave dangling markup behind a partial strip.
  */
 export function stripGuardedFlagBlocks(source: string, filename?: string): string {
   // `modern: true` — the typed AST (Svelte 6's default shape): IfBlock
@@ -104,6 +169,17 @@ export function stripGuardedFlagBlocks(source: string, filename?: string): strin
         `Flag-guarded {#if} block in ${where} has an {:else}/{:else if} branch ` +
           `(${flags.join(", ")}). The blessed guard shape has no else — ` +
           "unguard the fallback branch or move the flag to its own block.",
+      );
+    }
+    const test = node["test"] as SvelteNode;
+    if (!isBlessedGuardShape(test) && !isBareFlagIdentifier(test)) {
+      throw new Error(
+        `Flag guard in ${where} references a flag define outside the blessed shape: ` +
+          `\`${conditionSlice(source, test)}\`. Only the exact blessed shape — ` +
+          `\`${"__FLAG_<NAME>__"} || (${DEV_SERVER_MARKER} && ${OVERRIDE_HELPER}("<name>"))\` — ` +
+          "or a bare `__FLAG_<NAME>__` identifier strips; any other condition referencing " +
+          "a flag define fails the build here (see src/lib/flags/README.md, " +
+          "“The blessed guard shape”).",
       );
     }
     if (typeof node.start !== "number" || typeof node.end !== "number") {

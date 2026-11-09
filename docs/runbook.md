@@ -53,7 +53,10 @@ guarded code is eliminated by construction, because both flag globals are
 forced false in every build regardless of NODE_ENV (an empirical scan of
 the built bundle joins with the first flagged feature). When a feature
 graduates, its flag (registry entry and declaration) is removed together
-with the guard.
+with the guard. Flags are never a security boundary: they gate candidate
+UX trials only, and anything that must be enforced stays behind the API's
+real checks — the doctrine lives in
+`apps/web/src/lib/flags/README.md`.
 
 Stopping: interrupt `pnpm dev` in its terminal (Ctrl-C). On some platforms
 killing the parent processes can leave the API's TypeScript server child

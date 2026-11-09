@@ -23,11 +23,11 @@
  * Scan root: `build/client` resolved from THIS script's location (CWD-
  * independent), or the first CLI argument to point the scan at a fixture
  * tree. Exit codes: 0 clean, 1 elimination failure, 2 scan could not run
- * (missing or unreadable scan root — a scan that proves nothing must not
- * pass).
+ * (missing or unreadable scan root, or no resolvable entry script — a scan
+ * that proves nothing must not pass).
  */
 
-import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,20 +47,35 @@ export function defaultScanRoot() {
   return fileURLToPath(new URL("../build/client", import.meta.url));
 }
 
-/** Every file in the tree, sorted for stable output; symlinked dirs recurse. */
+/**
+ * Every file in the tree, sorted for stable output. Symlinks — files and
+ * dirs alike — are skipped, never followed (`lstatSync` does not resolve
+ * them): a link inside the build tree must not walk the scan outside the
+ * root or into a link cycle. The walk depth is capped with a clear error
+ * rather than recursing unbounded.
+ */
+const MAX_SCAN_DEPTH = 32;
+
 export function collectFiles(root) {
   const files = [];
-  const walk = (dir) => {
+  const walk = (dir, depth) => {
+    if (depth > MAX_SCAN_DEPTH) {
+      throw new Error(
+        `scan tree exceeds the ${MAX_SCAN_DEPTH}-directory depth cap at ${dir} — refusing to walk deeper`,
+      );
+    }
     for (const name of readdirSync(dir)) {
       const path = join(dir, name);
-      if (statSync(path).isDirectory()) {
-        walk(path);
-      } else if (statSync(path).isFile()) {
+      const stats = lstatSync(path);
+      if (stats.isSymbolicLink()) continue;
+      if (stats.isDirectory()) {
+        walk(path, depth + 1);
+      } else if (stats.isFile()) {
         files.push(path);
       }
     }
   };
-  walk(root);
+  walk(root, 1);
   return files.sort();
 }
 
@@ -90,12 +105,30 @@ export function findNeedleHits(content, needles, file = "<content>") {
 }
 
 function snippetAround(line, at) {
-  if (line.length <= MAX_SNIPPET_CHARS) return line.trim();
+  if (line.length <= MAX_SNIPPET_CHARS) return sanitizeSnippetText(line.trim());
   const half = Math.floor(MAX_SNIPPET_CHARS / 2);
   const start = Math.max(0, at - half);
   const end = Math.min(line.length, start + MAX_SNIPPET_CHARS);
   const body = line.slice(start, end);
-  return `${start > 0 ? `…${body}` : body}${end < line.length ? "…" : ""}`;
+  return sanitizeSnippetText(`${start > 0 ? `…${body}` : body}${end < line.length ? "…" : ""}`);
+}
+
+/**
+ * Render C0/C1 control characters (everything except tab) inert by escaping
+ * them (`\u001b`-style), applied to every content-derived snippet before it
+ * is printed: build output is untrusted input, and a raw newline, carriage
+ * return, or escape byte in a scanned file could otherwise forge terminal
+ * or log lines.
+ */
+function sanitizeSnippetText(text) {
+  let sanitized = "";
+  for (const char of text) {
+    const code = char.charCodeAt(0);
+    // C0 bytes minus tab (0x09) and LF (0x0A, already split away), plus C1.
+    const isControl = (code < 32 && code !== 0x09 && code !== 0x0a) || (code >= 127 && code <= 159);
+    sanitized += isControl ? `\\u${code.toString(16).padStart(4, "0")}` : char;
+  }
+  return sanitized;
 }
 
 /**
@@ -138,9 +171,26 @@ function printHits(hits, root, label) {
 }
 
 // Runs only as a direct CLI entry, never when imported for the exported
-// helpers. Raw-path comparison: import.meta.url percent-encodes the spaces
-// in this repo's location, so a plain string compare is the reliable check.
-const invokedAs = realpathSync(process.argv[1] ?? "");
+// helpers. Fail-closed on entry resolution: when `process.argv[1]` is
+// absent or does not resolve, this is not a recognizable invocation —
+// exit 2 like every other scan-that-proves-nothing path, never pass
+// silently. A present-but-different argv[1] is a plain module import
+// (the exports are the test API). Raw-path comparison: import.meta.url
+// percent-encodes the spaces in this repo's location, so a plain string
+// compare is the reliable check.
+let invokedAs = null;
+try {
+  invokedAs = process.argv[1] == null ? null : realpathSync(process.argv[1]);
+} catch {
+  invokedAs = null;
+}
+if (invokedAs === null) {
+  console.error(
+    "✗ Flag-elimination scan could not run: no resolvable entry script " +
+      "(process.argv[1] is missing or does not resolve).",
+  );
+  process.exit(2);
+}
 if (invokedAs === fileURLToPath(import.meta.url)) {
   const root = process.argv[2] ?? defaultScanRoot();
   let result;

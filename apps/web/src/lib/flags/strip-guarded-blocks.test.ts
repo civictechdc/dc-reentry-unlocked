@@ -61,6 +61,36 @@ describe("stripping flag-guarded markup blocks", () => {
     expect(stripped).not.toContain("__FLAG_W2_RECENTER__");
   });
 
+  test("strips a bare flag identifier guard", () => {
+    const source = [
+      "{#if __FLAG_W2_RECENTER__}",
+      '  <button type="button">r</button>',
+      "{/if}",
+    ].join("\n");
+    const stripped = stripGuardedFlagBlocks(source, "MapView.svelte");
+
+    expect(stripped).not.toContain("__FLAG_W2_RECENTER__");
+    expect(stripped).not.toContain("<button");
+  });
+
+  test("throws on a negated flag guard whose production semantics would render", () => {
+    const source = "{#if !__FLAG_W1_MAP_ZOOM__}<p>only when zoomed off</p>{/if}";
+
+    // Production folds the define to false, so `!__FLAG_…__` renders —
+    // deleting the block would silently change what users see.
+    expect(() => stripGuardedFlagBlocks(source, "MapView.svelte")).toThrow(/!__FLAG_W1_MAP_ZOOM__/);
+    expect(() => stripGuardedFlagBlocks(source, "MapView.svelte")).toThrow(/blessed shape/);
+  });
+
+  test("throws on a mixed disjunction that references a flag define", () => {
+    const source = "{#if units.length > 0 || __FLAG_W2_RECENTER__}<p>r</p>{/if}";
+
+    expect(() => stripGuardedFlagBlocks(source, "MapView.svelte")).toThrow(
+      /units\.length > 0 \|\| __FLAG_W2_RECENTER__/,
+    );
+    expect(() => stripGuardedFlagBlocks(source, "MapView.svelte")).toThrow(/blessed shape/);
+  });
+
   test("throws on a guarded if block that has an else branch", () => {
     const source = "{#if __FLAG_W1_MAP_ZOOM__}<button>+</button>{:else}<span>none</span>{/if}";
 
