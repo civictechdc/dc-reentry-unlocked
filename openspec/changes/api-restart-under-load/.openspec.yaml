@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-11-08
+goal: Diagnose the compose API restart observed under e2e matrix load and fix
+  the root cause the test-helper retry now masks
+skip_specs: true

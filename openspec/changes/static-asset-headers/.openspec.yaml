@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-11-08
+goal: Serve the standard hardening-header baseline from adapter-node's static
+  layer on immutable /_app/ assets, closing the long-documented headers residual
+skip_specs: true
