@@ -8,14 +8,15 @@
   // one-time wiring the production build ships no worker and no tiles render.
   import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
   setWorkerUrl(mapWorkerUrl);
+  import { hasFlagOverride } from "#lib/flags/index.ts";
   import {
     basePinLayerPaint,
     CARD_FOCUS_ZOOM,
     createMapStyle,
-    DC_MAP_CENTER,
-    DC_MAP_ZOOM,
     highlightLayerFilter,
     highlightPinLayerPaint,
+    LOCALE_MAP_CENTER,
+    LOCALE_MAP_ZOOM,
     pinCoordinatesFor,
     PIN_SOURCE,
     PIN_LABEL_BUBBLE_IMAGE_ID,
@@ -24,7 +25,10 @@
     pinLabelLayerDefinition,
     pinLabelLayerFilter,
     PIN_HOVER_INTENT_DELAY_MS,
+    recenterOnLocale,
     unitsToFeatureCollection,
+    zoomIn,
+    zoomOut,
   } from "#lib/map/map-config.ts";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -42,8 +46,8 @@
   let highlightedUnitId = $state<string | null>(null);
   // Camera observability (e2e/debug hook, not user-facing): center serialized
   // as `"<lng>,<lat>"`, zoom as a plain number string; refreshed on `moveend`.
-  let cameraCenterAttribute = $state(`${DC_MAP_CENTER.lng},${DC_MAP_CENTER.lat}`);
-  let cameraZoomAttribute = $state(String(DC_MAP_ZOOM));
+  let cameraCenterAttribute = $state(`${LOCALE_MAP_CENTER.lng},${LOCALE_MAP_CENTER.lat}`);
+  let cameraZoomAttribute = $state(String(LOCALE_MAP_ZOOM));
 
   $effect(() => {
     if (!container || map) return;
@@ -60,8 +64,8 @@
     });
     const initialCenter: [number, number] = focusedUnit
       ? pinCoordinatesFor(focusedUnit)
-      : [DC_MAP_CENTER.lng, DC_MAP_CENTER.lat];
-    const initialZoom = focusedUnit ? CARD_FOCUS_ZOOM : DC_MAP_ZOOM;
+      : [LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat];
+    const initialZoom = focusedUnit ? CARD_FOCUS_ZOOM : LOCALE_MAP_ZOOM;
     // The pending enter-intent timer for the map created below: effect-local
     // so each map instance owns exactly one slot and the teardown closes over
     // it (a pending timer must never outlive the map that registered it).
@@ -327,6 +331,49 @@
   data-map-zoom={cameraZoomAttribute}
 >
   <div class="map-canvas" bind:this={container}></div>
+  <!-- Flag-guarded camera controls (candidate walkthrough features): each
+       control calls a map-config camera operation with the component's map
+       instance — the control UI never touches the map directly. Placement is
+       a candidate too; it settles in a dev trial. -->
+  <div class="map-camera-controls">
+    {#if __FLAG_W1_MAP_ZOOM__ || (__DEV_SERVER__ && hasFlagOverride("w1-map-zoom"))}
+      <div class="map-zoom-controls">
+        <button
+          type="button"
+          aria-label={m.map_zoom_in()}
+          data-flag="w1-map-zoom"
+          onclick={() => {
+            if (map) zoomIn(map);
+          }}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+        <button
+          type="button"
+          aria-label={m.map_zoom_out()}
+          data-flag="w1-map-zoom"
+          onclick={() => {
+            if (map) zoomOut(map);
+          }}
+        >
+          <span aria-hidden="true">−</span>
+        </button>
+      </div>
+    {/if}
+    {#if __FLAG_W2_RECENTER__ || (__DEV_SERVER__ && hasFlagOverride("w2-recenter"))}
+      <button
+        type="button"
+        class="map-recenter-control"
+        aria-label={m.map_recenter()}
+        data-flag="w2-recenter"
+        onclick={() => {
+          if (map) recenterOnLocale(map);
+        }}
+      >
+        <span aria-hidden="true">⊕</span>
+      </button>
+    {/if}
+  </div>
   <!-- Keyboard-reachable pin selection: every unit pin has a focusable button. -->
   <ul
     class="sr-pins"
@@ -446,6 +493,43 @@
     min-height: 0;
     height: 100%;
     width: 100%;
+  }
+  /* Flag-guarded camera controls: parked on the map's right edge, roughly
+     vertical center — clear of the attribution control (bottom-right) and
+     the phone tab bar (bottom). Placement is a candidate; it settles in a
+     dev trial. The shared :focus-visible ring in app.css covers focus. */
+  .map-camera-controls {
+    position: absolute;
+    right: 0.5rem;
+    top: 40%;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .map-camera-controls button {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .map-camera-controls button:hover {
+    border-color: var(--accent);
+    color: var(--accent-hover);
+  }
+  .map-camera-controls button:active {
+    background: var(--surface-selected);
+    border-color: var(--accent-hover);
   }
   .map-legend {
     margin: 0;

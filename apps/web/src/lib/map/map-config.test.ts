@@ -1,6 +1,9 @@
 import { aUnit } from "@dc-reentry/shared/testing";
 import { describe, expect, test } from "vitest";
+import type { CameraMap } from "./map-config.ts";
 import {
+  LOCALE_MAP_CENTER,
+  LOCALE_MAP_ZOOM,
   PIN_LABEL_BUBBLE_IMAGE_ID,
   PIN_SOURCE,
   pinCoordinatesFor,
@@ -9,7 +12,11 @@ import {
   pinLabelText,
   pinLabelLayerDefinition,
   pinLabelLayerFilter,
+  recenterOnLocale,
   unitsToFeatureCollection,
+  ZOOM_STEP,
+  zoomIn,
+  zoomOut,
 } from "./map-config.ts";
 
 type BubbleImage = ReturnType<typeof pinLabelBubbleImage>;
@@ -29,6 +36,57 @@ const unitInWard3 = aUnit()
   .inWard(3)
   .withCoordinates(38.9364, -77.079)
   .build();
+
+/** A tiny camera mock: records every camera call and tracks the zoom readout. */
+function mockCameraMap(initialZoom: number) {
+  const map = {
+    currentZoom: initialZoom,
+    zoomToLog: [] as number[],
+    flyToLog: [] as Array<Record<string, unknown>>,
+    getZoom(): number {
+      return map.currentZoom;
+    },
+    zoomTo(zoom: number): void {
+      map.currentZoom = zoom;
+      map.zoomToLog.push(zoom);
+    },
+    flyTo(options: Record<string, unknown>): void {
+      map.flyToLog.push(options);
+    },
+  };
+  // The mock records on its raw shape; the cast carries only the camera
+  // surface the operations consume (MapLibre's chainable signatures make
+  // the real map structurally wider than this mock).
+  return map as typeof map & CameraMap;
+}
+
+describe("camera operations", () => {
+  test("zooming in steps the camera one step up from its current zoom", () => {
+    const map = mockCameraMap(11);
+
+    zoomIn(map);
+
+    expect(map.zoomToLog).toEqual([11 + ZOOM_STEP]);
+  });
+
+  test("zooming out steps the camera one step down from its current zoom", () => {
+    const map = mockCameraMap(14.5);
+
+    zoomOut(map);
+
+    expect(map.zoomToLog).toEqual([14.5 - ZOOM_STEP]);
+  });
+
+  test("recentering flies the camera back to the locale center at the locale zoom", () => {
+    const map = mockCameraMap(18);
+
+    recenterOnLocale(map);
+
+    expect(map.flyToLog).toEqual([
+      { center: [LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat], zoom: LOCALE_MAP_ZOOM },
+    ]);
+  });
+});
 
 describe("unit pin placement", () => {
   test("pinCoordinatesFor returns the unit's exact longitude and latitude in MapLibre order", () => {

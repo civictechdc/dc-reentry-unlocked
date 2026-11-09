@@ -11,15 +11,15 @@
 Svelte edits run under the Svelte skills / `svelte-file-editor` delegation
 (proposal execution approach).
 
-- [ ] 2.1 Rename `DC_MAP_CENTER`/`DC_MAP_ZOOM` to `LOCALE_MAP_CENTER`/`LOCALE_MAP_ZOOM` (values unchanged; map-config.ts, MapView.svelte, MapView.test.ts) and verify `pnpm -C apps/web test` + `pnpm typecheck` green
-- [ ] 2.2 Add camera operations beside the constants in the map-config module (`zoomIn`, `zoomOut`, `recenterOnLocale` → `flyTo` the locale view) with unit tests over a mocked map instance, and verify the behavioral-sentence tests pass
-- [ ] 2.3 Add the guarded controls markup to `MapView.svelte` — `+`/`−` and recenter `<button>`s inside the blessed per-flag `{#if}` guards with `data-flag` markers, paraglide `aria-label`s (new message keys), CSS-first placement clear of the attribution corner and phone tab bar — and verify component tests: controls render and drive the camera ops with flag anchors stubbed on, absent with them off (`pnpm -C apps/web test`)
+- [x] 2.1 Rename `DC_MAP_CENTER`/`DC_MAP_ZOOM` to `LOCALE_MAP_CENTER`/`LOCALE_MAP_ZOOM` (values unchanged; map-config.ts, MapView.svelte, MapView.test.ts) and verify `pnpm -C apps/web test` + `pnpm typecheck` green
+- [x] 2.2 Add camera operations beside the constants in the map-config module (`zoomIn`, `zoomOut`, `recenterOnLocale` → `flyTo` the locale view) with unit tests over a mocked map instance, and verify the behavioral-sentence tests pass
+- [x] 2.3 Add the guarded controls markup to `MapView.svelte` — `+`/`−` and recenter `<button>`s inside the blessed per-flag `{#if}` guards with `data-flag` markers, paraglide `aria-label`s (new message keys), CSS-first placement clear of the attribution corner and phone tab bar — and verify component tests: controls render and drive the camera ops with flag anchors stubbed on, absent with them off (`pnpm -C apps/web test`)
 
 ## 3. Elimination scan + gate wiring
 
-- [ ] 3.1 Create `apps/web/scripts/scan-flag-elimination.mjs` (scans `build/client`; fails on any `__FLAG_`/`__DEV_SERVER__` identifier and any `data-flag=` marker) plus the `scan:flags` package script (build + scan), and verify it exits 0 on the guarded-controls build and fails when a marker is deliberately seeded into a fixture output
-- [ ] 3.2 Add the PR-gate step to `.github/workflows/pr.yml` immediately after the existing web-production-build step (reusing its output, no second build), and verify `pnpm -C apps/web scan:flags` passes against a fresh build — the same command the gate runs
-- [ ] 3.3 Add the `scan:flags` row to the AGENTS.md verification-command table and verify the documented command runs as written
+- [x] 3.1 Create `apps/web/scripts/scan-flag-elimination.mjs` (scans `build/client`; fails on any `__FLAG_`/`__DEV_SERVER__` identifier and any `data-flag=` marker) plus the `scan:flags` package script (build + scan), and verify it exits 0 on the guarded-controls build and fails when a marker is deliberately seeded into a fixture output
+- [x] 3.2 Add the PR-gate step to `.github/workflows/pr.yml` immediately after the existing web-production-build step (reusing its output, no second build), and verify `pnpm -C apps/web scan:flags` passes against a fresh build — the same command the gate runs
+- [x] 3.3 Add the `scan:flags` row to the AGENTS.md verification-command table and verify the documented command runs as written
 
 ## 4. Detail card — close icon and `tel:` links (W11, W13)
 

@@ -1,4 +1,4 @@
-import type { StyleSpecification } from "maplibre-gl";
+import type { Map as MapLibreMap, StyleSpecification } from "maplibre-gl";
 import type { UnitCard } from "@dc-reentry/shared";
 
 /**
@@ -32,9 +32,42 @@ export function createMapStyle(): StyleSpecification {
   };
 }
 
-/** Washington DC center for the initial map view (ward 1–8 boundary focus). */
-export const DC_MAP_CENTER = { lat: 38.9072, lng: -77.0369 };
-export const DC_MAP_ZOOM = 12.5;
+/**
+ * The locale's default map camera (ward 1–8 boundary focus). The locale is
+ * Washington, DC today; the names are deliberately locale-neutral — which
+ * locale this serves is a configuration concern of this module, not
+ * something the camera code around it should spell out.
+ */
+export const LOCALE_MAP_CENTER = { lat: 38.9072, lng: -77.0369 };
+export const LOCALE_MAP_ZOOM = 12.5;
+
+/** One camera-control step, in MapLibre zoom levels. */
+export const ZOOM_STEP = 1;
+
+/**
+ * The camera surface the camera operations use — the three MapLibre methods
+ * they need and nothing more of the map. Control UI code depends on these
+ * operations, never on the map instance itself.
+ */
+export type CameraMap = Pick<MapLibreMap, "flyTo" | "zoomTo" | "getZoom">;
+
+/** Steps the camera one step up from its current zoom. */
+export function zoomIn(map: CameraMap): void {
+  map.zoomTo(map.getZoom() + ZOOM_STEP);
+}
+
+/** Steps the camera one step down from its current zoom. */
+export function zoomOut(map: CameraMap): void {
+  map.zoomTo(map.getZoom() - ZOOM_STEP);
+}
+
+/** Flies the camera back to the locale's default center and zoom. */
+export function recenterOnLocale(map: CameraMap): void {
+  map.flyTo({
+    center: [LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat],
+    zoom: LOCALE_MAP_ZOOM,
+  });
+}
 
 /**
  * Street-level focus zoom for card selection: selecting a unit flies the map
