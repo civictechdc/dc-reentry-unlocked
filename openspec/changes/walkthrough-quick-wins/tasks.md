@@ -31,7 +31,7 @@ Svelte edits run under the Svelte skills / `svelte-file-editor` delegation.
 
 ## 5. Favicon (W19)
 
-- [ ] 5.1 Create `apps/web/static/favicon.svg` (brand mark on the theme color) and `favicon.ico` fallback, link both from `app.html`, and verify both are served 200 by a dev boot and land in `apps/web/build/client` after `pnpm -C apps/web build`
+- [x] 5.1 Create `apps/web/static/favicon.svg` (brand mark on the theme color) and `favicon.ico` fallback, link both from `app.html`, and verify both are served 200 by a dev boot and land in `apps/web/build/client` after `pnpm -C apps/web build`
 
 ## 6. Integration sweep
 
