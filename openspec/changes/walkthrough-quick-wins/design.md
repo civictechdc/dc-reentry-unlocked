@@ -172,6 +172,31 @@ never authorization or security-relevant behavior.
   e2e suites unchanged — the Compose matrix exercises builds where the
   controls provably don't exist.
 
+### D12 — Markup guards are stripped pre-compilation in non-dev builds (user decision 2026-11-08)
+
+Empirical finding at the first consumer: Svelte 5 compiles `{#if}`
+branches as live closure arguments to its runtime, so a folded-false
+condition eliminates the JS machinery (zero `__FLAG_*`/`__DEV_SERVER__`
+identifiers in the built output — verified) but cannot eliminate the
+branch closures or their hoisted template fragments: the D7 scan
+correctly failed on `data-flag=` markers surviving as dead strings.
+Even a literal `{#if false}` keeps its branch (verified against the
+compiler directly — the consequent closure is an argument to a runtime
+call the bundler must keep).
+
+Decision: a small Svelte preprocessor (module beside the flags
+registry, unit-tested, wired only into non-dev-server compiles) strips
+every `{#if}` block whose condition references a `__FLAG_*__`
+identifier, at parse time — before Svelte compiles. Consequences:
+
+- Source keeps the blessed guard shape unchanged; dev-server runs keep
+  the full runtime override machinery (preprocessor inert).
+- JS-module guards keep define + DCE elimination as before.
+- A guarded block with an `{:else}`/`{:else if}` branch is a loud
+  preprocessor error — the blessed shape has no else.
+- The D7 scan stays at full strength (both signals) and now passes on
+  real output; the flags README documents the markup elimination path.
+
 ### D10 — CSS-first presentation for every touched surface
 
 The new controls, the × close affordance, and the `tel:` link render all
@@ -202,9 +227,11 @@ noted for a spawn, not folded in here.
 ## Risks / Trade-offs
 
 - [Svelte `{#if}` elimination relies on define replacement + esbuild DCE
-  folding through Svelte 5's compiled block code] → D7's scan is the
-  empirical proof on real output and fails the gate on any leak — exactly
-  why it rides with the first consumer.
+  folding through Svelte 5's compiled block code] → CONFIRMED at the first
+  consumer: the fold eliminates the JS machinery but not the branch
+  closures' template fragments; D12's preprocessor strip is the resolution.
+  D7's scan remains the empirical proof on real output and fails the gate
+  on any leak — exactly why it rides with the first consumer.
 - [Controls overlay collides with existing overlays (attribution control,
   phone map-tab offset)] → position the group clear of the attribution
   corner and the mobile tab bar; final placement settled in the dev trial.

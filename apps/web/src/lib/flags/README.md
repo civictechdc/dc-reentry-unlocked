@@ -59,6 +59,21 @@ Do not wrap the shape in a helper like `isFlagOn("name")`: a call
 expression is not statically foldable, so guarded code would ship in
 production bundles.
 
+### How elimination reaches markup (`.svelte`)
+
+The folding above is JavaScript semantics, and Svelte 5 compiles `{#if}`
+branches as live closure arguments to its runtime — so in a component,
+a folded-false condition eliminates the guarded JS machinery but keeps
+the branch's template fragment (a guarded control's `data-flag=` marker
+would survive as a dead string). In every non-dev-server compile,
+`vite.config.ts` therefore runs the preprocessor in
+`strip-guarded-blocks.ts`, which removes each flag-guarded `{#if}` block
+from the source before Svelte parses it; dev-server runs and Vitest
+compile the unchanged source (a guarded block carrying an `{:else}` is
+a loud error there — the blessed shape has no else). The build scan
+(`scripts/scan-flag-elimination.mjs`) proves both paths empirically on
+real output.
+
 ## The two toggle surfaces (development only)
 
 - **Command time (session default):**
