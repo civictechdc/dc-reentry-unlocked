@@ -165,6 +165,42 @@ describe("unit detail slide-over", () => {
     ).toBeInTheDocument();
   });
 
+  test("renders the listed provider phone as a tel link keeping the listed formatting", () => {
+    store.units = [aUnit().withId("unit-1").build()];
+    uiState.selectedUnitId = "unit-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const phoneRow = within(detail).getByText(m.detail_contact_phone()).closest(".row");
+    const link = within(phoneRow as HTMLElement).getByRole("link");
+    expect(link).toHaveAttribute("href", "tel:2025550100");
+    expect(link).toHaveTextContent("(202) 555-0100");
+  });
+
+  test("renders the unlisted provider phone as plain 'not publicly listed' without a tel link", () => {
+    const card = withContactStripped(aUnit().withId("unit-2").build());
+    store.units = [card];
+    uiState.selectedUnitId = "unit-2";
+    render(DetailSlideOver, { props: { store } });
+
+    const detail = screen.getByTestId("unit-detail");
+    const phoneRow = within(detail).getByText(m.detail_contact_phone()).closest(".row");
+    expect(
+      within(phoneRow as HTMLElement).getByText(m.detail_contact_no_details()),
+    ).toBeInTheDocument();
+    expect(within(phoneRow as HTMLElement).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  test("keeps the close control's accessible name while its visible text is the × glyph", () => {
+    store.units = [aUnit().withId("unit-1").build()];
+    uiState.selectedUnitId = "unit-1";
+    render(DetailSlideOver, { props: { store } });
+
+    const closeButton = screen.getByRole("button", { name: m.detail_close() });
+    expect(closeButton).toHaveTextContent("×");
+    expect(closeButton).not.toHaveTextContent(m.detail_close());
+  });
+
   test("missing contact details render 'not publicly listed', never fabricated data", () => {
     const card = withContactStripped(aUnit().withId("unit-2").build());
     store.units = [card];

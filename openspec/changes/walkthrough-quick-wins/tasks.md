@@ -25,9 +25,9 @@ Svelte edits run under the Svelte skills / `svelte-file-editor` delegation
 
 Svelte edits run under the Svelte skills / `svelte-file-editor` delegation.
 
-- [ ] 4.1 Add `telHref` beside the detail-contact rendering in `detail-values.ts` (digits + leading `+` only, e.g. `(202) 555-0123` → `tel:2025550123`) with behavioral-sentence unit tests, and verify the suite passes
-- [ ] 4.2 Render the provider phone as a `tel:` link when listed and the honest "not publicly listed" plain text when not (`DetailSlideOver.svelte`), and verify component tests assert both renderings (`pnpm -C apps/web test`)
-- [ ] 4.3 Change the close control to the × glyph with `aria-label={m.detail_close()}` (`DetailSlideOver.svelte`) and verify component tests assert the accessible name and the existing dismissal/focus-return tests stay green
+- [x] 4.1 Add `telHref` beside the detail-contact rendering in `detail-values.ts` (digits + leading `+` only, e.g. `(202) 555-0123` → `tel:2025550123`) with behavioral-sentence unit tests, and verify the suite passes
+- [x] 4.2 Render the provider phone as a `tel:` link when listed and the honest "not publicly listed" plain text when not (`DetailSlideOver.svelte`), and verify component tests assert both renderings (`pnpm -C apps/web test`)
+- [x] 4.3 Change the close control to the × glyph with `aria-label={m.detail_close()}` (`DetailSlideOver.svelte`) and verify component tests assert the accessible name and the existing dismissal/focus-return tests stay green
 
 ## 5. Favicon (W19)
 
