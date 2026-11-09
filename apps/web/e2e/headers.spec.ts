@@ -1,24 +1,16 @@
 import { expect, test, type APIResponse } from "@playwright/test";
 
 /**
- * Security response headers on every served page (the web half of the
- * security baseline): the SvelteKit-generated CSP plus the standard
- * hardening set applied by the hooks server sequence. The CSP assertions
- * parse the policy into directives and assert EXACT source lists — a
- * weakened CSP (added 'unsafe-eval', 'unsafe-inline' scripts) fails.
+ * Standard hardening response headers on every page the app serves (the
+ * web half of the security baseline), on the dev server AND the compose
+ * production boot alike. The CSP itself is pinned per-boot: the dev-server
+ * policy lives in headers-dev-csp.spec.ts, and the production nonce-based
+ * policy is pinned by the preview-headers probe. Immutable /_app assets
+ * bypass the hook chain on production (the adapter's boot-time static
+ * layer) — see the asset test below and the preview-headers probe's
+ * documented residual.
  */
 const WEB_PORT = 5173;
-
-/** Parse `a 'b'; c d` → { a: ['b'], c: ['d'] }. */
-function parseCsp(policy: string): Record<string, string[]> {
-  const parsed: Record<string, string[]> = {};
-  for (const directive of policy.split(";")) {
-    const [name, ...sources] = directive.trim().split(/\s+/);
-    if (!name) continue;
-    parsed[name.toLowerCase()] = sources.map((source) => source.replace(/^'|'$/g, ""));
-  }
-  return parsed;
-}
 
 async function fetchHeaders(response: APIResponse): Promise<Record<string, string>> {
   // Playwright APIResponse.headers() returns the lowercase header map.
@@ -37,30 +29,13 @@ function expectStandardHeaders(path: string, headers: Record<string, string>): v
   );
 }
 
-test.describe("security headers (dev server)", () => {
+test.describe("security response headers (every surface)", () => {
   for (const path of ["/", "/no-such-route"]) {
-    test(`exact CSP + security headers on ${path}`, async ({ request }) => {
+    test(`security headers on ${path}`, async ({ request }) => {
       const response = await request.get(`http://localhost:${WEB_PORT}${path}`);
       expect(response.status()).toBeLessThan(500);
       const headers = await fetchHeaders(response);
       expectStandardHeaders(path, headers);
-
-      const csp = parseCsp(headers["content-security-policy"] ?? "");
-      // directory structure: default domain confined to self
-      expect(csp["default-src"]).toEqual(["self"]);
-      // inline scripts are a DEV-only need (Vite HMR); no eval anywhere
-      expect(csp["script-src"] ?? []).toEqual(["self", "unsafe-inline"]);
-      expect(csp["script-src"] ?? []).not.toContain("blob:");
-      // The MapLibre worker is a same-origin bundled asset (setWorkerUrl) —
-      // bare 'self', no blob: anywhere in worker-src.
-      expect(csp["worker-src"]).toEqual(["self"]);
-      // tiles and the cross-origin housing API stay reachable
-      expect(csp["img-src"]).toContain("https://tile.openstreetmap.org");
-      expect(csp["connect-src"]).toContain("https://tile.openstreetmap.org");
-      expect(csp["connect-src"]).toContain("http://localhost:3000");
-      // deny-by-default edges
-      expect(csp["object-src"]).toEqual(["none"]);
-      expect(csp["frame-ancestors"]).toEqual(["self"]);
     });
   }
 
@@ -81,13 +56,15 @@ test.describe("security headers (dev server)", () => {
     );
     expect(asset.ok(), `asset reachable: ${assetPath}`).toBeTruthy();
     const headers = await fetchHeaders(asset);
-    // dev caveat: "/@fs/…" module sources are served by Vite's transform
-    // layer (before the kit hook chain by design of the dev middleware);
-    // the standard headers on ASSETS are asserted in production (the
-    // preview-headers spec). Reference assets here prove the surface only.
-    if (!assetPath!.startsWith("/@fs/")) {
+    // header caveat: two served-asset surfaces sit OUTSIDE the SvelteKit
+    // hook chain by design and carry no hook-applied headers — dev's
+    // "/@fs/…" module sources (Vite's transform layer) and production's
+    // immutable "/_app/…" bundles (the adapter's boot-time static layer;
+    // documented residual in the preview-headers probe). Reference assets
+    // here prove the served-asset surface on both boots; the standard
+    // headers are asserted wherever the hook chain runs.
+    if (!assetPath!.startsWith("/@fs/") && !assetPath!.startsWith("/_app/immutable/")) {
       expectStandardHeaders(assetPath!, headers);
     }
-    // the CSP header itself is an HTML-delivery directive; the asset carries the standard set
   });
 });

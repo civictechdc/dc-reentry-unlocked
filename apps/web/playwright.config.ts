@@ -49,7 +49,12 @@ export default defineConfig({
     {
       name: "desktop-chrome",
       testMatch: /.*\.spec\.ts/,
-      testIgnore: /preview-headers\.spec\.ts/,
+      // the dev server serves the dev CSP (inline scripts are the dev-only
+      // HMR relaxation) — the production nonce-based shape is asserted
+      // against the CI compose matrix by headers-prod-csp.spec.ts, and the
+      // production build probe keeps its own CSP assertions in
+      // preview-headers.spec.ts
+      testIgnore: /preview-headers\.spec\.ts|headers-prod-csp\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {

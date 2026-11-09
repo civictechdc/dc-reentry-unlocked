@@ -110,13 +110,22 @@ const mermaidCli = [
   ],
 ];
 
+// Sandbox-off posture for the renderer's chrome-headless-shell, Linux CI
+// only — see the trust note at the tmp setup in the CLI entry below. A
+// local Linux checkout (untrusted branches!) keeps Chrome's sandbox.
+const sandboxlessLinuxCi = process.platform === "linux" && process.env.CI !== undefined;
+
 function renderBlock(source, index, file, tmp) {
   const stem = `${basename(file, ".md")}-${index}.mmd`;
   const input = join(tmp, stem);
   const output = join(tmp, `${stem}.svg`);
   writeFileSync(input, `${source}\n`);
   const [cmd, args] = mermaidCli;
-  return spawnSync(cmd, [...args, "-i", input, "-o", output], {
+  // Linux CI only: hand mmdc the sandbox-off + network-isolated puppeteer
+  // config written next to the tmp dir (see the tmp setup); local Linux
+  // and macOS keep the defaults.
+  const puppeteerConfigArgs = sandboxlessLinuxCi ? ["-p", join(tmp, "puppeteer.json")] : [];
+  return spawnSync(cmd, [...args, ...puppeteerConfigArgs, "-i", input, "-o", output], {
     cwd: repoRoot,
     stdio: ["ignore", "ignore", "pipe"],
   });
@@ -129,6 +138,31 @@ const invokedAs = realpathSync(process.argv[1] ?? "");
 if (invokedAs === fileURLToPath(import.meta.url)) {
   let exitCode = 0;
   const tmp = mkdtempSync("diagram-check-");
+  // On Ubuntu 24.04 CI runners the AppArmor unprivileged-user-namespace
+  // restriction makes chrome-headless-shell's own sandbox unusable at
+  // launch ("FATAL: No usable sandbox!"), so Linux CI writes a puppeteer
+  // config turning it off for every mmdc run below — matching the job's
+  // existing posture: the job already executes PR-checkout code (this
+  // script renders PR-head markdown under mermaid's default `strict`
+  // securityLevel), and the Playwright browsers run sandbox-less on Linux
+  // the same way. The extra flags strip a compromised renderer's network
+  // reach, since mermaid rendering needs none: background networking off,
+  // extensions off, first-run off, and every DNS answer poisoned to
+  // ~NOTFOUND. Local Linux checkouts keep the sandbox; so does macOS.
+  if (sandboxlessLinuxCi) {
+    writeFileSync(
+      join(tmp, "puppeteer.json"),
+      JSON.stringify({
+        args: [
+          "--no-sandbox",
+          "--disable-background-networking",
+          "--disable-extensions",
+          "--no-first-run",
+          "--host-resolver-rules=MAP * ~NOTFOUND",
+        ],
+      }),
+    );
+  }
   try {
     let rendered = 0;
     let failed = 0;

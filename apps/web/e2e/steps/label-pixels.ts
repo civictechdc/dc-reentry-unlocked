@@ -48,12 +48,28 @@ const MIN_WHITE_ROWS_BETWEEN_INK_AND_RING = 3;
 const INK_INSIDE_BUBBLE_PADDING = 2;
 
 /**
- * The canvas repaints on requestAnimationFrame and glyph rasterization and
- * tile decode are not observable from the DOM; a bounded settle wait after
- * the camera attributes go still keeps both screenshots on the same fully
- * painted frame.
+ * The canvas repaints on requestAnimationFrame, and glyph rasterization and
+ * tile decode are not observable from the DOM — a fixed wait alone proved
+ * insufficient on CI's software-GL renderers, where tiles and glyphs kept
+ * landing AFTER the settle and polluted the label-ON/OFF diffs. The settle
+ * therefore keeps the fixed wait for the fast-renderer common case, then
+ * polls for PAINTING QUIESCENCE: two consecutive canvas screenshots that
+ * are byte-identical. Whichever poll bound ends first (sample cap or
+ * wall-clock deadline), settleMap returns anyway — the assertions, not
+ * the settle, are the proof.
  */
 const SETTLE_MS = 600;
+/** Interval between the two canvas screenshots of one quiescence sample. */
+const QUIESCENCE_SAMPLE_MS = 250;
+/** Poll bound 1: at most this many samples beyond the fixed wait. */
+const QUIESCENCE_MAX_SAMPLES = 20;
+/**
+ * Poll bound 2: at most this much wall-clock across the poll — on software
+ * renderers the two screenshots per sample dominate the cost, so the
+ * sample cap alone under-bounds a never-quiescent canvas. Whichever bound
+ * hits first ends the poll (fail-soft).
+ */
+const QUIESCENCE_DEADLINE_MS = 6_000;
 
 type Box = {
   minX: number;
@@ -83,10 +99,24 @@ export async function mapCanvas(page: Page) {
   return canvas;
 }
 
-/** Tiles fetched, camera still, glyphs rasterized: safe to screenshot. */
+/**
+ * Tiles fetched, camera still, glyphs rasterized: safe to screenshot. The
+ * fixed wait covers the fast-renderer common case; the poll then confirms
+ * the canvas has stopped changing by finding two consecutive byte-identical
+ * screenshots of the canvas element (see the settle constants above),
+ * returning bounded rather than blocking forever.
+ */
 export async function settleMap(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(SETTLE_MS);
+  const canvas = await mapCanvas(page);
+  const deadline = Date.now() + QUIESCENCE_DEADLINE_MS;
+  for (let sample = 0; sample < QUIESCENCE_MAX_SAMPLES && Date.now() < deadline; sample++) {
+    const before = await canvas.screenshot();
+    await page.waitForTimeout(QUIESCENCE_SAMPLE_MS);
+    const after = await canvas.screenshot();
+    if (before.equals(after)) return;
+  }
 }
 
 export async function canvasShot(page: Page): Promise<Buffer> {
@@ -323,18 +353,51 @@ export function expectLabelCompositePresent(stats: LabelGeometryStats): void {
  * exists; the bubble zone would otherwise swallow a whole narrow phone
  * canvas). Returns canvas-LOCAL coordinates (add the canvas bounding box
  * origin to obtain page coordinates).
+ *
+ * The point must be pin-free on two consecutive frames: a single mid-paint
+ * read can pass the scan and land the click inside a pin's hit radius
+ * (observed on the CI WebKit rasterizer). Each round picks from one frame
+ * and verifies the pick against a fresh frame; a failed verification
+ * rescans from that fresh frame, bounded to three rounds before the loud
+ * error.
  */
 export async function pinFreeCanvasPoint(
   page: Page,
   options: { excludeLabelBubble?: boolean } = {},
 ): Promise<{ x: number; y: number }> {
-  const shot = await canvasShot(page);
+  const excludeLabelBand = options.excludeLabelBubble === true;
+  let shot = await canvasShot(page);
+  for (let round = 0; round < 3; round++) {
+    const candidate = await evaluatePinFreeFrame(page, shot, excludeLabelBand);
+    if (!candidate) break;
+    const freshShot = await canvasShot(page);
+    const verified = await evaluatePinFreeFrame(page, freshShot, excludeLabelBand, candidate);
+    if (verified) return candidate;
+    shot = freshShot;
+  }
+  throw new Error("the canvas scan found no pin-free point to click");
+}
+
+/**
+ * One pass over a single canvas frame's pixels, shared by both halves of
+ * the two-frame consistency check: without a candidate it scans for the
+ * best pin-free point ({@link pinFreeCanvasPoint}); with one it re-runs the
+ * identical clearance test on just that point against the fresh frame.
+ * Returns the canvas-local point, or null when the frame holds no pin-free
+ * point (scan half) or the candidate fails the clearance test (verify
+ * half).
+ */
+async function evaluatePinFreeFrame(
+  page: Page,
+  frame: Buffer,
+  excludeLabelBand: boolean,
+  candidate?: { x: number; y: number },
+): Promise<{ x: number; y: number } | null> {
   const scratch = await page.context().newPage();
   try {
-    const excludeLabelBand = options.excludeLabelBubble === true;
     return await scratch.evaluate(
-      async ([base64, bandExcluded]) => {
-        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      async ([frameBase64, bandExcluded, point]) => {
+        const bytes = Uint8Array.from(atob(frameBase64), (character) => character.charCodeAt(0));
         const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
         const canvas = document.createElement("canvas");
         canvas.width = bitmap.width;
@@ -363,29 +426,33 @@ export async function pinFreeCanvasPoint(
         const labelBubbleZone = (x: number, y: number): boolean =>
           bandExcluded && Math.abs(x - centerX) <= 260 && y >= centerY - 110 && y <= centerY + 30;
         const clearanceRadius = 26;
+        const hasPinClearance = (x: number, y: number): boolean => {
+          for (let dy = -clearanceRadius; dy <= clearanceRadius; dy += 2) {
+            for (let dx = -clearanceRadius; dx <= clearanceRadius; dx += 2) {
+              if (dx * dx + dy * dy > clearanceRadius * clearanceRadius) continue;
+              if (isPinPaint(x + dx, y + dy)) return false;
+            }
+          }
+          return true;
+        };
+        // verify half: the identical clearance test on the picked point
+        if (point) {
+          return hasPinClearance(point.x, point.y) && !labelBubbleZone(point.x, point.y)
+            ? point
+            : null;
+        }
         let best: { x: number; y: number; edgeDistance: number } | null = null;
         for (let y = 20; y < height - 20; y += 8) {
           for (let x = 20; x < width - 20; x += 8) {
             if (labelBubbleZone(x, y)) continue;
-            let clear = true;
-            scan: for (let dy = -clearanceRadius; dy <= clearanceRadius; dy += 2) {
-              for (let dx = -clearanceRadius; dx <= clearanceRadius; dx += 2) {
-                if (dx * dx + dy * dy > clearanceRadius * clearanceRadius) continue;
-                if (isPinPaint(x + dx, y + dy)) {
-                  clear = false;
-                  break scan;
-                }
-              }
-            }
-            if (!clear) continue;
+            if (!hasPinClearance(x, y)) continue;
             const edgeDistance = Math.min(x, width - x, y, height - y);
             if (!best || edgeDistance > best.edgeDistance) best = { x, y, edgeDistance };
           }
         }
-        if (!best) throw new Error("the canvas scan found no pin-free point to click");
-        return { x: best.x, y: best.y };
+        return best ? { x: best.x, y: best.y } : null;
       },
-      [shot.toString("base64"), excludeLabelBand] as const,
+      [frame.toString("base64"), excludeLabelBand, candidate ?? null] as const,
     );
   } finally {
     await scratch.close();
