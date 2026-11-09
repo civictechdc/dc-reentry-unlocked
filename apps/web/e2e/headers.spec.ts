@@ -44,10 +44,13 @@ test.describe("security response headers (every surface)", () => {
     const html = await root.text();
     // production serves /_app bundles (title-tagged src/href); dev inlines the
     // dynamic kit import ("/@fs/…entry.js") — either way the asset response
-    // rides the same hook chain.
-    const htmlAsset =
-      html.match(/(?:src|href)="(\/_app\/[^"]+)"/)?.[1] ??
-      html.match(/(?:src|href)="(\/[^"\s]+)"/)?.[1];
+    // rides the same hook chain. Favicon links live in the static root —
+    // outside the hook chain on both boots (dev: vite's static middleware;
+    // prod: the adapter's boot-time static layer), the same out-of-chain
+    // class as "/@fs/…" and "/_app/immutable/" — so discovery skips them.
+    const htmlAsset = [...html.matchAll(/(?:src|href)="(\/[^"\s]+)"/g)]
+      .flatMap((match) => match[1] ?? [])
+      .find((path) => !path.startsWith("/favicon"));
     const importEntry = html.match(/import\("([^"]+)"\)/)?.[1];
     const assetPath = htmlAsset ?? importEntry?.replace(/^\.\//, "/");
     expect(assetPath, "the root page references a served asset").toBeTruthy();
