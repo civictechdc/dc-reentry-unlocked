@@ -27,6 +27,3 @@ declare const __FLAG_W1_MAP_ZOOM__: boolean;
 
 /** Launch default for the `w2-recenter` walkthrough recenter control. */
 declare const __FLAG_W2_RECENTER__: boolean;
-
-/** The naming contract for define constants: `__FLAG_<SCREAMING_SNAKE>__`. */
-declare type FlagDefineName = `__FLAG_${string}__`;

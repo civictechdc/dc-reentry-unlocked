@@ -35,10 +35,10 @@ Svelte edits run under the Svelte skills / `svelte-file-editor` delegation.
 
 ## 6. Integration sweep
 
-- [ ] 6.1 Run the full deterministic gate — `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`, `pnpm arch:check`, `pnpm -C apps/web scan:flags` — all green
-- [ ] 6.2 Run `pnpm -C apps/web e2e` and `pnpm -C apps/web e2e:prod` (flag-off default: controls absent, detail/favicon changes live) and verify both pass
-- [ ] 6.3 Run the simplification/domain-language pass over every file this change touched (`code-simplification` + `codebase-design` skills; touched surfaces only) and verify no behavior change — gates from 6.1 still green
-- [ ] 6.4 Run `openspec validate walkthrough-quick-wins --strict` and the tracking-reference grep from AGENTS.md (no task/decision/change refs outside `openspec/`) and verify both clean
+- [x] 6.1 Run the full deterministic gate — `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`, `pnpm arch:check`, `pnpm -C apps/web scan:flags` — all green
+- [x] 6.2 Run `pnpm -C apps/web e2e` and `pnpm -C apps/web e2e:prod` (flag-off default: controls absent, detail/favicon changes live) and verify both pass
+- [x] 6.3 Run the simplification/domain-language pass over every file this change touched (`code-simplification` + `codebase-design` skills; touched surfaces only) and verify no behavior change — gates from 6.1 still green
+- [x] 6.4 Run `openspec validate walkthrough-quick-wins --strict` and the tracking-reference grep from AGENTS.md (no task/decision/change refs outside `openspec/`) and verify both clean
 
 ## Workflow follow-up
 

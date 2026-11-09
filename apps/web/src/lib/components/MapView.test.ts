@@ -1114,7 +1114,7 @@ describe("card selection focuses the map", () => {
     expect(created.flyToLog).toEqual([]);
   });
 
-  test("no selection at mount keeps the DC default initial view", async () => {
+  test("no selection at mount keeps the locale default initial view", async () => {
     const created = await mountedMapWithResolvedUnits([unitInWard7]);
 
     expect(created.options.center).toEqual([LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat]);

@@ -60,8 +60,7 @@ export default defineConfig(({ command, mode }) => {
     // a dev-server run whose command time set VITE_FEATURE_<NAME>=1 (see
     // flagDefineEnv). Both are statically replaced in every build/preview
     // — whatever NODE_ENV or --mode is in effect — so flagged code and the
-    // override machinery are stripped from built output. Empty registry
-    // today.
+    // override machinery are stripped from built output.
     define: {
       __DEV_SERVER__: isDevServerRun(command, mode),
       ...buildFlagDefines(FEATURE_FLAGS, flagDefineEnv(command, mode, process.env)),

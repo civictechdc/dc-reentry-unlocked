@@ -54,8 +54,8 @@
     // Mount-time camera: a selection pre-existing at mount (the map can be
     // unmounted while the list tab is active) opens already focused on that
     // unit's pin. When the selected unit is no longer in the current result
-    // set, the camera intentionally falls back to the DC default view — no
-    // pin is placed, so there is nothing to focus. Read untracked like the
+    // set, the camera intentionally falls back to the locale default view —
+    // no pin is placed, so there is nothing to focus. Read untracked like the
     // units snapshot below — the create effect must depend on the container
     // only.
     const focusedUnit = untrack(() => {
