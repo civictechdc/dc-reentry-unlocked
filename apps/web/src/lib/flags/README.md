@@ -9,6 +9,14 @@ repo's own define constants and are forced `false` in every build. An
 empirical scan of the emitted bundle joins with the first flagged
 feature.
 
+## Flags are never a security boundary
+
+Flags gate candidate UX trials only — never authorization, access
+control, or any security-relevant behavior. A flag is a compile-time
+constant plus a dev-only URL override: trivially flipped in a development
+session, and absent from production builds rather than enforced there.
+Anything that must be enforced stays behind the API's real checks.
+
 ## The blessed guard shape
 
 Guard candidate behavior with exactly this shape:

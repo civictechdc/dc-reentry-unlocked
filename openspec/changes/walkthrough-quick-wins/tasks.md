@@ -2,9 +2,9 @@
 
 ## 1. Flag registry riders (no consumers yet)
 
-- [ ] 1.1 Register `w1-map-zoom` and `w2-recenter` via the two-line ritual (`FEATURE_FLAGS` tuple + `flag-globals.d.ts` declarations) and verify `pnpm typecheck` plus `pnpm -C apps/web test` stay green
-- [ ] 1.2 Add the registry-shape unit check to `flags.test.ts` (entries unique, kebab-case `^[a-z0-9]+(-[a-z0-9]+)*$`) and verify the flags suite passes
-- [ ] 1.3 Add the "flags are never a security boundary" paragraph to `apps/web/src/lib/flags/README.md` and verify the line is present and `pnpm lint` passes
+- [x] 1.1 Register `w1-map-zoom` and `w2-recenter` via the two-line ritual (`FEATURE_FLAGS` tuple + `flag-globals.d.ts` declarations) and verify `pnpm typecheck` plus `pnpm -C apps/web test` stay green
+- [x] 1.2 Add the registry-shape unit check to `flags.test.ts` (entries unique, kebab-case `^[a-z0-9]+(-[a-z0-9]+)*$`) and verify the flags suite passes
+- [x] 1.3 Add the "flags are never a security boundary" paragraph to `apps/web/src/lib/flags/README.md` and verify the line is present and `pnpm lint` passes
 
 ## 2. Map camera controls — first flag rider (W1, W2)
 

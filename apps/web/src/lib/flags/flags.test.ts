@@ -14,6 +14,17 @@ import {
 // its own module instance (mocked registry, stubbed dev-server global).
 const { parseFlagOverrides } = await import("./index");
 
+describe("the flag registry", () => {
+  test("registers every flag name exactly once, in kebab-case", () => {
+    const names = [...FEATURE_FLAGS];
+
+    expect(new Set(names).size).toBe(names.length);
+    for (const name of names) {
+      expect(name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    }
+  });
+});
+
 describe("flag name derivations", () => {
   test("derives the command-time environment key from a kebab-case flag name", () => {
     expect(flagEnvKey("w1-map-zoom")).toBe("VITE_FEATURE_W1_MAP_ZOOM");
@@ -55,12 +66,11 @@ describe("page-load flag override parsing", () => {
 
 describe("the dev-server-only override gate", () => {
   test("applies a page-load override on a dev-server run and refuses it in any build", async () => {
-    // The registry is deliberately empty in committed source, so mock it to
-    // carry the name: only then is the module-scope memo genuinely
-    // populated and the negative below discriminating (without the mock it
-    // would pass vacuously — absent name, refused for the wrong reason).
-    // The cast reconciles the compile-time empty registry with the mocked
-    // one.
+    // The registry is mocked to a controlled name list, so the fresh module
+    // instance's memo is genuinely populated however the real registry
+    // drifts — the negative below discriminates the closed gate, not an
+    // absent name. The cast reconciles the compile-time registry type with
+    // the mocked one.
     const nameFromUrl = "w1-map-zoom" as unknown as FeatureFlag;
 
     vi.resetModules();
@@ -162,11 +172,14 @@ describe("command-time define building", () => {
     expect(garbage).toEqual({ __FLAG_MAP_ZOOM__: false });
   });
 
-  test("builds no defines while the registry is empty", () => {
+  test("emits a false define for every registered flag when no flag variable is set", () => {
     const defines = buildFlagDefines(FEATURE_FLAGS, {
       VITE_FEATURE_ANYTHING: "1",
     });
 
-    expect(defines).toEqual({});
+    expect(defines).toEqual({
+      __FLAG_W1_MAP_ZOOM__: false,
+      __FLAG_W2_RECENTER__: false,
+    });
   });
 });

@@ -14,15 +14,15 @@
  */
 
 /**
- * Every registered flag name, as a tuple of kebab-case strings. Kept
- * deliberately empty until the first flagged feature lands: an entry here
- * lights up the command-time environment variable and the page-load URL
- * override for that name; the matching
+ * Every registered flag name, as a tuple of kebab-case strings. The first
+ * entries are the candidate controls `w1-map-zoom` and `w2-recenter`. An
+ * entry here lights up the command-time environment variable and the
+ * page-load URL override for that name; the matching
  * `declare const __FLAG_<SCREAMING_SNAKE>__: boolean;` line in
  * `./flag-globals.d.ts` is what makes its guard global valid (the README
  * documents the two-line ritual).
  */
-export const FEATURE_FLAGS = [] as const;
+export const FEATURE_FLAGS = ["w1-map-zoom", "w2-recenter"] as const;
 
 export type FeatureFlag = (typeof FEATURE_FLAGS)[number];
 
