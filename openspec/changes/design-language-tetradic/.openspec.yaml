@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-11-09
+goal: "W17 follow-up: evaluate the Google Labs DESIGN.md format
+  (github.com/google-labs-code/design.md) as the artifact for organizing the
+  web app's design language; explore a WCAG-conformant tetradic color scheme"
+skip_specs: true
