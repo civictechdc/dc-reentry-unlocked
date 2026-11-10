@@ -6,4 +6,3 @@ goal: "Create a maintainable, well-organised design language for the web
   as its artifact, grounding CSS usage in the CSS Snapshot 2026 baseline
   with an explicit fallback doctrine, and exploring a WCAG-conformant
   tetradic color scheme"
-skip_specs: true
