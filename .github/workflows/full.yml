@@ -129,6 +129,19 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Design tokens (lint + regeneration identity + hand-written drift)
+        # Same gate as the PR check job: deterministic, needs only the
+        # frozen install.
+        run: pnpm design:check
+
+      - name: Unit and component tests (Vitest, includes the blocking contrast suite)
+        # design:check covers lint/export/drift; the WCAG token-pair suite
+        # lives in the web Vitest tree, and this job otherwise never runs
+        # the test suites — the spec requires the contrast suite behind
+        # both CI entry points. The paraglide messages compile during the
+        # vitest run itself (verified: fresh checkout, no compile step).
+        run: pnpm test
+
       - name: Regenerate the dataset
         run: pnpm datagen
 

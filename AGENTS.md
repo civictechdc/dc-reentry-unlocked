@@ -62,6 +62,7 @@ recipes](docs/runbook.md)).
 | `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)                       |
 | `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                              |
 | `pnpm arch:check`                        | dependency-cruiser architecture rules                                                         |
+| `pnpm design:check`                      | design.md lint + generated-artifact byte identity + hand-written/bridge drift                 |
 | `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)                  |
 | `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                                |
 | `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app)          |
@@ -315,6 +316,11 @@ Decision log (per-entry provenance dates below):
 - OpenSpec specs/designs live in the in-repo `openspec/` workspace
   (see intro). Do not edit them
   without an assigned task.
+- `apps/web/DESIGN.md` — the web app's design-language source of truth
+  (token YAML + rationale prose). The generated stylesheet at
+  `apps/web/src/generated/design-tokens.css` is built from it and must
+  never be hand-edited; `pnpm design:check` verifies lint, regeneration
+  byte-identity, and hand-written/bridge drift.
 - `docs/` — human-facing: `docs/glossary.md` (ubiquitous domain language —
   keep terms consistent with specs), `docs/runbook.md` (dev/Compose/
   data-regeneration run story), and `docs/architecture.md` (system
