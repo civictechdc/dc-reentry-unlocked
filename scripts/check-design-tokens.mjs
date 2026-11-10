@@ -15,10 +15,7 @@ import process from "node:process";
  * 2. non-CSS color bridges (document theme-color today; map paint and
  *    bitmap-channel constants join when the map bridge module lands)
  *    against resolved DESIGN.md colors;
- * 3. an interim legacy pin: until the runtime token swap replaces app.css's
- *    hand-written color block, every legacy token must equal its DESIGN.md
- *    semantic value except the explicitly pinned divergences;
- * 4. safety rails: references must resolve without cycles, the YAML must
+ * 3. safety rails: references must resolve without cycles, the YAML must
  *    parse as data, and hand-written CSS must never declare a property
  *    under a generated (`--color-*`, `--spacing-*`, `--rounded-*`) name.
  *
@@ -39,7 +36,12 @@ const WEB_ROOT = join(REPO_ROOT, "apps/web");
  * unknown-property rule below fails the moment an unmapped one appears.
  */
 const HAND_WRITTEN_MAPPINGS = [
+  { property: "--font-family-body", tokenPath: "typography.body.fontFamily", kind: "text" },
   { property: "--font-size-base", tokenPath: "typography.body.fontSize", kind: "dimension" },
+  // unitless line-height: a plain text literal, not a dimension
+  { property: "--line-height-body", tokenPath: "typography.body.lineHeight", kind: "text" },
+  { property: "--font-size-small", tokenPath: "typography.small.fontSize", kind: "dimension" },
+  { property: "--font-size-heading", tokenPath: "typography.heading.fontSize", kind: "dimension" },
   { property: "--shadow", tokenPath: "components.elevation-raised.shadow", kind: "text" },
 ];
 
@@ -61,36 +63,22 @@ const SOURCE_FAMILY_ROOTS = ["typography", "components"];
 /**
  * Source leaves deliberately NOT consumed by any checked target. Each
  * entry must cover at least one live leaf; an entry covering a consumed
- * leaf fails. The typography deferrals land as real mappings at the
- * runtime token swap, which also removes the legacy block (see the legacy
- * pin below).
+ * leaf fails. Weights, secondary line-heights, and secondary font stacks
+ * stay component literals (inventoried in DESIGN.md prose) with no CSS
+ * custom-property target.
  */
 export const SOURCE_EXCLUSIONS = [
-  {
-    prefix: "typography.body.fontFamily",
-    reason:
-      "body font stack is a body-rule literal until the runtime swap adds the --font-family-body mapping",
-  },
   {
     prefix: "typography.body.fontWeight",
     reason:
       "weights stay component literals (inventoried in DESIGN.md prose) with no CSS custom property target",
   },
-  {
-    prefix: "typography.body.lineHeight",
-    reason:
-      "body line-height is a body-rule literal until the runtime swap adds the --line-height-body mapping",
-  },
-  {
-    prefix: "typography.small.",
-    reason:
-      "small-role values stay component literals until the runtime swap adds the --font-size-small mappings",
-  },
-  {
-    prefix: "typography.heading.",
-    reason:
-      "heading-role values stay component literals until the runtime swap adds the --font-size-heading mappings",
-  },
+  ...["small", "heading"].flatMap((role) =>
+    ["fontFamily", "fontWeight", "lineHeight"].map((leaf) => ({
+      prefix: `typography.${role}.${leaf}`,
+      reason: `${role}-role ${leaf} stays a component literal (inventoried in DESIGN.md prose); only the role's fontSize is consumed`,
+    })),
+  ),
   ...[
     "button-primary",
     "button-primary-hover",
@@ -224,51 +212,6 @@ function extractThemeColorTags(activeHtml) {
   }
   return { failures, themeColorValue: themeColorValues.length === 1 ? themeColorValues[0] : null };
 }
-
-/**
- * Interim legacy pin: until the runtime token swap replaces app.css's
- * hand-written color/radius block with the generated import, every legacy
- * token below must equal its DESIGN.md semantic value — except the pinned
- * divergences. This pins the family mechanically; the swap removes both
- * the legacy block and this manifest.
- */
-const LEGACY_TOKEN_MAPPINGS = [
-  { property: "--surface", tokenPath: "colors.surface" },
-  { property: "--surface-raised", tokenPath: "colors.surface-raised" },
-  { property: "--surface-warning", tokenPath: "colors.surface-warning" },
-  { property: "--surface-selected", tokenPath: "colors.surface-selected" },
-  { property: "--ink", tokenPath: "colors.ink" },
-  { property: "--ink-muted", tokenPath: "colors.ink-muted" },
-  { property: "--ink-on-accent", tokenPath: "colors.ink-on-accent" },
-  { property: "--line", tokenPath: "colors.line" },
-  { property: "--line-strong", tokenPath: "colors.line-strong" },
-  { property: "--accent", tokenPath: "colors.accent" },
-  { property: "--accent-hover", tokenPath: "colors.accent-hover" },
-  { property: "--accent-focus-ring", tokenPath: "colors.accent-focus-ring" },
-  { property: "--pin-exact", tokenPath: "colors.pin-exact" },
-  { property: "--pin-highlight", tokenPath: "colors.pin-highlight" },
-  { property: "--pin-highlight-ring", tokenPath: "colors.pin-highlight-ring" },
-  { property: "--badge-confirmed-bg", tokenPath: "colors.badge-confirmed-bg" },
-  { property: "--badge-confirmed-ink", tokenPath: "colors.badge-confirmed-ink" },
-  { property: "--badge-unverified-bg", tokenPath: "colors.badge-unverified-bg" },
-  { property: "--badge-unverified-ink", tokenPath: "colors.badge-unverified-ink" },
-  { property: "--radius", tokenPath: "rounded.control" },
-];
-
-/**
- * The ONLY allowed hand-written divergences from the source, each pinned
- * to its exact interim value. Removing a divergence while app.css still
- * carries the old value fails; finishing the token swap removes both the
- * legacy block and this list.
- */
-const LEGACY_DIVERGENCES = [
-  {
-    property: "--line-strong",
-    pinnedValue: "#8a97a0",
-    reason:
-      "pre-correction value kept while app.css still hand-writes the legacy color block; removed together with that block at the runtime token swap",
-  },
-];
 
 /**
  * Loads the `yaml` parser from the pinned dependency's own closure:
@@ -824,64 +767,6 @@ export function checkSourceCoverage(
 }
 
 /**
- * Interim legacy pin: every legacy hand-written token must equal its
- * DESIGN.md semantic value, except the pinned divergences (which must
- * carry exactly their pinned interim values). A missing legacy token, a
- * duplicated one, a divergence pin that no longer matches app.css, or an
- * unpinned drift all fail.
- */
-export function checkLegacyTokens(
-  declared,
-  tokens,
-  mappings = LEGACY_TOKEN_MAPPINGS,
-  divergences = LEGACY_DIVERGENCES,
-) {
-  const failures = [];
-  for (const mapping of mappings) {
-    const values = declared.get(mapping.property);
-    if (!values || values.length === 0) {
-      failures.push(
-        `${mapping.property}: expected legacy token is missing from app.css — if the token swap removed the legacy block, remove its legacy manifest entry`,
-      );
-      continue;
-    }
-    if (values.length > 1) {
-      failures.push(
-        `${mapping.property}: declared ${values.length} times — a legacy token must appear exactly once`,
-      );
-      continue;
-    }
-    const divergence = divergences.find((d) => d.property === mapping.property);
-    if (divergence) {
-      if (normalizeValue(values[0]) !== normalizeValue(divergence.pinnedValue)) {
-        failures.push(
-          `${mapping.property}: divergence pin expects "${normalizeValue(divergence.pinnedValue)}" but app.css has "${normalizeValue(values[0])}" — finish the token swap and remove the pin, or restore the pinned value`,
-        );
-      }
-      continue;
-    }
-    const resolved = resolveTokenAt(tokens, mapping.tokenPath);
-    if (resolved.error) {
-      failures.push(`${mapping.property}: ${resolved.error}`);
-      continue;
-    }
-    if (normalizeValue(values[0]) !== normalizeValue(resolved.value)) {
-      failures.push(
-        `interim legacy parity: ${mapping.property} has "${normalizeValue(values[0])}" but DESIGN.md ${mapping.tokenPath} resolves to "${normalizeValue(resolved.value)}" — correct one or the other`,
-      );
-    }
-  }
-  for (const divergence of divergences) {
-    if (!mappings.some((m) => m.property === divergence.property)) {
-      failures.push(
-        `divergence pin "${divergence.property}" has no legacy token mapping — stale entry`,
-      );
-    }
-  }
-  return failures;
-}
-
-/**
  * Runs every check against a repository tree. Returns failure messages;
  * an empty array means the hand-written surface matches the source.
  */
@@ -891,8 +776,6 @@ export async function runCheck({
   mappings = HAND_WRITTEN_MAPPINGS,
   bridges = BRIDGES,
   exclusions = SOURCE_EXCLUSIONS,
-  legacyMappings = LEGACY_TOKEN_MAPPINGS,
-  legacyDivergences = LEGACY_DIVERGENCES,
   readFile = (path) => readFileSync(path, "utf8"),
   yamlParse,
 } = {}) {
@@ -920,16 +803,14 @@ export async function runCheck({
     failures.push(`cannot read hand-written CSS ${cssPath}: ${error.message}`);
     return failures;
   }
-  let declared;
   try {
-    declared = parseDeclarations(cssText).declared;
+    parseDeclarations(cssText);
   } catch (error) {
     failures.push(`app.css declarations unparseable: ${error.message}`);
     return failures;
   }
   failures.push(...checkHandWrittenCss(cssText, tokens, mappings));
   failures.push(...checkBridges(readFile, tokens, bridges));
-  failures.push(...checkLegacyTokens(declared, tokens, legacyMappings, legacyDivergences));
   return failures;
 }
 

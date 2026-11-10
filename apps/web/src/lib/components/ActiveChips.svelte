@@ -79,29 +79,29 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    background: var(--surface-selected);
-    border: 1px solid var(--line);
-    border-radius: 999px;
+    background: var(--color-surface-selected);
+    border: 1px solid var(--color-line);
+    border-radius: var(--rounded-pill);
     padding: 0.15rem 0.35rem 0.15rem 0.65rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-small);
   }
   .chip button {
     font: inherit;
     font-size: 0.75rem;
     border: 0;
     background: transparent;
-    color: var(--ink);
+    color: var(--color-ink);
     padding: 0.1rem 0.35rem;
-    border-radius: 999px;
+    border-radius: var(--rounded-pill);
   }
   .clear-all-chips {
     align-self: start;
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--font-size-small);
     padding: 0.2rem 0.5rem;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
 </style>

@@ -74,7 +74,7 @@
 <style>
   .unit-list {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
     align-content: start;
     min-height: 0;
     overflow-y: auto;
@@ -83,22 +83,22 @@
        overflow-y clip alone does not stop that propagation in every engine,
        and this pane is the card stack's only scroll boundary. */
     contain: layout;
-    padding: 0.5rem;
+    padding: var(--spacing-sm);
   }
   .cards {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
   .panel {
-    background: var(--surface-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--rounded-control);
     padding: 1.25rem;
     display: grid;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
     justify-items: start;
   }
   h3,
@@ -110,31 +110,36 @@
   .zero-panel button {
     font: inherit;
     padding: 0.4rem 0.9rem;
-    background: var(--accent);
-    color: var(--ink-on-accent);
+    background: var(--color-accent);
+    color: var(--color-ink-on-accent);
     border: 0;
-    border-radius: var(--radius);
+    border-radius: var(--rounded-control);
   }
   .retry-banner {
-    background: var(--surface-warning);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    padding: 0.75rem 1rem;
+    background: var(--color-surface-warning);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    padding: var(--spacing-md) var(--spacing-lg);
     display: grid;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
   .result-count {
     margin: 0;
-    font-size: 0.875rem;
-    color: var(--ink-muted);
+    font-size: var(--font-size-small);
+    color: var(--color-ink-muted);
   }
   .skeleton-row {
     list-style: none;
   }
   .skeleton-box {
     height: 6.5rem;
-    border-radius: var(--radius);
-    background: linear-gradient(90deg, var(--line), var(--surface-raised), var(--line));
+    border-radius: var(--rounded-control);
+    background: linear-gradient(
+      90deg,
+      var(--color-line),
+      var(--color-surface-raised),
+      var(--color-line)
+    );
     background-size: 200% 100%;
     animation: shimmer 1.2s infinite;
   }

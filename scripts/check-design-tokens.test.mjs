@@ -5,7 +5,6 @@ import { describe, expect, test } from "vitest";
 import {
   checkBridges,
   checkHandWrittenCss,
-  checkLegacyTokens,
   checkSourceCoverage,
   extractFrontMatter,
   generatedNames,
@@ -22,9 +21,9 @@ import {
  * The design drift gate must fail closed on every divergence class between
  * the hand-written token surface and the DESIGN.md source: YAML
  * malformation, hand-written value drift, bridge drift, broken references,
- * generated-name overrides, mapping-table gaps, parser-evasion shapes,
- * source-side coverage holes, and unpinned legacy drift. Fixtures are real
- * temp trees; the real-tree smoke probe asserts the committed state passes.
+ * generated-name overrides, mapping-table gaps, parser-evasion shapes, and
+ * source-side coverage holes. Fixtures are real temp trees; the real-tree
+ * smoke probe asserts the committed state passes.
  */
 
 const FIXTURE_DESIGN = `---
@@ -70,15 +69,28 @@ const FIXTURE_EXCLUSIONS = SOURCE_EXCLUSIONS.filter(
 
 const GOOD_CSS = `
 :root {
+  --font-family-body: system-ui;
   --font-size-base: 1rem;
+  --line-height-body: 1.45;
+  --font-size-small: 0.875rem;
+  --font-size-heading: 1.25rem;
   --shadow: 0 1px 3px rgb(27 42 52 / 0.25);
 }
 `;
 
 const MAPPINGS = [
+  { property: "--font-family-body", tokenPath: "typography.body.fontFamily", kind: "text" },
   { property: "--font-size-base", tokenPath: "typography.body.fontSize", kind: "dimension" },
+  { property: "--line-height-body", tokenPath: "typography.body.lineHeight", kind: "text" },
+  { property: "--font-size-small", tokenPath: "typography.small.fontSize", kind: "dimension" },
+  { property: "--font-size-heading", tokenPath: "typography.heading.fontSize", kind: "dimension" },
   { property: "--shadow", tokenPath: "components.elevation-raised.shadow", kind: "text" },
 ];
+
+/** Two-row table scoped to the tiny parser-evasion CSS fixtures. */
+const SMALL_MAPPINGS = MAPPINGS.filter((mapping) =>
+  ["--font-size-base", "--shadow"].includes(mapping.property),
+);
 
 /** Minimal source tree for pure hand-written-CSS checks across describes. */
 const tokensFixture = {
@@ -92,14 +104,6 @@ const GOOD_BRIDGE = {
   tokenPath: "colors.accent",
   pattern: /<meta\s+name="theme-color"\s+content="(#[0-9a-fA-F]{3,8})"/,
 };
-
-/** Legacy manifest scoped to what a fixture carries, with the pinned divergence. */
-const FIXTURE_LEGACY_MAPPINGS = [
-  { property: "--ink", tokenPath: "colors.ink" },
-  { property: "--accent", tokenPath: "colors.accent" },
-  { property: "--line-strong", tokenPath: "colors.line-strong" },
-];
-const FIXTURE_LEGACY_DIVERGENCES = [{ property: "--line-strong", pinnedValue: "#8a97a0" }];
 
 function makeFixtureTree({ design = FIXTURE_DESIGN, css = GOOD_CSS, themeColor = "#0b5fab" } = {}) {
   const root = mkdtempSync(join(tmpdir(), "design-drift-"));
@@ -116,10 +120,6 @@ const runFixtureCheck = async (root, overrides = {}) =>
     mappings: MAPPINGS,
     bridges: [{ ...GOOD_BRIDGE, file: join(root, "app.html") }],
     exclusions: FIXTURE_EXCLUSIONS,
-    // the fixture app.css carries no legacy token block; the legacy pin is
-    // proven by the pure tests and the real-tree smoke probe
-    legacyMappings: [],
-    legacyDivergences: [],
     readFile: (path) => readFileSync(path, "utf8"),
     ...overrides,
   });
@@ -237,7 +237,7 @@ describe("strict no-backslash rule in hand-written CSS", () => {
   test("an ordinary declaration's quoted decoy value cannot satisfy real drift parity", () => {
     const css =
       ':root { content: " --shadow: 0 1px 3px rgb(27 42 52 / 0.25)"; --shadow: 0 9px 9px rgb(0 0 0 / 0.9); --font-size-base: 1rem; }';
-    expect(checkHandWrittenCss(css, tokensFixture, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokensFixture, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*0 9px 9px/s),
     ]);
   });
@@ -252,14 +252,14 @@ describe("string-aware comment stripping and value validation", () => {
 
   test("a quoted decoy cannot mask a drifted hand-written value", () => {
     const css = `:root { --decoy: "/*"; --shadow: 0 9px 9px rgb(0 0 0 / 0.9); /* --shadow: 0 1px 3px rgb(27 42 52 / 0.25) */ --font-size-base: 1rem; }`;
-    expect(checkHandWrittenCss(css, tokensFixture, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokensFixture, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*0 9px 9px/s),
     ]);
   });
 
   test("a value containing a brace is flagged unsupported instead of satisfying parity", () => {
     const css = `:root { --shadow: 0 {0} 0; --font-size-base: 1rem; }`;
-    const failures = checkHandWrittenCss(css, tokensFixture, MAPPINGS);
+    const failures = checkHandWrittenCss(css, tokensFixture, SMALL_MAPPINGS);
     expect(failures).toHaveLength(2);
     expect(failures[0]).toMatch(/--shadow.*unsupported custom-property value "0"/s);
     expect(failures[1]).toMatch(/--shadow.*not declared there/s);
@@ -284,7 +284,7 @@ describe("string-aware comment stripping and value validation", () => {
 
   test("comment-adjacent hand-written drift is caught without whitespace separation", () => {
     const css = ":root{/*c*/--shadow:0 2px 4px rgb(0 0 0 / 0.4);--font-size-base:1rem}";
-    expect(checkHandWrittenCss(css, tokensFixture, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokensFixture, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*0 2px 4px/s),
     ]);
   });
@@ -293,7 +293,11 @@ describe("string-aware comment stripping and value validation", () => {
 describe("hand-written CSS checks (pure)", () => {
   const tokens = {
     colors: { accent: "#0b5fab" },
-    typography: { body: { fontSize: "1rem" } },
+    typography: {
+      body: { fontFamily: "system-ui", fontSize: "1rem", lineHeight: 1.45 },
+      small: { fontSize: "0.875rem" },
+      heading: { fontSize: "1.25rem" },
+    },
     components: { "elevation-raised": { shadow: "0 1px 3px rgb(27 42 52 / 0.25)" } },
   };
 
@@ -303,19 +307,19 @@ describe("hand-written CSS checks (pure)", () => {
 
   test("a drifted hand-written value names both sides of the mismatch", () => {
     const css = ":root { --font-size-base: 1.125rem; --shadow: 0 1px 3px rgb(27 42 52 / 0.25); }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--font-size-base.*1\.125rem.*1rem/s),
     ]);
   });
 
   test("an equivalent dimension written differently still matches", () => {
     const css = ":root { --font-size-base: 1.0rem; --shadow: 0 1px 3px rgb(27  42 52 / 0.25); }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([]);
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([]);
   });
 
   test("a final declaration without a semicolon is still drift-checked", () => {
     const css = ":root { --font-size-base: 1rem; --shadow: 0 2px 4px rgb(0 0 0 / 0.4) }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*0 2px 4px/s),
     ]);
   });
@@ -331,7 +335,7 @@ describe("hand-written CSS checks (pure)", () => {
   test("a duplicated checked hand-written property fails instead of masking", () => {
     const css =
       ":root { --font-size-base: 3rem; } .later { --font-size-base: 1rem; --shadow: 0 1px 3px rgb(27 42 52 / 0.25); }";
-    const failures = checkHandWrittenCss(css, tokens, MAPPINGS);
+    const failures = checkHandWrittenCss(css, tokens, SMALL_MAPPINGS);
     expect(failures).toHaveLength(2);
     expect(failures[0]).toMatch(/--font-size-base.*declared 2 times.*exactly once/s);
     expect(failures[1]).toMatch(/--font-size-base.*3rem.*1rem/s);
@@ -340,28 +344,28 @@ describe("hand-written CSS checks (pure)", () => {
   test("a commented decoy cannot satisfy a drifted real declaration", () => {
     const css =
       ":root { --shadow: 0 9px 9px rgb(0 0 0 / 0.9); /* --shadow: 0 1px 3px rgb(27 42 52 / 0.25); */ --font-size-base: 1rem; }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*0 9px 9px/s),
     ]);
   });
 
   test("a hand-written property outside the mapping table fails closed", () => {
-    const css = `${GOOD_CSS}\n:root { --font-size-small: 0.875rem; }`;
+    const css = `${GOOD_CSS}\n:root { --line-height-tight: 1.2; }`;
     expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
-      expect.stringMatching(/--font-size-small.*no DESIGN\.md mapping/s),
+      expect.stringMatching(/--line-height-tight.*no DESIGN\.md mapping/s),
     ]);
   });
 
   test("a mapping row whose property is absent from app.css fails closed", () => {
     const css = ":root { --font-size-base: 1rem; }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--shadow.*expects it in app\.css/s),
     ]);
   });
 
   test("an unsupported dimension value fails instead of comparing garbage", () => {
     const css = ":root { --font-size-base: auto; --shadow: 0 1px 3px rgb(27 42 52 / 0.25); }";
-    expect(checkHandWrittenCss(css, tokens, MAPPINGS)).toEqual([
+    expect(checkHandWrittenCss(css, tokens, SMALL_MAPPINGS)).toEqual([
       expect.stringMatching(/--font-size-base.*unsupported dimension value "auto"/s),
     ]);
   });
@@ -369,7 +373,7 @@ describe("hand-written CSS checks (pure)", () => {
   test("multi-dot, unit-less, and trailing-junk dimensions are unsupported, never silently truncated", () => {
     for (const bad of ["1.0.9rem", "1", "1remX"]) {
       const css = `:root { --font-size-base: ${bad}; --shadow: 0 1px 3px rgb(27 42 52 / 0.25); }`;
-      const failures = checkHandWrittenCss(css, tokens, MAPPINGS);
+      const failures = checkHandWrittenCss(css, tokens, SMALL_MAPPINGS);
       expect(failures, `dimension "${bad}"`).toHaveLength(1);
       expect(failures[0], `dimension "${bad}"`).toMatch(/unsupported dimension value/);
     }
@@ -594,55 +598,6 @@ describe("attribute-order-agnostic theme-color matching (pure)", () => {
   });
 });
 
-describe("interim legacy pin (pure)", () => {
-  const tokens = {
-    colors: { ink: "#1b2a34", accent: "#0b5fab", "line-strong": "#84909a" },
-    rounded: { control: "6px" },
-  };
-  const css = ":root { --ink: #1b2a34; --accent: #0b5fab; --line-strong: #8a97a0; --radius: 6px; }";
-  const declared = parseCustomProperties(css);
-
-  test("pinned divergences and equal legacy tokens produce no failures", () => {
-    const mappings = [
-      ...FIXTURE_LEGACY_MAPPINGS,
-      { property: "--radius", tokenPath: "rounded.control" },
-    ];
-    expect(checkLegacyTokens(declared, tokens, mappings, FIXTURE_LEGACY_DIVERGENCES)).toEqual([]);
-  });
-
-  test("mutating a non-divergent legacy color fails against the source value", () => {
-    const drifted = parseCustomProperties(
-      ":root { --ink: #000000; --accent: #0b5fab; --line-strong: #8a97a0; }",
-    );
-    expect(
-      checkLegacyTokens(drifted, tokens, FIXTURE_LEGACY_MAPPINGS, FIXTURE_LEGACY_DIVERGENCES),
-    ).toEqual([expect.stringMatching(/interim legacy parity: --ink.*#000000.*#1b2a34/s)]);
-  });
-
-  test("removing the divergence pin while app.css keeps the old value fails", () => {
-    const failures = checkLegacyTokens(declared, tokens, FIXTURE_LEGACY_MAPPINGS, []);
-    expect(failures).toEqual([
-      expect.stringMatching(/interim legacy parity: --line-strong.*#8a97a0.*#84909a/s),
-    ]);
-  });
-
-  test("a divergence pin whose app.css value moved fails instead of silently pinning", () => {
-    const moved = parseCustomProperties(
-      ":root { --ink: #1b2a34; --accent: #0b5fab; --line-strong: #999999; }",
-    );
-    expect(
-      checkLegacyTokens(moved, tokens, FIXTURE_LEGACY_MAPPINGS, FIXTURE_LEGACY_DIVERGENCES),
-    ).toEqual([expect.stringMatching(/--line-strong.*divergence pin expects "#8a97a0".*#999999/s)]);
-  });
-
-  test("a missing legacy token fails so the swap must update the manifest", () => {
-    const short = parseCustomProperties(":root { --ink: #1b2a34; --accent: #0b5fab; }");
-    expect(
-      checkLegacyTokens(short, tokens, FIXTURE_LEGACY_MAPPINGS, FIXTURE_LEGACY_DIVERGENCES),
-    ).toEqual([expect.stringMatching(/--line-strong.*expected legacy token is missing/s)]);
-  });
-});
-
 describe("drift detection over fixture trees", () => {
   test("the committed real tree passes every check", async () => {
     await expect(runCheck()).resolves.toEqual([]);
@@ -701,7 +656,7 @@ describe("drift detection over fixture trees", () => {
 
   test("hand-written CSS drift fails through the full check", async () => {
     const root = makeFixtureTree({
-      css: ":root { --font-size-base: 1rem; --shadow: 0 2px 4px rgb(0 0 0 / 0.4); }",
+      css: `:root { --font-family-body: system-ui; --font-size-base: 1rem; --line-height-body: 1.45; --font-size-small: 0.875rem; --font-size-heading: 1.25rem; --shadow: 0 2px 4px rgb(0 0 0 / 0.4); }`,
     });
     try {
       const failures = await runFixtureCheck(root);

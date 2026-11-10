@@ -105,37 +105,37 @@
     display: flex;
     gap: 0.4rem;
     overflow-x: auto;
-    padding: 0.5rem 0.75rem;
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--line);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-line);
     white-space: nowrap;
   }
   .summary-chip {
     font: inherit;
     font-size: 0.85rem;
     padding: 0.3rem 0.6rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-pill);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
     flex: none;
   }
   .sheet-root {
     position: fixed;
     inset: 0;
-    background: var(--surface);
+    background: var(--color-surface);
     z-index: 50;
     overflow-y: auto;
   }
   .sheet-root > div {
     display: grid;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
   }
   .sheet-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
   h2 {
     margin: 0;
@@ -145,15 +145,15 @@
   .sheet-actions button {
     font: inherit;
     padding: 0.45rem 0.9rem;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
   .sheet-actions .apply {
-    background: var(--accent);
-    color: var(--ink-on-accent);
-    border-color: var(--accent);
+    background: var(--color-accent);
+    color: var(--color-ink-on-accent);
+    border-color: var(--color-accent);
     font-weight: 600;
   }
 </style>
