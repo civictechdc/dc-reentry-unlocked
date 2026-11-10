@@ -8,6 +8,7 @@ import {
   checkSourceCoverage,
   extractFrontMatter,
   generatedNames,
+  maskTypeScriptStrings,
   normalizeValue,
   parseCustomProperties,
   parseDeclarations,
@@ -524,6 +525,169 @@ describe("bridge decoy hardening (pure)", () => {
   });
 });
 
+describe("map-colors canonical-declaration bridges (pure)", () => {
+  const tokens = {
+    colors: {
+      "pin-exact": "#0b5fab",
+      "pin-highlight": "#d9340f",
+      "pin-ring": "#ffffff",
+      "pin-highlight-ring": "#ffffff",
+      "pin-label-ink": "#1f2937",
+      "pin-label-bg": "#ffffff",
+      "pin-label-border": "#cccccc",
+    },
+  };
+  const readFile = (content) => () => content;
+  const mapBridge = (constant, tokenPath = "colors.pin-exact") => ({
+    id: `map color ${constant}`,
+    file: "map-colors.ts",
+    tokenPath,
+    kind: "typescript-constant",
+    commentSyntax: "typescript",
+    constant,
+  });
+  const declaration = (constant, value) => `export const ${constant} = "${value}";\n`;
+
+  test("a drifted map color constant fails naming both values", () => {
+    const failures = checkBridges(readFile(declaration("PIN_EXACT", "#123456")), tokens, [
+      mapBridge("PIN_EXACT"),
+    ]);
+    expect(failures).toEqual([expect.stringMatching(/map color PIN_EXACT.*#123456.*#0b5fab/s)]);
+  });
+
+  test("a missing map color constant fails closed instead of passing silently", () => {
+    const failures = checkBridges(readFile('export const OTHER = "#0b5fab";\n'), tokens, [
+      mapBridge("PIN_EXACT"),
+    ]);
+    expect(failures).toEqual([
+      expect.stringMatching(/canonical declaration of PIN_EXACT not found/s),
+    ]);
+  });
+
+  test("a duplicated map color constant fails instead of silently taking the first", () => {
+    const content = `${declaration("PIN_EXACT", "#0b5fab")}${declaration("PIN_EXACT", "#123456")}`;
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(/found 2 canonical declarations.*exactly one/s),
+    ]);
+  });
+
+  test("an initializer expression breaks the canonical statement and can never borrow its literal", () => {
+    // `= "<hex>".replace(...)` used to satisfy a prefix pattern with the
+    // literal prefix while the runtime value differed; the statement
+    // grammar's end-of-line anchor rejects it outright.
+    const content = `export const PIN_EXACT = "#0b5fab".replace("#0b5fab", "#123456");\n`;
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(/canonical declaration of PIN_EXACT not found/s),
+    ]);
+  });
+
+  test("a string decoy cannot satisfy the bridge and a typed drifted declaration cannot hide behind it", () => {
+    // The single-quoted decoy used to be the one "active match" while the
+    // type annotation kept the real (drifted) declaration from matching;
+    // masking turns the decoy into a placeholder and the annotation fails
+    // the statement grammar, so nothing matches.
+    const content = [
+      String.raw`const NOTE = 'export const PIN_EXACT = "#0b5fab";';`,
+      String.raw`export const PIN_EXACT: string = "#123456";`,
+    ].join("\n");
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(/canonical declaration of PIN_EXACT not found/s),
+    ]);
+  });
+
+  test("a decoy inside a multi-line template literal is masked and never matches", () => {
+    const content = [
+      "const NOTE = `",
+      `export const PIN_EXACT = "#0b5fab";`,
+      "`;",
+      String.raw`export const PIN_EXACT: string = "#123456";`,
+    ].join("\n");
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(/canonical declaration of PIN_EXACT not found/s),
+    ]);
+  });
+
+  test("an unterminated template literal fails the scan instead of dangling at EOF", () => {
+    const content = `${declaration("PIN_EXACT", "#0b5fab")}const BROKEN = \``;
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(
+        /not statically scannable.*unterminated quoted string or template literal/s,
+      ),
+    ]);
+  });
+
+  test("a quote inside a regex literal is not lexed and fails the scan closed", () => {
+    // Empirical pin: the stripper does not model regex literals, so the
+    // quote inside /['"]/ opens string mode that never closes — the scan
+    // reports the file as not statically scannable rather than guessing.
+    const content = `const RE = /['"]/.test(x);\n${declaration("PIN_EXACT", "#0b5fab")}`;
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(
+        /not statically scannable.*unterminated quoted string or template literal/s,
+      ),
+    ]);
+  });
+
+  test("a line-comment decoy constant cannot satisfy the bridge; the live value is compared", () => {
+    const content = `// ${declaration("PIN_EXACT", "#dead00")}${declaration("PIN_EXACT", "#0b5fab")}`;
+    expect(checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")])).toEqual([]);
+  });
+
+  test("a block-comment decoy constant cannot satisfy the bridge either", () => {
+    const content = `/* ${declaration("PIN_EXACT", "#dead00")} */\n${declaration("PIN_EXACT", "#0b5fab")}`;
+    expect(checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")])).toEqual([]);
+  });
+
+  test("a decoy-only file (zero active declarations) fails", () => {
+    const content = `// ${declaration("PIN_EXACT", "#0b5fab")}`;
+    const failures = checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")]);
+    expect(failures).toEqual([
+      expect.stringMatching(/canonical declaration of PIN_EXACT not found/s),
+    ]);
+  });
+
+  test("string content stays masked and inert: a // inside a string cannot eat the real declaration", () => {
+    const content = [
+      'const SOURCE_NOTE = "see https://example.com/rule for details";',
+      declaration("PIN_EXACT", "#0b5fab"),
+    ].join("\n");
+    expect(checkBridges(readFile(content), tokens, [mapBridge("PIN_EXACT")])).toEqual([]);
+  });
+
+  test("an unterminated block comment fails the scan instead of guessing", () => {
+    const failures = checkBridges(readFile(`/* ${declaration("PIN_EXACT", "#0b5fab")}`), tokens, [
+      mapBridge("PIN_EXACT"),
+    ]);
+    expect(failures).toEqual([
+      expect.stringMatching(/not statically scannable.*unterminated block comment/s),
+    ]);
+  });
+});
+
+describe("string masking binds each placeholder to its exact interior (pure)", () => {
+  test("masked text replaces interiors with index placeholders that resolve to the recorded bytes", () => {
+    const masked = maskTypeScriptStrings(`a "first" b \`second\` c`);
+    expect(masked.text).toBe(`a \u00000\u0000 b \u00001\u0000 c`);
+    expect(masked.interiors).toEqual(["first", "second"]);
+  });
+
+  test("an empty string records an empty interior and an escaped closer stays inside", () => {
+    const masked = maskTypeScriptStrings(String.raw`x "" y "a\"b" z`);
+    expect(masked.text).toBe(`x \u00000\u0000 y \u00001\u0000 z`);
+    expect(masked.interiors).toEqual(["", String.raw`a\"b`]);
+  });
+
+  test("a string left open at EOF throws instead of returning a truncated mask", () => {
+    expect(() => maskTypeScriptStrings(`const x = "never closed`)).toThrow(/unterminated/);
+  });
+});
+
 describe("attribute-order-agnostic theme-color matching (pure)", () => {
   const tokens = { colors: { accent: "#0b5fab" } };
   const readFile = (content) => () => content;
@@ -649,6 +813,29 @@ describe("drift detection over fixture trees", () => {
     try {
       const failures = await runFixtureCheck(root);
       expect(failures[0]).toMatch(/fixture theme-color.*pattern did not match/s);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a drifted map-colors constant fails through the full check", async () => {
+    const root = makeFixtureTree();
+    writeFileSync(join(root, "map-colors.ts"), 'export const PIN_EXACT = "#123456";\n');
+    try {
+      const failures = await runFixtureCheck(root, {
+        bridges: [
+          { ...GOOD_BRIDGE, file: join(root, "app.html") },
+          {
+            id: "map color PIN_EXACT",
+            file: join(root, "map-colors.ts"),
+            tokenPath: "colors.pin-exact",
+            kind: "typescript-constant",
+            commentSyntax: "typescript",
+            constant: "PIN_EXACT",
+          },
+        ],
+      });
+      expect(failures).toEqual([expect.stringMatching(/map color PIN_EXACT.*#123456.*#0b5fab/s)]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

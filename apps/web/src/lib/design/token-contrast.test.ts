@@ -170,6 +170,25 @@ const basePinStroke = paintString(basePinLayerPaint(), "circle-stroke-color");
 const highlightPinFill = paintString(highlightPinLayerPaint(), "circle-color");
 const highlightPinStroke = paintString(highlightPinLayerPaint(), "circle-stroke-color");
 
+/**
+ * The map paints and bitmap channels must equal their resolved design
+ * tokens: the drift checker pins the bridge constants to DESIGN.md and the
+ * map consumes those constants, so these equality proofs close the chain
+ * from token to rendered surface.
+ */
+function mapPaintDerivationFailures(): string[] {
+  const checks: Array<[string, string, string]> = [
+    ["base pin fill", basePinFill, token("pin-exact")],
+    ["base pin stroke", basePinStroke, token("pin-ring")],
+    ["highlight pin fill", highlightPinFill, token("pin-highlight")],
+    ["highlight pin stroke", highlightPinStroke, token("pin-highlight-ring")],
+    ["map label ink", mapLabelInk, token("pin-label-ink")],
+  ];
+  return checks
+    .filter(([, painted, resolved]) => painted !== resolved)
+    .map(([name, painted, resolved]) => `${name}: painted ${painted} but token is ${resolved}`);
+}
+
 interface MatrixPair {
   role: string;
   state: string;
@@ -364,13 +383,14 @@ function matrixPairs(): MatrixPair[] {
       background: token("badge-unverified-bg"),
       threshold: NORMAL_TEXT,
     },
-    // The map address label on its opaque speech-bubble body (rendered pair).
+    // The map address label on its opaque speech-bubble body — the resolved
+    // pair, with the bitmap proven to paint exactly the body token below.
     {
       role: "map label text",
       kind: "text",
       state: "over the opaque bubble body",
-      foreground: mapLabelInk,
-      background: bubbleBodyPixel,
+      foreground: token("pin-label-ink"),
+      background: token("pin-label-bg"),
       threshold: NORMAL_TEXT,
     },
     // Essential non-text boundaries against the colors they actually draw
@@ -454,16 +474,16 @@ function matrixPairs(): MatrixPair[] {
       role: "available pin boundary",
       kind: "non-text",
       state: "white stroke against pin fill",
-      foreground: basePinStroke,
-      background: basePinFill,
+      foreground: token("pin-ring"),
+      background: token("pin-exact"),
       threshold: NON_TEXT,
     },
     {
       role: "highlight pin boundary",
       kind: "non-text",
       state: "white stroke against highlight fill",
-      foreground: highlightPinStroke,
-      background: highlightPinFill,
+      foreground: token("pin-highlight-ring"),
+      background: token("pin-highlight"),
       threshold: NON_TEXT,
     },
   ];
@@ -487,12 +507,23 @@ describe("the WCAG token-pair contract over resolved design tokens", () => {
       "badge-confirmed-bg",
       "badge-unverified-ink",
       "badge-unverified-bg",
+      "pin-exact",
+      "pin-highlight",
+      "pin-ring",
+      "pin-highlight-ring",
+      "pin-label-ink",
+      "pin-label-bg",
+      "pin-label-border",
     ];
     expect(() => required.forEach(token)).not.toThrow();
   });
 
-  test("the label bubble bitmap really paints the white body the label sits on", () => {
-    expect(bubbleBodyPixel).toBe("#ffffff");
+  test("the map layer paints carry exactly the resolved pin tokens the bridges pin", () => {
+    expect(mapPaintDerivationFailures()).toEqual([]);
+  });
+
+  test("the label bubble bitmap really paints the body color the label token names", () => {
+    expect(bubbleBodyPixel).toBe(token("pin-label-bg"));
   });
 
   test("every sampled bitmap position is verified opaque before its color is measured", () => {
@@ -510,11 +541,11 @@ describe("the WCAG token-pair contract over resolved design tokens", () => {
   });
 
   test("the bubble's soft bitmap border stays decorative and is never a claimed boundary", () => {
-    // Documented exclusion: the bubble border (~#cccccc on white) identifies
-    // nothing essential — the opaque white body separates the label from the
-    // map, so the text pair above carries the requirement.
-    expect(bubbleBorderPixel.toLowerCase()).toBe("#cccccc");
-    expect(contrastRatio(bubbleBorderPixel, "#ffffff")).toBeLessThan(NON_TEXT);
+    // Documented exclusion: the bubble border identifies nothing essential —
+    // the opaque body separates the label from the map, so the text pair
+    // above carries the requirement.
+    expect(bubbleBorderPixel.toLowerCase()).toBe(token("pin-label-border"));
+    expect(contrastRatio(bubbleBorderPixel, token("pin-label-bg"))).toBeLessThan(NON_TEXT);
   });
 
   test("every pair in the role/state/adjacency matrix meets its threshold", () => {

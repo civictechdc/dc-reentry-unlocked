@@ -13,6 +13,10 @@
   --color-pin-exact: #0b5fab;
   --color-pin-highlight: #d9340f;
   --color-pin-highlight-ring: #ffffff;
+  --color-pin-ring: #ffffff;
+  --color-pin-label-bg: #ffffff;
+  --color-pin-label-ink: #1f2937;
+  --color-pin-label-border: #cccccc;
   --color-badge-confirmed-bg: #d1e7dd;
   --color-badge-confirmed-ink: #0f5132;
   --color-badge-unverified-bg: #ffe8cc;

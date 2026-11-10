@@ -40,6 +40,14 @@ colors:
   pin-exact: "#0b5fab"
   pin-highlight: "#d9340f"
   pin-highlight-ring: "#ffffff"
+  # Map paint roles consumed outside CSS (MapLibre style JSON and the
+  # typed-array label-bubble bitmap) through checked bridge constants.
+  pin-ring: "#ffffff"
+  pin-label-bg: "#ffffff"
+  # Deliberately distinct from ink: the map address label keeps its own
+  # darker value regardless of any body-ink edit.
+  pin-label-ink: "#1f2937"
+  pin-label-border: "#cccccc"
   badge-confirmed-bg: "#d1e7dd"
   badge-confirmed-ink: "#0f5132"
   badge-unverified-bg: "#ffe8cc"
@@ -117,6 +125,9 @@ components:
     backgroundColor: "{colors.pin-highlight}"
   map-pin-ring:
     backgroundColor: "{colors.pin-highlight-ring}"
+  map-pin-label:
+    backgroundColor: "{colors.pin-label-bg}"
+    textColor: "{colors.pin-label-ink}"
   elevation-raised:
     shadow: "0 1px 3px rgb(27 42 52 / 0.25)"
 ---
@@ -200,29 +211,35 @@ Tokens layer in three strata:
 
 ### Status and map paints (deliberately unaliased)
 
-| Token                  | Value     | Meaning                                    |
-| ---------------------- | --------- | ------------------------------------------ |
-| `pin-exact`            | `#0b5fab` | Available unit's map pin (availability)    |
-| `pin-highlight`        | `#d9340f` | Selected/hovered pin (selection)           |
-| `pin-highlight-ring`   | `#ffffff` | Stroke that separates highlight from tiles |
-| `badge-confirmed-bg`   | `#d1e7dd` | Confirmed verification badge background    |
-| `badge-confirmed-ink`  | `#0f5132` | Confirmed badge text                       |
-| `badge-unverified-bg`  | `#ffe8cc` | Needs-verification badge background        |
-| `badge-unverified-ink` | `#7c3a00` | Needs-verification badge text              |
+| Token                  | Value     | Meaning                                       |
+| ---------------------- | --------- | --------------------------------------------- |
+| `pin-exact`            | `#0b5fab` | Available unit's map pin (availability)       |
+| `pin-highlight`        | `#d9340f` | Selected/hovered pin (selection)              |
+| `pin-highlight-ring`   | `#ffffff` | Stroke that separates highlight from tiles    |
+| `pin-ring`             | `#ffffff` | Stroke that separates the base pin from tiles |
+| `pin-label-bg`         | `#ffffff` | Label bubble body the address text sits on    |
+| `pin-label-ink`        | `#1f2937` | Map address-label text on the bubble          |
+| `pin-label-border`     | `#cccccc` | Label bubble's soft bitmap border             |
+| `badge-confirmed-bg`   | `#d1e7dd` | Confirmed verification badge background       |
+| `badge-confirmed-ink`  | `#0f5132` | Confirmed badge text                          |
+| `badge-unverified-bg`  | `#ffe8cc` | Needs-verification badge background           |
+| `badge-unverified-ink` | `#7c3a00` | Needs-verification badge text                 |
 
 These stay literal even where a value equals a brand token (`pin-exact` is
-`#0b5fab`, the same hex as `accent`, with no reference between them): pins
+`#0b5fab`, the same hex as `accent`; `pin-ring` and `pin-label-bg` are
+`#ffffff`, the same hex as `white` — with no reference between them): pins
 mean availability, highlight means selection, badges mean verification
 status — none may inherit palette edits meant for actions. Supporting brand
 hues must never pose as status indicators.
 
 Map paint colors and the label-bubble bitmap channels are consumed outside
 CSS (MapLibre style JSON and a typed-array bitmap), so they are checked
-against these tokens through explicit bridge constants rather than custom
-properties; that bridge module is planned work in the runtime swap. The map
-address-label ink (`#1f2937`) keeps its distinct value and will be named as
-a color token when the bridge lands. The document `theme-color` in
-`app.html` is checked against `accent`.
+against these tokens through the explicit bridge constants in
+`src/lib/map/map-colors.ts` rather than custom properties; the drift
+checker fails when any constant drifts from its token here. The map
+address-label ink (`#1f2937`) keeps its distinct value as `pin-label-ink`
+(exported `--color-pin-label-ink`) rather than collapsing into `ink`. The
+document `theme-color` in `app.html` is checked against `accent`.
 
 ## Typography
 
@@ -333,13 +350,15 @@ suite against the resolved values.
 | `map-pin-available`    | `pin-exact`           | —                      | Availability paint            |
 | `map-pin-highlighted`  | `pin-highlight`       | —                      | Selection paint               |
 | `map-pin-ring`         | `pin-highlight-ring`  | —                      | Highlight stroke paint        |
+| `map-pin-label`        | `pin-label-bg`        | `pin-label-ink`        | Address label on its bubble   |
 | `elevation-raised`     | —                     | —                      | `shadow` value, see Elevation |
 
 Essential non-text boundaries (control outlines in `line-strong`, the
 selection outline in `accent`, focus rings in `accent-focus-ring`, pin
-strokes in `pin-highlight-ring`) are asserted at the 3:1 non-text
-threshold against the surfaces they actually draw across; decorative
-`line` hairlines and raster-tile adjacency are explicitly not asserted.
+strokes in `pin-highlight-ring` and `pin-ring`) are asserted at the 3:1
+non-text threshold against the surfaces they actually draw across;
+decorative `line` hairlines and raster-tile adjacency are explicitly not
+asserted.
 
 ## Do's and Don'ts
 

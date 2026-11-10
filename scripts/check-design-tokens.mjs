@@ -12,9 +12,12 @@ import process from "node:process";
  *    against the DESIGN.md source tree (the exporter deliberately omits
  *    these families), plus a source-side coverage inventory so an unmapped
  *    source leaf cannot silently lose its enforcement;
- * 2. non-CSS color bridges (document theme-color today; map paint and
- *    bitmap-channel constants join when the map bridge module lands)
- *    against resolved DESIGN.md colors;
+ * 2. non-CSS color bridges against resolved DESIGN.md colors: the
+ *    `app.html` document theme-color meta, and every map paint / bitmap
+ *    color constant in `apps/web/src/lib/map/map-colors.ts` (the bridge
+ *    module the map style JSON and the typed-array bubble bitmap consume),
+ *    matched as canonical declaration statements after comment stripping
+ *    and string/template masking;
  * 3. safety rails: references must resolve without cycles, the YAML must
  *    parse as data, and hand-written CSS must never declare a property
  *    under a generated (`--color-*`, `--spacing-*`, `--rounded-*`) name.
@@ -93,6 +96,7 @@ export const SOURCE_EXCLUSIONS = [
     "map-pin-available",
     "map-pin-highlighted",
     "map-pin-ring",
+    "map-pin-label",
   ].map((entry) => ({
     prefix: `components.${entry}.`,
     reason:
@@ -104,10 +108,31 @@ export const SOURCE_EXCLUSIONS = [
  * Bridges: hand-written occurrences of design colors outside CSS. The
  * document theme-color bridge matches the meta element as a whole tag
  * (attribute order and quote style agnostic) after HTML comments are
- * stripped, and must find exactly one active, single-content meta. Map
- * paint and bitmap channel entries join as pattern bridges when the map
- * bridge constants module lands.
+ * stripped, and must find exactly one active, single-content meta. The
+ * map-colors bridges match each named constant's CANONICAL DECLARATION
+ * STATEMENT in the map bridge module: after TypeScript comments are
+ * stripped and string/template interiors are masked, exactly one line may
+ * have the shape `export const NAME = "<string>";` — no type annotation,
+ * no expression parts, no trailing tokens — and the recorded string
+ * interior of that line is the literal compared against the resolved
+ * DESIGN.md color. Commented-out decoys are stripped away, decoys inside
+ * string content are masked into placeholders and can never read as code,
+ * and any deviation from the canonical shape yields zero matches, which
+ * fails closed: the module's declarations must stay canonical.
  */
+const MAP_COLORS_FILE = join(WEB_ROOT, "src", "lib", "map", "map-colors.ts");
+
+/** One map-colors bridge row per named constant, pairing it with its token. */
+const MAP_COLOR_CONSTANTS = [
+  { constant: "PIN_EXACT", tokenPath: "colors.pin-exact" },
+  { constant: "PIN_HIGHLIGHT", tokenPath: "colors.pin-highlight" },
+  { constant: "PIN_RING", tokenPath: "colors.pin-ring" },
+  { constant: "PIN_HIGHLIGHT_RING", tokenPath: "colors.pin-highlight-ring" },
+  { constant: "PIN_LABEL_INK", tokenPath: "colors.pin-label-ink" },
+  { constant: "PIN_LABEL_BG", tokenPath: "colors.pin-label-bg" },
+  { constant: "PIN_LABEL_BORDER", tokenPath: "colors.pin-label-border" },
+];
+
 const BRIDGES = [
   {
     id: "document theme-color",
@@ -115,7 +140,167 @@ const BRIDGES = [
     tokenPath: "colors.accent",
     kind: "html-meta-theme-color",
   },
+  ...MAP_COLOR_CONSTANTS.map(({ constant, tokenPath }) => ({
+    id: `map color ${constant}`,
+    file: MAP_COLORS_FILE,
+    tokenPath,
+    kind: "typescript-constant",
+    commentSyntax: "typescript",
+    constant,
+  })),
 ];
+
+/**
+ * Strips `//` line comments and `/*` block comments from TypeScript source
+ * while tracking quoted strings: quoted content must survive verbatim, and
+ * a comment marker inside a string (an URL's `//`) must never start a
+ * comment. Escaped closers stay inside their string. Throws on an
+ * unterminated block comment AND on an unterminated string/template
+ * literal at EOF — leaving the scan in a dangling-string state would let a
+ * later pass misread where strings end, and both outcomes must fail closed
+ * instead. This is NOT a TypeScript lexer: regex literals are not parsed,
+ * so a quote character inside a regex literal opens string mode and can
+ * only end in that unterminated-string throw or (after the string-masking
+ * pass below) a canonical-declaration mismatch; a quote-free regex is
+ * inert ordinary characters. Both failure modes are the intended behavior
+ * for the bridge module this serves (canonical constant declarations plus
+ * a quote-free helper regex).
+ */
+export function stripTypeScriptComments(source) {
+  let out = "";
+  let inString = null;
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    if (inString !== null) {
+      if (ch === "\\") {
+        out += source.slice(i, i + 2);
+        i += 2;
+        continue;
+      }
+      if (ch === inString) inString = null;
+      out += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      inString = ch;
+      out += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === "/" && source[i + 1] === "/") {
+      while (i < source.length && source[i] !== "\n") i += 1;
+      continue;
+    }
+    if (ch === "/" && source[i + 1] === "*") {
+      const end = source.indexOf("*/", i + 2);
+      if (end === -1) throw new Error("unterminated block comment");
+      i = end + 2;
+      out += " ";
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  if (inString !== null) throw new Error("unterminated quoted string or template literal");
+  return out;
+}
+
+const MASK = "\u0000";
+
+/**
+ * Masks string and template-literal INTERIORS of comment-stripped
+ * TypeScript source: every interior is replaced by a `\u0000{index}\u0000`
+ * placeholder and recorded, so code-position grammar matching can bind a
+ * match to the exact source bytes it stands for while string content can
+ * never read as code — a decoy declaration inside a single-quoted string
+ * or a (possibly multi-line) template literal is unmatchable. Escaped
+ * closers stay inside their string; empty strings record an empty
+ * interior. Throws on an unterminated string/template at EOF. Like the
+ * comment stripper, this is not a TypeScript lexer: template interpolation
+ * and regex literals are not modeled, so a quote inside either shifts
+ * string state and can only end in this throw or a canonical-declaration
+ * grammar mismatch — both fail closed.
+ */
+export function maskTypeScriptStrings(source) {
+  const interiors = [];
+  let out = "";
+  let inString = null;
+  let interior = "";
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    if (inString !== null) {
+      if (ch === "\\") {
+        interior += source.slice(i, i + 2);
+        i += 2;
+        continue;
+      }
+      if (ch === inString) {
+        interiors.push(interior);
+        out += `${MASK}${interiors.length - 1}${MASK}`;
+        inString = null;
+        interior = "";
+        i += 1;
+        continue;
+      }
+      interior += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      inString = ch;
+      interior = "";
+      i += 1;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  if (inString !== null) throw new Error("unterminated quoted string or template literal");
+  return { text: out, interiors };
+}
+
+/**
+ * The canonical-declaration grammar a TypeScript constant bridge accepts:
+ * exactly one line of the masked source of the shape
+ * `export const NAME = «placeholder»;` — no type annotation, no
+ * expression parts, no trailing tokens. Deviations yield zero matches and
+ * are reported, which is the correct failure: the module's declarations
+ * must stay canonical. The matched line's recorded string interior IS the
+ * checked literal, so the value compared against DESIGN.md is the exact
+ * source bytes the constant initializes from — an initializer expression
+ * (a chained method call such as replace, or concatenation) cannot
+ * satisfy the end-of-line anchor, and a string decoy elsewhere cannot
+ * impersonate the statement because interiors are masked.
+ */
+export function extractMaskedConstantLiteral(masked, constantName) {
+  const statement = new RegExp(
+    `^[ \t]*export const ${constantName} = ${MASK}(\\d+)${MASK};[ \t]*$`,
+  );
+  const hits = [];
+  for (const line of masked.text.split("\n")) {
+    const match = statement.exec(line);
+    if (!match) continue;
+    const interior = masked.interiors[Number(match[1])];
+    if (interior === undefined) {
+      return { error: `placeholder ${match[1]} has no recorded string interior` };
+    }
+    hits.push(interior);
+  }
+  if (hits.length === 0) {
+    return {
+      error: `expected canonical declaration of ${constantName} not found — the statement must be exactly 'export const ${constantName} = "<hex>";' with no annotation, expression, or trailing tokens`,
+    };
+  }
+  if (hits.length > 1) {
+    return {
+      error: `found ${hits.length} canonical declarations of ${constantName} — exactly one is expected`,
+    };
+  }
+  return { value: hits[0] };
+}
 
 /**
  * Tokenizes a `<meta ...>` tag's attributes: whitespace-separated name
@@ -615,10 +800,12 @@ export function checkHandWrittenCss(cssText, tokens, mappings = HAND_WRITTEN_MAP
 
 /**
  * Bridge check: every bridge's hand-written literal must equal its
- * resolved DESIGN.md color. HTML comments are stripped before matching (a
- * commented-out decoy must not satisfy the check), the pattern must match
- * EXACTLY once (zero or several active metas both fail), and read failures
- * fail closed.
+ * resolved DESIGN.md color. Comments are stripped per the bridge's
+ * language and string/template interiors are masked for TypeScript
+ * bridges (a commented-out or string-content decoy must not satisfy the
+ * check); a TypeScript constant bridge must find EXACTLY ONE canonical
+ * declaration statement, a pattern bridge EXACTLY ONE active match (zero
+ * or several both fail), and read/strip/mask failures fail closed.
  */
 export function checkBridges(readFile, tokens, bridges = BRIDGES) {
   const failures = [];
@@ -630,7 +817,22 @@ export function checkBridges(readFile, tokens, bridges = BRIDGES) {
       failures.push(`${bridge.id}: cannot read ${bridge.file} — ${error.message}`);
       continue;
     }
-    const active = content.replace(/<!--[\s\S]*?-->/g, "");
+    let active;
+    let masked = null;
+    if (bridge.commentSyntax === "typescript") {
+      try {
+        masked = maskTypeScriptStrings(stripTypeScriptComments(content));
+      } catch (error) {
+        failures.push(
+          `${bridge.id}: ${bridge.file} is not statically scannable — ${error.message}`,
+        );
+        continue;
+      }
+    } else {
+      // HTML comment stripping, as the document theme-color bridge (and any
+      // pattern bridge over an HTML-ish file) has always used.
+      active = content.replace(/<!--[\s\S]*?-->/g, "");
+    }
     let literal;
     if (bridge.kind === "html-meta-theme-color") {
       const { failures: metaFailures, themeColorValue } = extractThemeColorTags(active);
@@ -639,6 +841,13 @@ export function checkBridges(readFile, tokens, bridges = BRIDGES) {
       }
       if (themeColorValue === null) continue; // the failures above already fail the check
       literal = themeColorValue;
+    } else if (bridge.commentSyntax === "typescript") {
+      const extracted = extractMaskedConstantLiteral(masked, bridge.constant);
+      if (extracted.error) {
+        failures.push(`${bridge.id}: ${extracted.error} (${bridge.file})`);
+        continue;
+      }
+      literal = extracted.value;
     } else {
       const globalPattern = new RegExp(
         bridge.pattern.source,

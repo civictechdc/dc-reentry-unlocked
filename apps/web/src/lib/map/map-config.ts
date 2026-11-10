@@ -1,5 +1,15 @@
 import type { Map as MapLibreMap, StyleSpecification } from "maplibre-gl";
 import type { UnitCard } from "@dc-reentry/shared";
+import {
+  PIN_EXACT,
+  PIN_HIGHLIGHT,
+  PIN_HIGHLIGHT_RING,
+  PIN_LABEL_BG,
+  PIN_LABEL_BORDER,
+  PIN_LABEL_INK,
+  PIN_RING,
+  rgbChannels,
+} from "./map-colors.ts";
 
 /**
  * Map configuration shared by the MapLibre wrapper and the mocked component
@@ -160,9 +170,9 @@ export function unitsToFeatureCollection(
 /** The MapLibre paint properties for the base pin circle layer. */
 export function basePinLayerPaint(): Record<string, unknown> {
   return {
-    "circle-color": "#0b5fab",
+    "circle-color": PIN_EXACT,
     "circle-radius": 6,
-    "circle-stroke-color": "#ffffff",
+    "circle-stroke-color": PIN_RING,
     "circle-stroke-width": 1.5,
   };
 }
@@ -180,9 +190,9 @@ export const PIN_HOVER_INTENT_DELAY_MS = 30;
 /** Highlight layer paint (selected/hovered unit's pin). */
 export function highlightPinLayerPaint(): Record<string, unknown> {
   return {
-    "circle-color": "#d9340f",
+    "circle-color": PIN_HIGHLIGHT,
     "circle-radius": 9,
-    "circle-stroke-color": "#ffffff",
+    "circle-stroke-color": PIN_HIGHLIGHT_RING,
     "circle-stroke-width": 2,
   };
 }
@@ -246,9 +256,11 @@ function bubbleGeometry(opts: PinLabelBubbleOptions = {}): {
 /**
  * The label speech bubble bitmap, procedurally drawn at 2x resolution
  * (pixelRatio 2, crisp on retina) as pure typed-array math — no canvas, no
- * DOM, so it also runs in jsdom. White body, subtle gray border on the
- * straight edges AND the rounded-corner arcs, and a small tail pointing
- * DOWN toward the pin. Register it together with
+ * DOM, so it also runs in jsdom. The body paints the label-bubble
+ * background color and the border the label-bubble border color (both from
+ * the named map colors, derived per channel), on the straight edges AND
+ * the rounded-corner arcs, with a small tail pointing DOWN toward the pin.
+ * Register it together with
  * {@link pinLabelBubbleImageMetadata}. Data must be Uint8Array:
  * texImage2D rejects Uint8ClampedArray in some browsers.
  */
@@ -292,6 +304,8 @@ export function pinLabelBubbleImage(opts: PinLabelBubbleOptions = {}): {
   // is no border line across the body/tail junction because those pixels
   // have only inside neighbors nearby.
   const data = new Uint8Array(width * height * 4);
+  const [bodyR, bodyG, bodyB] = rgbChannels(PIN_LABEL_BG);
+  const [borderR, borderG, borderB] = rgbChannels(PIN_LABEL_BORDER);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
@@ -310,14 +324,14 @@ export function pinLabelBubbleImage(opts: PinLabelBubbleOptions = {}): {
       }
       data[i + 3] = 255;
       if (onBorder) {
-        // Subtle gray border.
-        data[i] = 204;
-        data[i + 1] = 204;
-        data[i + 2] = 204;
+        // The bubble's subtle gray border channels.
+        data[i] = borderR;
+        data[i + 1] = borderG;
+        data[i + 2] = borderB;
       } else {
-        data[i] = 255;
-        data[i + 1] = 255;
-        data[i + 2] = 255;
+        data[i] = bodyR;
+        data[i + 1] = bodyG;
+        data[i + 2] = bodyB;
       }
     }
   }
@@ -427,7 +441,7 @@ export function pinLabelLayerDefinition(
       "text-allow-overlap": true,
     },
     paint: {
-      "text-color": "#1f2937",
+      "text-color": PIN_LABEL_INK,
     },
     filter: initialFilter,
   };
