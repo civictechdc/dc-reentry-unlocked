@@ -35,10 +35,10 @@ The API SHALL accept filter selections against the units listing and return only
 
 #### Scenario: Boolean filter with unknown source value
 - **WHEN** a user filters "referral required = no" and a program's referral policy is unknown at the source
-- **THEN** that program's available units are included in results, and their detail view still shows "not publicly listed"
+- **THEN** that program's available units are included in results, and their detail view still shows "Unknown"
 
 #### Scenario: Enum filter with unknown source value
-- **WHEN** a user filters "population = families" and a program's population served is "not publicly listed"
+- **WHEN** a user filters "population = families" and a program's population served is unknown at the source
 - **THEN** the program's available units are included in results, marked "policy not listed" on population, so the case manager knows to confirm with the provider
 
 ### Requirement: Stable, evolvable contract
