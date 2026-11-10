@@ -16,7 +16,9 @@ Two problems it addresses:
 1. **Tokens without a language.** `apps/web/src/app.css` carries a "civic
    clean light theme" as an ad-hoc CSS custom-property block — values exist,
    but there is no structure, no rationale for why each value exists, no
-   machine-readable form agents can consume, and no contrast guarantee.
+   machine-readable form agents can consume, and no contrast guarantee
+   owned by the token system itself (today's checks are comment discipline
+   plus a rendered-page axe-core scan).
 2. **Palette without a scheme.** The current palette grew item by item
    (ink/paper neutrals, map/status colors, badge colors). W17 asks whether a
    tetradic scheme (two complementary pairs) can organize it — without
