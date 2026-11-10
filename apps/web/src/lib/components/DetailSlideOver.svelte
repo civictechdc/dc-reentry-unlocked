@@ -15,7 +15,7 @@
   /**
    * Unit detail slide-over: opened by selecting a card or map pin while the
    * map stays visible; closing returns to the list in its prior state.
-   * Unknown policy fields render the honest "not publicly listed" — never
+   * Unknown policy fields render the honest "Unknown" — never
    * a fabricated value.
    */
   const unit = $derived(store.units?.find((card) => card.id === uiState.selectedUnitId) ?? null);

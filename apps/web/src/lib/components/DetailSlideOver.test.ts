@@ -118,7 +118,7 @@ describe("zero-bedroom presentation vocabulary", () => {
 });
 
 describe("unit detail slide-over", () => {
-  test("renders unknown policy fields as the honest 'not publicly listed'", async () => {
+  test("renders unknown policy fields as the honest 'Unknown'", async () => {
     const card = aUnit()
       .withId("unit-1")
       .withUnknownReferralPolicy()
@@ -177,7 +177,7 @@ describe("unit detail slide-over", () => {
     expect(link).toHaveTextContent("(202) 555-0100");
   });
 
-  test("renders the unlisted provider phone as plain 'not publicly listed' without a tel link", () => {
+  test("renders the unlisted provider phone as plain 'Unknown' without a tel link", () => {
     const card = withContactStripped(aUnit().withId("unit-2").build());
     store.units = [card];
     uiState.selectedUnitId = "unit-2";
@@ -201,7 +201,7 @@ describe("unit detail slide-over", () => {
     expect(closeButton).not.toHaveTextContent(m.detail_close());
   });
 
-  test("missing contact details render 'not publicly listed', never fabricated data", () => {
+  test("missing contact details render 'Unknown', never fabricated data", () => {
     const card = withContactStripped(aUnit().withId("unit-2").build());
     store.units = [card];
     uiState.selectedUnitId = "unit-2";

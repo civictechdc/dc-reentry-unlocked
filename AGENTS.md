@@ -104,12 +104,12 @@ The task verification for your block's task must pass before you report done.
 
 ## Unknown honesty
 
-Unknown is a representable state meaning "not publicly listed" — never a
-fabricated yes/no. When touching inventory/filter code: boolean filters match
-unknown against "no" selections; enum filters match unknown against every
-value selection while carrying a "policy not listed" marker; detail views
-always render the honest unknown ("not publicly listed"). If a source value
-would need inventing, surface unknown.
+Unknown is a representable state meaning the source has not stated the
+value — never a fabricated yes/no. When touching inventory/filter code:
+boolean filters match unknown against "no" selections; enum filters match
+unknown against every value selection while carrying a "policy not listed"
+marker; detail views always render the honest unknown ("Unknown"). If a
+source value would need inventing, surface unknown.
 
 ## Agent hooks — nudges, not gates
 

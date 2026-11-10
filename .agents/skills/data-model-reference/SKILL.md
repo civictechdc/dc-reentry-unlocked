@@ -40,10 +40,10 @@ Two distinct concepts:
 
 ## Unknown state (never fabricate)
 
-Every policy/eligibility field supports an **unknown** state meaning "not
-publicly listed" — distinct from yes and no:
+Every policy/eligibility field supports an **unknown** state meaning the
+source has not stated the value — distinct from yes and no:
 
-- Detail views render it honestly as "not publicly listed", never a
+- Detail views render it honestly as "Unknown", never a
   fabricated yes/no (the unknown-vs-"policy not listed"-marker distinction:
   the marker travels on filtered enum results; the detail view always shows
   the honest unknown).

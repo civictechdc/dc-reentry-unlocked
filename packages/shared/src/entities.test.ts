@@ -92,7 +92,7 @@ test("all eight real DC wards are valid filter territory", () => {
   expect(Value.Check(WardSchema, 9)).toBe(false);
 });
 
-test("eligibility fields that are not publicly listed stay unknown through a JSON round-trip", () => {
+test("eligibility fields unknown to the source stay unknown through a JSON round-trip", () => {
   const unlisted = aProgram()
     .withUnknownHousingType()
     .withUnknownLengthOfStay()

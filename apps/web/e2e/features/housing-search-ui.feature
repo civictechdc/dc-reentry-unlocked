@@ -13,7 +13,7 @@ Feature: Housing search UI golden paths
 
   Scenario: Honest unknowns in detail
     When a policy field is unknown at the source
-    Then the detail panel displays "not publicly listed" for that field
+    Then the detail panel displays "Unknown" for that field
 
   Scenario: Citizen on a phone
     When the app is used at phone width

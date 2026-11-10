@@ -6,7 +6,7 @@ import { aProvider, aProgram, aUnit } from "@dc-reentry/shared/testing";
 // domain language — and that the built cards conform to the shared contract
 // the API is responsible for serving.
 
-test("api tests arrange a ward-5 unit with an unlisted sobriety policy via the shared builder", () => {
+test("api tests arrange a ward-5 unit with an unknown sobriety policy via the shared builder", () => {
   const card = aUnit().inWard(5).withUnknownSobrietyPolicy().build();
 
   expect(card.ward).toBe(5);
@@ -14,7 +14,7 @@ test("api tests arrange a ward-5 unit with an unlisted sobriety policy via the s
   expect(Value.Check(UnitCardSchema, card)).toBe(true);
 });
 
-test("a unit whose population is not publicly listed still conforms to the card contract", () => {
+test("a unit whose population is unknown still conforms to the card contract", () => {
   const card = aUnit().withUnknownPopulation().build();
 
   expect(card.program.population).toBe("unknown");

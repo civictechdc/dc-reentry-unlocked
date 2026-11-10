@@ -1,16 +1,14 @@
 <script lang="ts">
-  import type { FilterDefinition, UnitCard } from "@dc-reentry/shared";
+  import type { UnitCard } from "@dc-reentry/shared";
   import { m } from "#lib/paraglide/messages.js";
-  import { cardBedroomsValue } from "./detail-values.ts";
+  import { cardBedroomsValue, detailValueLabel } from "./detail-values.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
 
   let {
     card,
-    definition,
     selected = false,
   }: {
     card: UnitCard;
-    definition?: FilterDefinition;
     selected?: boolean;
   } = $props();
 
@@ -19,12 +17,7 @@
     uiState.hoveredCardUnitId === card.id || uiState.hoveredPinUnitId === card.id,
   );
   const isOpen = $derived(uiState.selectedUnitId === card.id);
-  const housingTypeLabel = $derived(
-    definition
-      ? (definition.options?.find((option) => option.value === card.program.housingType)?.label ??
-          m.detail_value_unknown())
-      : m.detail_value_unknown(),
-  );
+  const housingTypeLabel = $derived(detailValueLabel(card.program.housingType));
   const badgeLabel = $derived(
     card.verificationBadge === "confirmed"
       ? m.card_badge_confirmed()

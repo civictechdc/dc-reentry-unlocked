@@ -6,7 +6,7 @@ import { openApp, expectResultsLoaded } from "./app.steps.ts";
  * Golden-path steps for the unit-detail scenarios: a pin (or card) opens
  * the slide-over detail for that unit while the map stays visible, the
  * panel carries every spec/policy/contact block, and unknown policy fields
- * stay honestly listed as "not publicly listed".
+ * stay honestly listed as "Unknown".
  */
 
 let openedAddress: string | null = null;
@@ -96,11 +96,6 @@ When("a policy field is unknown at the source", async ({ page }: { page: Page })
   await expect(page.getByTestId("unit-detail")).toBeVisible({ timeout: 20_000 });
 });
 
-Then(
-  'the detail panel displays "not publicly listed" for that field',
-  async ({ page }: { page: Page }) => {
-    await expect(
-      page.getByTestId("unit-detail").getByText("Not publicly listed").first(),
-    ).toBeVisible();
-  },
-);
+Then('the detail panel displays "Unknown" for that field', async ({ page }: { page: Page }) => {
+  await expect(page.getByTestId("unit-detail").getByText("Unknown").first()).toBeVisible();
+});

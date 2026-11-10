@@ -144,7 +144,7 @@ const unknownUnits: ReadonlyArray<[string, string]> = [
 
 const unknownIdsFor = new Map(unknownUnits);
 
-test("a not-publicly-listed policy always matches every no and enum selection, never a yes", async () => {
+test("an unknown-at-source policy always matches every no and enum selection, never a yes", async () => {
   const app = await appPromise;
 
   for (const { definition, values } of pairsByFilter) {
@@ -171,7 +171,7 @@ test("a not-publicly-listed policy always matches every no and enum selection, n
           );
         }
       } else {
-        expect(ids, `${definition.id}=${value} includes the not-publicly-listed card`).toContain(
+        expect(ids, `${definition.id}=${value} includes the unknown-policy card`).toContain(
           unknownCardId,
         );
       }

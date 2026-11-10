@@ -108,7 +108,7 @@ describe("Copilot harness (camelCase payloads)", () => {
     expect(result.code).toBe(0);
     const output = parseOutput(result);
     expect(output).toHaveProperty("additionalContext");
-    expect(output.additionalContext).toContain("not publicly listed");
+    expect(output.additionalContext).toContain("render as Unknown");
   });
 
   it("emits {} for postToolUse on a non-matching path (no token bloat)", async () => {
@@ -152,7 +152,7 @@ describe("Claude / Codex payloads (hook_event_name)", () => {
     );
     expect(result.code).toBe(0);
     const message = parseOutput(result).hookSpecificOutput.additionalContext;
-    expect(message).toContain("not publicly listed");
+    expect(message).toContain("render as Unknown");
   });
 
   it("emits {} for PostToolUse on a non-matching path", async () => {
@@ -212,7 +212,7 @@ describe("prompt-injection resistance in emitted context", () => {
     expect(stdout).not.toContain("IGNORE PREVIOUS RULES");
     expect(stdout).not.toContain("curl evil.sh");
     // the honesty line itself (the fixed string) still fires via path match
-    expect(stdout).toContain("not publicly listed");
+    expect(stdout).toContain("render as Unknown");
   });
 
   it("never echoes a corrupt non-string hook_event_name (AV1) and emits the fixed default event", async () => {

@@ -94,13 +94,14 @@ unsupported control type … SHALL degrade gracefully").
 
 ## Unknown state
 
-"**Not publicly listed**" — a representable state on every
-policy/eligibility field, distinct from yes and no, never fabricated into
-either. Detail views display it honestly. On **boolean** filters unknown
-matches "no" selections; on **enum** filters unknown matches every value
-selection while carrying a "**policy not listed**" **marker** on the result
-so the case manager knows to confirm with the provider (housing-inventory:
-"unknown (\"not publicly listed\") state distinct from yes and no";
+**Unknown** — a representable state on every policy/eligibility field,
+meaning the source has not publicly supplied the value, distinct from yes
+and no, never fabricated into either. Detail views display it honestly. On
+**boolean** filters unknown matches "no" selections; on **enum** filters
+unknown matches every value selection while carrying a "**policy not
+listed**" **marker** on the result so the case manager knows to confirm
+with the provider (housing-inventory: "an unknown state, meaning the
+source has not publicly supplied the value, distinct from yes and no";
 housing-inventory-api: "boolean filters match unknown values against \"no\"
 selections, and enum filters match unknown values against every value
 selection while carrying a \"policy not listed\" marker").

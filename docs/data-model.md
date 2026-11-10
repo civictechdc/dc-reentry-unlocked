@@ -24,29 +24,29 @@ Housing provider: the contact-bearing organization at the top of the Provider �
 | --- | --- | --- | --- | --- |
 | `id` | string | required |  | Stable provider identifier. |
 | `organization` | string | required |  | Organization name shown as the contact. |
-| `phone` | string | optional |  | Contact phone, when publicly listed. |
-| `email` | string | optional |  | Contact email, when publicly listed. |
-| `website` | string | optional | pattern `^https?://` | Contact website URL (http/https), when publicly listed. |
+| `phone` | string | optional |  | Contact phone, when the source states it. |
+| `email` | string | optional |  | Contact email, when the source states it. |
+| `website` | string | optional | pattern `^https?://` | Contact website URL (http/https), when the source states it. |
 
 ## Program
 
-Housing program: the policy-bearing layer between provider and unit. Every eligibility/policy field carries the unknown state ("not publicly listed") — tri-state for the policy fields, taxonomy + "unknown" for the enumerated eligibility fields. Unknown is never fabricated as yes/no.
+Housing program: the policy-bearing layer between provider and unit. Every eligibility/policy field carries the unknown state ("Unknown") — tri-state for the policy fields, taxonomy + "unknown" for the enumerated eligibility fields. Unknown is never fabricated as yes/no.
 
 | Field | Type | Required | Constraints | Description |
 | --- | --- | --- | --- | --- |
 | `id` | string | required |  | Stable program identifier. |
 | `name` | string | required |  | Program name shown in the detail contact block. |
-| `applicationProcess` | string | optional |  | How the application process works, when publicly listed. |
-| `housingType` | enum | required | `emergency-shelter` (Emergency shelter.) · `transitional` (Transitional housing.) · `permanent-supportive-housing` (Permanent supportive housing.) · `subsidized-rental` (Subsidized rental.) · `market-rate` (Market-rate housing.) · `unknown` (Not publicly listed — the honest unknown, never a fabricated value.) | Housing type: a taxonomy value, or "unknown" ("not publicly listed"). |
-| `lengthOfStay` | enum | required | `emergency-nightly` (Emergency shelter, priced nightly.) · `short-term-up-to-90-days` (Short-term stay, up to 90 days.) · `transitional-up-to-24-months` (Transitional stay, up to 24 months.) · `permanent-open-ended` (Permanent housing, open-ended.) · `unknown` (Not publicly listed — the honest unknown, never a fabricated value.) | Length of stay: a taxonomy value, or "unknown" ("not publicly listed"). |
-| `population` | enum | required | `individuals` (Individuals.) · `families` (Families.) · `both` (Both individuals and families.) · `unknown` (Not publicly listed — the honest unknown, never a fabricated value.) | Population served: a taxonomy value, or "unknown" ("not publicly listed"). |
-| `gender` | enum | required | `men` (Men.) · `women` (Women.) · `all` (All genders.) · `unknown` (Not publicly listed — the honest unknown, never a fabricated value.) | Gender served: a taxonomy value, or "unknown" ("not publicly listed"). |
-| `referralRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
-| `sobrietyRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
-| `backgroundCheckRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
-| `sexOffenseRestrictions` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
-| `treatmentRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
-| `housingVouchersAccepted` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Not publicly listed — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("not publicly listed"). |
+| `applicationProcess` | string | optional |  | How the application process works, when the source states it. |
+| `housingType` | enum | required | `emergency-shelter` (Emergency shelter.) · `transitional` (Transitional housing.) · `permanent-supportive-housing` (Permanent supportive housing.) · `subsidized-rental` (Subsidized rental.) · `market-rate` (Market-rate housing.) · `unknown` (The honest unknown — never a fabricated value.) | Housing type: a taxonomy value, or "unknown" (the honest "Unknown"). |
+| `lengthOfStay` | enum | required | `emergency-nightly` (Emergency shelter, priced nightly.) · `short-term-up-to-90-days` (Short-term stay, up to 90 days.) · `transitional-up-to-24-months` (Transitional stay, up to 24 months.) · `permanent-open-ended` (Permanent housing, open-ended.) · `unknown` (The honest unknown — never a fabricated value.) | Length of stay: a taxonomy value, or "unknown" (the honest "Unknown"). |
+| `population` | enum | required | `individuals` (Individuals.) · `families` (Families.) · `both` (Both individuals and families.) · `unknown` (The honest unknown — never a fabricated value.) | Population served: a taxonomy value, or "unknown" (the honest "Unknown"). |
+| `gender` | enum | required | `men` (Men.) · `women` (Women.) · `all` (All genders.) · `unknown` (The honest unknown — never a fabricated value.) | Gender served: a taxonomy value, or "unknown" (the honest "Unknown"). |
+| `referralRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
+| `sobrietyRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
+| `backgroundCheckRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
+| `sexOffenseRestrictions` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
+| `treatmentRequired` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
+| `housingVouchersAccepted` | enum | required | `yes` (The policy applies.) · `no` (The policy does not apply.) · `unknown` (Unknown — never fabricated as yes or no.) | Tri-state policy value: known yes / known no / unknown ("Unknown"). |
 
 ## UnitSize
 

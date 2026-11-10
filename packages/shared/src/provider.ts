@@ -9,12 +9,12 @@ export const ProviderSchema = Type.Object(
   {
     id: Type.String({ description: "Stable provider identifier." }),
     organization: Type.String({ description: "Organization name shown as the contact." }),
-    phone: Type.Optional(Type.String({ description: "Contact phone, when publicly listed." })),
-    email: Type.Optional(Type.String({ description: "Contact email, when publicly listed." })),
+    phone: Type.Optional(Type.String({ description: "Contact phone, when the source states it." })),
+    email: Type.Optional(Type.String({ description: "Contact email, when the source states it." })),
     website: Type.Optional(
       Type.String({
         pattern: "^https?://",
-        description: "Contact website URL (http/https), when publicly listed.",
+        description: "Contact website URL (http/https), when the source states it.",
       }),
     ),
   },

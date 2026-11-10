@@ -71,7 +71,7 @@ test("a builder walks all three availability states under its own control", () =
   expect(builder.availabilityState).toBe("available");
 });
 
-test("an eligibility field that is not publicly listed rides the card honestly", () => {
+test("an eligibility field that is unknown rides the card honestly", () => {
   const card = aUnit().withUnknownPopulation().build();
 
   expect(card.program.population).toBe("unknown");
