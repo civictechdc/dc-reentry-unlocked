@@ -16,7 +16,7 @@
 - [x] 2.2 Rename the ~115 `var()` consumers across `app.css` (body/focus rules) and the Svelte components/routes to exporter names (`--color-*`, `--spacing-*`, `--radius` → `--rounded-control`); retrofit repeated equal spacing/rounded literals to the generated roles, leaving exceptional dimensions explicit; no legacy alias layer; verify rendered hex values and layout are byte-identical before/after (rendered comparison) and `pnpm test` + `pnpm -C apps/web e2e` pass
 - [x] 2.3 Add `apps/web/src/lib/map/map-colors.ts` with named opaque hex constants for map paints and bitmap RGB construction; `map-config.ts` consumes them; preserve distinct label ink `#1f2937` as `colors.pin-label-ink` (exported `--color-pin-label-ink`), name remaining label roles from existing values; check `apps/web/src/app.html` theme-color against `colors.accent`; bitmap channels derive from the constants; verify `design:drift` covers every bridge and the rendered map is unchanged
 - [x] 2.4 Add focused rendered state probes (keyboard focus, selected, hover, badge, map-label) across the existing CI browser matrix, keeping the axe scan; record actual engine versions and report WebKit coverage gaps honestly (never as coverage); verify the matrix is green or exceptions are recorded per `webkit-ci-fidelity`
-- [ ] 2.5 Human verification gate: user reviews the generated artifact and before/after rendering before any palette edit; verify the approval is recorded in the change folder before group 3 starts
+- [x] 2.5 Human verification gate: user reviews the generated artifact and before/after rendering before any palette edit; verify the approval is recorded in the change folder before group 3 starts
 
 ## 3. Tetradic palette candidate and activation
 
