@@ -34,6 +34,24 @@ Two problems it addresses:
 - **Explore a tetradic color scheme** whose text/background pairs pass WCAG
   AA (4.5:1) — validated mechanically (the `@google/design.md` linter ships
   a `contrast-ratio` rule), never by eye
+- **Ground the CSS usage in [CSS Snapshot 2026](https://www.w3.org/TR/css-2026/)**:
+  build the token system on snapshot-stable modules — custom properties,
+  cascade layers (css-cascade-5), `@supports` conditional rules, CSS Color 4
+  (oklch and friends) and Color 5 (`color-mix()`, relative-color syntax —
+  both cleared for broad release pre-CR by the CSSWG). The snapshot
+  classifies by spec stability, NOT engine adoption (its own abstract says
+  so) — so feature choices pair snapshot status with engine-support
+  evidence from the repo's own cross-engine e2e matrix
+  (Chromium/Firefox/WebKit)
+- **Define the adaptation strategy for missing engine support**: a fallback
+  doctrine for every non-universal feature — fallback declarations ahead of
+  modern syntax (relying on the snapshot's §3.1 rule that renderers ignore
+  unsupported constructs whole), `@supports` feature queries where the
+  fallback needs different structure, and honest degradation (the design
+  stays legible, if plainer) rather than polyfill JS. This feeds W14
+  (JS→CSS offload) and W15 (no-JS minimal functionality), which want CSS
+  doing more without breaking weaker engines — WebKit in CI being the
+  alerting surface (`webkit-ci-fidelity`)
 - **Wire the outcome into the web app** (token source of truth and the
   app.css consumption path) — the exact integration (hand-maintained
   DESIGN.md as documentation only vs. lint/export tooling in the dev loop)
@@ -54,7 +72,8 @@ Two problems it addresses:
 - **Code:** `apps/web/src/app.css` (token reorganization; component style
   consumption), possibly Svelte component style blocks
 - **Docs:** a new `DESIGN.md` (location decided at planning — repo root vs
-  `apps/web/`)
+  `apps/web/`); the fallback doctrine lands beside the tokens so agents
+  inherit both
 - **Tooling (possible):** `@google/design.md` devDependency for lint/export.
   The format is **alpha** and under active development — adopting its CLI is
   a deliberate, reviewed, version-pinned decision (repo tooling policy), not
@@ -62,7 +81,10 @@ Two problems it addresses:
 - **Sequencing:** W17 research item promoted to next (user decision
   2026-11-09); feeds the medium walkthrough-UI changes (W3–W8, W10), which
   should consume the settled design language rather than grow more ad-hoc
-  styles. Walkthrough audience vets the palette like all copy.
+  styles, and pairs with W14/W15 (CSS offload, no-JS fallbacks) —
+  `webkit-ci-fidelity` provides the cross-engine regression signal while
+  fallbacks are introduced. Walkthrough audience vets the palette like all
+  copy.
 
 (Spawned at proposal stage with `skip_specs` set; delta specs are authored in
 this change's planning session, which unsets it.)
