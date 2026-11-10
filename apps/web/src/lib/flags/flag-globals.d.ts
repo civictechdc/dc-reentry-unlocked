@@ -4,9 +4,9 @@
  * entry in `./registry.ts` (built by `buildFlagDefines`), plus the shared
  * `__DEV_SERVER__` dev-server marker.
  *
- * The registry is currently empty, so this file declares no flag globals
- * yet. Each added flag adds exactly one line here, beside its registry
- * entry:
+ * The registry's first entries are the candidate controls `w1-map-zoom`
+ * and `w2-recenter`, whose globals are declared below. Each added flag
+ * adds exactly one line here, beside its registry entry:
  *
  *   declare const __FLAG_EXAMPLE_NAME__: boolean;
  *
@@ -22,5 +22,8 @@
 /** True only for a dev-server run (`vite dev`); `false` in every build/preview. */
 declare const __DEV_SERVER__: boolean;
 
-/** The naming contract for define constants: `__FLAG_<SCREAMING_SNAKE>__`. */
-declare type FlagDefineName = `__FLAG_${string}__`;
+/** Launch default for the `w1-map-zoom` walkthrough zoom control. */
+declare const __FLAG_W1_MAP_ZOOM__: boolean;
+
+/** Launch default for the `w2-recenter` walkthrough recenter control. */
+declare const __FLAG_W2_RECENTER__: boolean;

@@ -9,6 +9,14 @@ repo's own define constants and are forced `false` in every build. An
 empirical scan of the emitted bundle joins with the first flagged
 feature.
 
+## Flags are never a security boundary
+
+Flags gate candidate UX trials only — never authorization, access
+control, or any security-relevant behavior. A flag is a compile-time
+constant plus a dev-only URL override: trivially flipped in a development
+session, and absent from production builds rather than enforced there.
+Anything that must be enforced stays behind the API's real checks.
+
 ## The blessed guard shape
 
 Guard candidate behavior with exactly this shape:
@@ -49,7 +57,28 @@ machinery alive. Only a dev-server run (`serve` + development mode, the
 
 Do not wrap the shape in a helper like `isFlagOn("name")`: a call
 expression is not statically foldable, so guarded code would ship in
-production bundles.
+production bundles. The build-time stripper enforces the same literalism:
+it strips only the exact shape above — or a bare `__FLAG_<NAME>__`
+identifier — and any other condition referencing a flag define (a
+negation, a mixed disjunction, a swapped arm) fails the build, because
+its production semantics are not what a full-block strip assumes.
+
+### How elimination reaches markup (`.svelte`)
+
+The folding above is JavaScript semantics, and Svelte 5 compiles `{#if}`
+branches as live closure arguments to its runtime — so in a component,
+a folded-false condition eliminates the guarded JS machinery but keeps
+the branch's template fragment (a guarded control's `data-flag=` marker
+would survive as a dead string). In every non-dev-server compile,
+`vite.config.ts` therefore runs the preprocessor in
+`strip-guarded-blocks.ts`, which removes each flag-guarded `{#if}` block
+from the source before Svelte parses it. Dev-server runs and Vitest
+compile the unchanged source — silently, even for a malformed guard: the
+loud errors (a guarded block carrying an `{:else}`, or a condition
+referencing a flag define outside the blessed shape) fire in the
+stripping compile, which is every non-dev-server build. The build scan
+(`scripts/scan-flag-elimination.mjs`) proves both paths empirically on
+real output.
 
 ## The two toggle surfaces (development only)
 
@@ -77,6 +106,6 @@ declare line — together with the guard.
 
 Component tests under Vitest do not receive the vite.config defines (this
 repo's vitest.config.ts is separate — the setup defaults `__DEV_SERVER__`
-to `false`), so a test exercising a guarded branch must stub the globals
-itself: `vi.stubGlobal("__DEV_SERVER__", …)` and, for the flag constant,
-`vi.stubGlobal("__FLAG_<NAME>__", …)`.
+and every registered flag define to `false`), so a test exercising a
+guarded branch must stub the globals itself: `vi.stubGlobal("__DEV_SERVER__", …)`
+and, for the flag constant, `vi.stubGlobal("__FLAG_<NAME>__", …)`.

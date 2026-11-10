@@ -10,15 +10,16 @@ import { HousingStore } from "#lib/state/housing-store.svelte.ts";
 import { uiState } from "#lib/state/ui-state.svelte.ts";
 import {
   CARD_FOCUS_ZOOM,
-  DC_MAP_CENTER,
-  DC_MAP_ZOOM,
   highlightLayerFilter,
+  LOCALE_MAP_CENTER,
+  LOCALE_MAP_ZOOM,
   OSM_ATTRIBUTION,
   OSM_TILE_URL,
   pinCoordinatesFor,
   PIN_HOVER_INTENT_DELAY_MS,
   pinLabelLayerFilter,
   unitsToFeatureCollection,
+  ZOOM_STEP,
 } from "#lib/map/map-config.ts";
 
 /**
@@ -70,6 +71,7 @@ const h = vi.hoisted(() => ({
     }>;
     addLayerLog: Array<{ id: string; seq: number }>;
     flyToLog: Array<Record<string, unknown>>;
+    zoomToLog: number[];
     moveendHandlers: Array<() => void>;
     fireMoveEnd(): void;
     getCenter(): { lng: number; lat: number };
@@ -126,6 +128,8 @@ vi.mock("maplibre-gl", () => {
     addLayerLog: Array<{ id: string; seq: number }> = [];
     callSeq = 0;
     flyToLog: Array<Record<string, unknown>> = [];
+    /** Camera zoom steps: the target zoom of each `zoomTo` call, in order. */
+    zoomToLog: number[] = [];
     /** Test-settable camera readouts backing `getCenter()`/`getZoom()`. */
     currentCenter: { lng: number; lat: number } = { lng: 0, lat: 0 };
     currentZoom = 0;
@@ -191,6 +195,12 @@ vi.mock("maplibre-gl", () => {
     }
     flyTo(options: Record<string, unknown>): void {
       this.flyToLog.push(options);
+    }
+    zoomTo(zoom: number): void {
+      this.zoomToLog.push(zoom);
+      // The camera readout settles at the stepped zoom, like the real map's
+      // animated zoom settling — a later `getZoom()` chains from it.
+      this.currentZoom = zoom;
     }
     getCenter(): { lng: number; lat: number } {
       return this.currentCenter;
@@ -403,6 +413,7 @@ function removeChromeStubs(): void {
 afterEach(() => {
   cleanup();
   removeChromeStubs();
+  vi.unstubAllGlobals();
   h.instances.length = 0;
   uiState.hoveredCardUnitId = null;
   uiState.hoveredPinUnitId = null;
@@ -419,8 +430,8 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     };
     expect(style.sources.osm?.tiles[0]).toBe(OSM_TILE_URL);
     expect(style.sources.osm?.attribution).toBe(OSM_ATTRIBUTION);
-    expect(created.options.center).toEqual([DC_MAP_CENTER.lng, DC_MAP_CENTER.lat]);
-    expect(created.options.zoom).toBe(DC_MAP_ZOOM);
+    expect(created.options.center).toEqual([LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat]);
+    expect(created.options.zoom).toBe(LOCALE_MAP_ZOOM);
   });
 
   test("renders one pin per unit in the shared GeoJSON source", async () => {
@@ -1103,11 +1114,11 @@ describe("card selection focuses the map", () => {
     expect(created.flyToLog).toEqual([]);
   });
 
-  test("no selection at mount keeps the DC default initial view", async () => {
+  test("no selection at mount keeps the locale default initial view", async () => {
     const created = await mountedMapWithResolvedUnits([unitInWard7]);
 
-    expect(created.options.center).toEqual([DC_MAP_CENTER.lng, DC_MAP_CENTER.lat]);
-    expect(created.options.zoom).toBe(DC_MAP_ZOOM);
+    expect(created.options.center).toEqual([LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat]);
+    expect(created.options.zoom).toBe(LOCALE_MAP_ZOOM);
     expect(created.flyToLog).toEqual([]);
   });
 
@@ -1116,9 +1127,9 @@ describe("card selection focuses the map", () => {
 
     const section = document.querySelector('[data-testid="map-view"]')!;
     expect(section.getAttribute("data-map-center")).toBe(
-      `${DC_MAP_CENTER.lng},${DC_MAP_CENTER.lat}`,
+      `${LOCALE_MAP_CENTER.lng},${LOCALE_MAP_CENTER.lat}`,
     );
-    expect(section.getAttribute("data-map-zoom")).toBe(String(DC_MAP_ZOOM));
+    expect(section.getAttribute("data-map-zoom")).toBe(String(LOCALE_MAP_ZOOM));
 
     // The camera moved (as after a flyTo animation) and settles: moveend fires.
     created.currentCenter = {
@@ -1142,6 +1153,79 @@ describe("card selection focuses the map", () => {
     await tick();
 
     expect(created.flyToLog).toEqual([]);
+  });
+});
+
+describe("flag-guarded camera controls", () => {
+  test("with the zoom flag on, the zoom buttons render with their localized names and flag markers and step the camera one step per click", async () => {
+    vi.stubGlobal("__FLAG_W1_MAP_ZOOM__", true);
+    try {
+      const created = await mountedMapWithResolvedUnits([unitInWard7]);
+      // Arrange the camera readout the zoom steps chain from.
+      created.currentZoom = LOCALE_MAP_ZOOM;
+
+      const zoomInButton = screen.getByRole("button", { name: m.map_zoom_in() });
+      const zoomOutButton = screen.getByRole("button", { name: m.map_zoom_out() });
+      expect(zoomInButton).toHaveAttribute("data-flag", "w1-map-zoom");
+      expect(zoomOutButton).toHaveAttribute("data-flag", "w1-map-zoom");
+
+      await userEvent.click(zoomInButton);
+      await tick();
+      expect(created.zoomToLog).toEqual([LOCALE_MAP_ZOOM + ZOOM_STEP]);
+
+      await userEvent.click(zoomOutButton);
+      await tick();
+      expect(created.zoomToLog).toEqual([LOCALE_MAP_ZOOM + ZOOM_STEP, LOCALE_MAP_ZOOM]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("with the zoom flag off, no zoom control renders", async () => {
+    vi.stubGlobal("__FLAG_W1_MAP_ZOOM__", false);
+    vi.stubGlobal("__DEV_SERVER__", false);
+    try {
+      await mountedMapWithResolvedUnits([unitInWard7]);
+
+      expect(screen.queryByRole("button", { name: m.map_zoom_in() })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: m.map_zoom_out() })).not.toBeInTheDocument();
+      expect(document.querySelector('[data-flag="w1-map-zoom"]')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("with the recenter flag on, the recenter button renders with its localized name and flag marker and flies the camera back to the locale view", async () => {
+    vi.stubGlobal("__FLAG_W2_RECENTER__", true);
+    try {
+      const created = await mountedMapWithResolvedUnits([unitInWard7]);
+
+      const recenterButton = screen.getByRole("button", { name: m.map_recenter() });
+      expect(recenterButton).toHaveAttribute("data-flag", "w2-recenter");
+
+      await userEvent.click(recenterButton);
+      await tick();
+
+      expect(created.flyToLog.at(-1)).toEqual({
+        center: [LOCALE_MAP_CENTER.lng, LOCALE_MAP_CENTER.lat],
+        zoom: LOCALE_MAP_ZOOM,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("with the recenter flag off, no recenter control renders", async () => {
+    vi.stubGlobal("__FLAG_W2_RECENTER__", false);
+    vi.stubGlobal("__DEV_SERVER__", false);
+    try {
+      await mountedMapWithResolvedUnits([unitInWard7]);
+
+      expect(screen.queryByRole("button", { name: m.map_recenter() })).not.toBeInTheDocument();
+      expect(document.querySelector('[data-flag="w2-recenter"]')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

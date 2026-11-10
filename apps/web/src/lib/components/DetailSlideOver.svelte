@@ -3,7 +3,12 @@
   import { m } from "#lib/paraglide/messages.js";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
-  import { detailBedroomsValue, detailValueLabel, roomTypeDetailLabel } from "./detail-values.ts";
+  import {
+    detailBedroomsValue,
+    detailValueLabel,
+    roomTypeDetailLabel,
+    telHref,
+  } from "./detail-values.ts";
 
   let { store = housingStore }: { store?: HousingStore } = $props();
 
@@ -116,7 +121,7 @@
       {#if unit}
         <h2>{unit.program.name}</h2>
       {/if}
-      <button type="button" class="close" onclick={close}>{m.detail_close()}</button>
+      <button type="button" class="close" aria-label={m.detail_close()} onclick={close}>×</button>
     </div>
     {#if unit}
       <section class="detail-section" aria-label={m.detail_specs_title()}>
@@ -154,7 +159,13 @@
           </div>
           <div class="row">
             <dt>{m.detail_contact_phone()}</dt>
-            <dd>{unit.provider.phone ?? m.detail_contact_no_details()}</dd>
+            <dd>
+              {#if unit.provider.phone}
+                <a href={telHref(unit.provider.phone)}>{unit.provider.phone}</a>
+              {:else}
+                {m.detail_contact_no_details()}
+              {/if}
+            </dd>
           </div>
           <div class="row">
             <dt>{m.detail_contact_email()}</dt>
@@ -227,6 +238,7 @@
   }
   .close {
     font: inherit;
+    line-height: 1;
     border: 1px solid var(--line-strong);
     background: var(--surface-raised);
     color: var(--ink);

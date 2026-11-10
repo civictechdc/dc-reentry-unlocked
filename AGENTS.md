@@ -66,6 +66,7 @@ recipes](docs/runbook.md)).
 | `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                                |
 | `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app)          |
 | `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)               |
+| `pnpm -C apps/web scan:flags`            | Flag elimination scan over the web production build output (build + scan)                     |
 | `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty               |
 | `pnpm docgen:model`                      | Regenerate the model reference — `git diff --exit-code -- docs/data-model.md` must stay empty |
 | `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                             |

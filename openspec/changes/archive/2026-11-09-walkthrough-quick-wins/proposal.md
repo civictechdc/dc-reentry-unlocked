@@ -34,6 +34,12 @@ visible to batch invisibly into other work.
   change is its first consumer); plan after `mobile-initial-tab` so the
   `housing-search-ui` delta is authored against the corrected responsive
   wording instead of racing another delta into the same main spec
+- Execution approach (repo agent standard): the `apps/web` component edits
+  run under the `.agents/skills/svelte-code-writer` and
+  `.agents/skills/svelte-core-bestpractices` skills, and where the harness
+  supports it the `.svelte` edits are delegated to the
+  `svelte-file-editor` subagent (atomic Svelte-file rule, repo
+  `AGENTS.md`)
 
 ## Capabilities
 

@@ -78,3 +78,15 @@ export function detailValueLabel(
   if (value === "no") return m.detail_value_no();
   return taxonomyMessages[value] ?? m.detail_value_unknown();
 }
+
+/**
+ * Dialable "tel:" href for a listed contact phone, derived from the value
+ * exactly as publicly listed: digits survive, every separator drops, and a
+ * "+" is kept only as the first character (no country-code invention, no
+ * extension handling). The visible link text keeps the listed formatting;
+ * this builds only the href.
+ */
+export function telHref(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return `tel:${phone.startsWith("+") ? "+" : ""}${digits}`;
+}
