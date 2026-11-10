@@ -23,12 +23,30 @@ Two problems it addresses:
    breaking WCAG AA contrast or colliding with the data-carrying map/status
    and badge colors, which are semantic, not brand.
 
+**The goal (user decision 2026-11-09): a maintainable, well-organised
+design language that is easy to modify, to re-use where applicable, and to
+extend — with readable names.** Everything below is measured against that:
+the format verdict, the palette scheme, and the token architecture are
+means; a language a future agent or contributor can safely change is the
+end. Concretely, the token system must have:
+
+- **Readable names** — a consistent naming grammar in domain language, not
+  opaque codes; a name should say what a token is for, not just what it is
+- **Layered references** — primitives → semantic tokens → component tokens,
+  so re-use happens by reference (`{colors.primary}` chains) and a
+  primitive change ripples correctly instead of being hunted down
+- **Cheap extension** — adding a palette role or a component follows an
+  existing pattern; dead weight is detectable (the DESIGN.md linter's
+  `orphaned-tokens` rule), not discovered by archaeology
+
 ## What Changes
 
 - **Evaluate the DESIGN.md format** as the web app's design-language
   artifact: YAML design tokens + markdown rationale, canonical sections
   (Overview, Colors, Typography, Layout, Elevation, Shapes, Components,
-  Do's and Don'ts), component tokens with `{token}` references
+  Do's and Don'ts), component tokens with `{token}` references. The
+  maintainability goal is the evaluation criterion: does the format make a
+  readable, layered, cheaply-extendable token system — or fight it?
 - **Organize the existing tokens** (colors, typography, spacing, rounded,
   component styles) from `app.css` into that structure, with rationale prose
 - **Explore a tetradic color scheme** whose text/background pairs pass WCAG
