@@ -84,8 +84,9 @@ investigated from a green tree (2026-11-10):
   browser. The app shell, map, and worker all look healthy, which makes the
   symptom point far from the cause.
 - **Late e2e tests start failing after back-to-back full-suite runs**
-  against one long-lived API: the per-route rate limit (100 requests per
-  minute) saturates and the client surfaces the same unreachable alert.
+  against one long-lived API: the per-client rate limit (100 requests per
+  minute, one shared budget across all requests) saturates and the client
+  surfaces the same unreachable alert.
 
 Diagnosis one-liner — a correctly booted e2e API answers with an
 `access-control-allow-origin` header for the prod origin; an orphan does
