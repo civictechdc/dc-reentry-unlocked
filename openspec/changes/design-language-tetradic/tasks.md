@@ -28,7 +28,7 @@
 ## 4. Integration verification
 
 
-- [ ] 4.1 Full verification sweep from the repo root: `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`, `pnpm arch:check`, `pnpm design:check`, `pnpm -C apps/web e2e` and `e2e:prod`, `openspec validate --all --strict`, and the tracking-reference grep from AGENTS.md (DESIGN.md and all committed files outside `openspec/` stay free of OpenSpec-internal references); verify all green
+- [x] 4.1 Full verification sweep from the repo root: `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`, `pnpm arch:check`, `pnpm design:check`, `pnpm -C apps/web e2e` and `e2e:prod`, `openspec validate --all --strict`, and the tracking-reference grep from AGENTS.md (DESIGN.md and all committed files outside `openspec/` stay free of OpenSpec-internal references); verify all green
 
 ## Workflow follow-up
 
