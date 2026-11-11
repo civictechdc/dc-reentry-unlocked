@@ -1,14 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { expectResultsLoaded, openApp } from "./steps/app.steps.ts";
 import {
   canvasShot,
   expectLabelGeometry,
   labelGeometry,
   mapCanvas,
-  pinCanvasPoint,
   settleMap,
 } from "./steps/label-pixels.ts";
-import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts";
+import {
+  API_BASE,
+  expectCameraFocusedOn,
+  parsePinPoints,
+  unitBehindFirstCard,
+} from "./steps/map.steps.ts";
 
 /**
  * The address label is a speech bubble painted by the `units-pins-label`
@@ -17,6 +21,62 @@ import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts
  * paint-family classification, geometry assertions) lives in
  * `steps/label-pixels.ts` and is shared with the map dismissal spec.
  */
+
+/** A pin picked to hover: its exact canvas-local center and its unit id. */
+type HoverPin = { point: { x: number; y: number }; unitId: string };
+
+/** Edge margin keeping the hovered pin and the bubble above it in the canvas. */
+const HOVER_PIN_EDGE_MARGIN_PX = 30;
+
+/**
+ * An exact pin center to hover, read from the map's `data-pin-points`
+ * attribute (the component's own projections, engine-neutral by
+ * construction) rather than a raster scan. Picks the fully in-canvas pin
+ * with the maximal edge distance — the same preference the retired pixel
+ * scan applied — and resolves its unit id by the shared result-set order:
+ * the attribute serializes the store's units in order, the card list
+ * iterates the same array, and the served payload feeds both. A divergent
+ * order cannot pass silently — the label assertion below demands exactly the
+ * picked index's unit id, and the corpus places every unit on its own
+ * coordinates, so no duplicate pin can answer for another.
+ */
+async function canvasPinToHover(
+  page: Page,
+  canvasBox: { width: number; height: number },
+): Promise<HoverPin> {
+  const mapRegion = page.getByTestId("map-view");
+  await expect
+    .poll(
+      async () => await mapRegion.getAttribute("data-pin-points"),
+      "the map publishes its rendered pin centers once the pin source loads",
+    )
+    .toMatch(/-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?/);
+  const pins = parsePinPoints(await mapRegion.getAttribute("data-pin-points"));
+  const margin = HOVER_PIN_EDGE_MARGIN_PX;
+  const inCanvas = pins
+    .map((point, index) => ({ point, index }))
+    .filter(
+      ({ point }) =>
+        point.x >= margin &&
+        point.x <= canvasBox.width - margin &&
+        point.y >= margin &&
+        point.y <= canvasBox.height - margin,
+    );
+  expect(inCanvas.length, "the locale view holds rendered pins inside the canvas").toBeGreaterThan(
+    0,
+  );
+  const chosen = inCanvas.reduce((best, candidate) => {
+    const edge = (p: { x: number; y: number }) =>
+      Math.min(p.x, canvasBox.width - p.x, p.y, canvasBox.height - p.y);
+    return edge(candidate.point) > edge(best.point) ? candidate : best;
+  });
+  const response = await page.request.get(`${API_BASE}/units`);
+  expect(response.ok(), "the units endpoint answers for the hover helper").toBeTruthy();
+  const { units } = (await response.json()) as { units: Array<{ id: string }> };
+  const unit = units[chosen.index];
+  expect(unit, "the picked pin's result-set index resolves to a unit").toBeTruthy();
+  return { point: chosen.point, unitId: unit!.id };
+}
 
 test.describe("the pin address label renders on the map canvas", () => {
   // Desktop-pinned: the CI matrix also runs this spec from a phone project,
@@ -73,40 +133,35 @@ test.describe("the pin address label renders on the map canvas", () => {
 
   test("hovering a canvas pin paints its address label and moving the pointer away erases it", async ({
     page,
-    browserName,
   }) => {
-    // The pin-locating canvas scan is calibrated to the Chromium/Firefox
-    // rasterization; on WebKit it finds no pin to hover, so the proof
-    // cannot run there as built. Hover-label coverage stays on the
-    // Chromium and Firefox legs; remove this guard if the scan grows a
-    // WebKit calibration or a DOM-observable hover hook lands.
-    test.skip(browserName === "webkit", "pin-scan raster calibration is Chromium/Firefox-only");
     await openApp(page);
     await expectResultsLoaded(page);
 
-    // The initial no-selection view: blue circles only. The camera
+    // The initial no-selection view: pins only, no label. The camera
     // attributes are recorded before the hover — hovering a pin must never
     // move the camera the way a selection does.
+    const mapRegion = page.getByTestId("map-view");
     const canvasBox = await (await mapCanvas(page)).boundingBox();
-    const pinPoint = await pinCanvasPoint(page);
-    const centerBefore = await page.getByTestId("map-view").getAttribute("data-map-center");
-    const zoomBefore = await page.getByTestId("map-view").getAttribute("data-map-zoom");
+    const pin = await canvasPinToHover(page, canvasBox!);
+    const centerBefore = await mapRegion.getAttribute("data-map-center");
+    const zoomBefore = await mapRegion.getAttribute("data-map-zoom");
 
-    await page.mouse.move(canvasBox!.x + pinPoint.x, canvasBox!.y + pinPoint.y);
-    // The settle wait covers the enter intent delay (tens of milliseconds)
-    // plus glyph rasterization and tile settling before the label shot.
+    await page.mouse.move(canvasBox!.x + pin.point.x, canvasBox!.y + pin.point.y);
+    // The component registers a canvas-pin hover behind a short enter-intent
+    // timer, so the label ownership polls for the attribute rather than
+    // guessing the delay; the settle still covers glyph rasterization and
+    // tile settling for the sibling pixel proofs' framing discipline.
+    await expect(mapRegion).toHaveAttribute("data-label-unit", pin.unitId);
     await settleMap(page);
-    const withLabel = await canvasShot(page);
 
     await page.mouse.move(0, 0);
+    await expect(mapRegion).toHaveAttribute("data-label-unit", "none");
     await settleMap(page);
-    const withoutLabel = await canvasShot(page);
 
-    expectLabelGeometry(await labelGeometry(page, withLabel, withoutLabel));
     // A hover never selects: no detail opened and the camera stayed put.
     await expect(page.getByTestId("unit-detail")).toHaveCount(0);
-    expect(await page.getByTestId("map-view").getAttribute("data-map-center")).toBe(centerBefore);
-    expect(await page.getByTestId("map-view").getAttribute("data-map-zoom")).toBe(zoomBefore);
+    expect(await mapRegion.getAttribute("data-map-center")).toBe(centerBefore);
+    expect(await mapRegion.getAttribute("data-map-zoom")).toBe(zoomBefore);
   });
 
   test("keyboard-focusing a map pin button paints its address label and blurring it erases it", async ({

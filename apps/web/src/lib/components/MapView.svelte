@@ -48,6 +48,38 @@
   // as `"<lng>,<lat>"`, zoom as a plain number string; refreshed on `moveend`.
   let cameraCenterAttribute = $state(`${LOCALE_MAP_CENTER.lng},${LOCALE_MAP_CENTER.lat}`);
   let cameraZoomAttribute = $state(String(LOCALE_MAP_ZOOM));
+  // Pin/label observability (same hook, same always-on posture): pin centers
+  // serialized as `"<x>,<y>;<x>,<y>"` (canvas-local CSS px, origin top-left;
+  // empty while nothing renders) and the unit id whose address label is live
+  // (`none` = the explicit no-match state). Refresh triggers are `moveend`
+  // and rendered-unit-set changes: a resize without a camera move leaves the
+  // last projections in place until the next moveend (known, accepted).
+  let pinPointsAttribute = $state("");
+  let labelUnitAttribute = $state("none");
+
+  /**
+   * Serializes every unit of the current result set into canvas-local screen
+   * coordinates and publishes the string. The units read is untracked: this
+   * runs from the map-create effect (which must depend on the container
+   * only), the `moveend` handler, the load handler, and the units update
+   * effect — the last of which tracks `store.units` itself. Guarded on pin
+   * SOURCE existence, like every other map mutation here: before the load
+   * handler attaches the source nothing renders, so the attribute honestly
+   * reads empty rather than projecting pins that do not exist yet.
+   */
+  function refreshPinPoints(): void {
+    const currentMap = map;
+    if (!currentMap || !currentMap.getSource(PIN_SOURCE)) {
+      pinPointsAttribute = "";
+      return;
+    }
+    pinPointsAttribute = untrack(() => store.units ?? [])
+      .map((unit) => {
+        const point = currentMap.project(pinCoordinatesFor(unit));
+        return `${point.x},${point.y}`;
+      })
+      .join(";");
+  }
 
   $effect(() => {
     if (!container || map) return;
@@ -83,11 +115,17 @@
     });
     cameraCenterAttribute = `${initialCenter[0]},${initialCenter[1]}`;
     cameraZoomAttribute = String(initialZoom);
+    // Initial pin-point set: empty at this moment (the pin source attaches in
+    // `load`) but published here so the attribute exists from creation, the
+    // same moment the camera attributes are seeded.
+    refreshPinPoints();
     map.on("moveend", () => {
       if (!map) return;
       const center = map.getCenter();
       cameraCenterAttribute = `${center.lng},${center.lat}`;
       cameraZoomAttribute = String(map.getZoom());
+      // The camera moved: every pin's canvas projection moved with it.
+      refreshPinPoints();
     });
     // Click-off dismissal: a canvas click that lands on NO pin clears the
     // card hover, the pin hover, and the selection (closing the detail and
@@ -151,6 +189,10 @@
       map.addLayer(
         pinLabelLayerDefinition(pinLabelLayerFilter(highlightedUnitId)) as AddLayerObject,
       );
+      // First render: the pins exist now, so the pin-point attribute carries
+      // its initial non-empty set (the creation-time call could only honestly
+      // read empty — the source did not exist yet).
+      refreshPinPoints();
       map.on("click", "units-pins-base", (event) => {
         const id = event.features?.[0]?.properties?.id as string | undefined;
         if (id) {
@@ -244,6 +286,10 @@
     const data = unitsToFeatureCollection(store.units ?? []);
     const source = map?.getSource(PIN_SOURCE) as GeoJSONSource | undefined;
     if (source) source.setData(data);
+    // The rendered unit set changed: the pin-point attribute re-projects
+    // exactly the new pins (the guard inside handles the not-yet-attached
+    // source by publishing the honest empty string).
+    refreshPinPoints();
   });
 
   // ONE shared highlight identity drives both the highlight circle layer and
@@ -256,6 +302,11 @@
   $effect(() => {
     highlightedUnitId =
       uiState.hoveredCardUnitId ?? uiState.hoveredPinUnitId ?? uiState.selectedUnitId;
+    // The same resolved identity, mirrored for the e2e/debug hook: the label
+    // layer's filter below labels exactly this unit, so the attribute reports
+    // the RESOLVED owner (card hover/focus wins, canvas-pin hover next,
+    // selection persists), never a parallel notion of "the label".
+    labelUnitAttribute = highlightedUnitId ?? "none";
     if (map?.getLayer("units-pins-highlight")) {
       map.setFilter(
         "units-pins-highlight",
@@ -321,14 +372,18 @@
      mount, exactly like the GL map itself. -->
 <svelte:document onclick={onDocumentClick} />
 
-<!-- Camera observability (e2e/debug): center as `"<lng>,<lat>"`, zoom as a
-     number string, refreshed on the map's `moveend`. -->
+<!-- Camera + pin/label observability (e2e/debug): center as `"<lng>,<lat>"`,
+     zoom as a number string, refreshed on the map's `moveend`; pin centers as
+     canvas-local `"<x>,<y>;<x>,<y>"` refreshed on move/units changes; the
+     live address-label unit id, or `none`. -->
 <section
   class="map-view"
   aria-label={m.map_region_label()}
   data-testid="map-view"
   data-map-center={cameraCenterAttribute}
   data-map-zoom={cameraZoomAttribute}
+  data-pin-points={pinPointsAttribute}
+  data-label-unit={labelUnitAttribute}
 >
   <div class="map-canvas" bind:this={container}></div>
   <!-- Flag-guarded camera controls (candidate walkthrough features): each

@@ -7,7 +7,12 @@ against the dev servers — **warn-gate status**: the envelopes above still
 only warn; hard failure thresholds are deliberately loose until a production
 (`vite build` + adapter-node server on port 4317 inside `e2e:prod`) baseline
 is frozen. When that lands, revisit every budget below using the measured
-numbers.
+numbers. One distinction runs through this file: the numbers below were
+measured against the **dev servers**, while the suite's CI matrix (`e2e:ci`)
+measures the same specs against the **Compose boot** (production-built API +
+web images) — the dev numbers carry Vite transform overhead and are not
+comparable to Compose-measured ceilings; each measured basis is labeled
+where it matters.
 
 ## Units payload (user decision 2026-10-29 — API compression)
 
@@ -67,6 +72,27 @@ Pin re-render alone (GeoJSON `setData` on the source) is sub-frame in the
 component tests; the measured number covers the full network round trip. A
 production budget should split server time from client re-render time.
 
+### Software-GL WebKit ceiling (Compose-measured calibration)
+
+The filter-apply gross-churn ceiling is engine-split in `e2e/perf.spec.ts`:
+2s shared, **3s for WebKit** (named constants `GROSS_CHURN_FLOOR_MS` /
+`CALIBRATED_WEBKIT_SOFTWARE_GL_FLOOR_MS`). This is a calibration against
+measured software-GL round-trips, not an advisory target:
+
+- CI runner (ubuntu-24.04, `LIBGL_ALWAYS_SOFTWARE=1`, xvfb): recorded
+  round-trips of **2354ms and 2553ms** on the WebKit leg.
+- Linux reference rig (the runbook's Playwright-container WebKit leg,
+  arm64 under Apple Silicon — a CPU-noisier software-GL host than the
+  runner's amd64): cold first attempts **2740ms / 3617ms / 4322ms**,
+  warm-retry values **1445ms / 2434ms**, full-suite run **2160ms**.
+
+Both measured bases sit near or past the shared 2s ceiling, so the WebKit
+leg keeps its own 3s ceiling: tightening below 3000ms has no measurement
+basis (the rig's cold spread reaches past 3s under CPU contention), and
+loosening past it would weaken the assertion. The ceiling leans on the CI
+retry posture (`retries: 1` under `CI`) for rig-side contention spikes;
+the PR-check runner remains the authoritative gate.
+
 ## Known dev-only residual
 
 `maplibre-gl` logs `Worker failed to load. Check that the worker URL is
@@ -83,7 +109,9 @@ suite; the production `worker-src 'self' blob:` is asserted in
 - payload: hard-fails only on gross bloat (< 1MB wire total); the
   ~500KB/1,000 on-the-wire target warns.
 - long task: hard-fails only above 2s in a dev run; 50ms target warns.
-- filter latency: hard-fails only above 2s; 100ms target warns.
+- filter latency: hard-fails above the gross-churn ceilings — 2s shared,
+  3s for WebKit's software-GL calibration (measured basis above);
+  100ms target warns.
 
 When the production baseline is frozen (`vite build` + adapter-node server +
 measured numbers), turn the warn-gates into real threshold assertions by

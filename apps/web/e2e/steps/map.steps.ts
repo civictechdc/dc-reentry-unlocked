@@ -32,6 +32,29 @@ export async function unitBehindFirstCard(page: Page): Promise<CameraUnit> {
   return unit!;
 }
 
+/** A pin center in canvas-local CSS px (the map attribute's coordinate space). */
+export type PinPoint = { x: number; y: number };
+
+/**
+ * Parses the map section's `data-pin-points` attribute (`"x,y;x,y"` — the
+ * projected canvas-local centers of every rendered pin, refreshed on
+ * `moveend` and unit-set changes) into points. Empty string → empty array.
+ * A malformed pair throws loudly: the viewport filters below would
+ * otherwise silently drop an unparseable pin.
+ */
+export function parsePinPoints(attribute: string | null): PinPoint[] {
+  return (attribute ?? "")
+    .split(";")
+    .filter((pair) => pair.trim().length > 0)
+    .map((pair) => {
+      const [x, y] = pair.split(",").map(Number) as [number, number];
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error(`malformed pin-point pair in data-pin-points: "${pair}"`);
+      }
+      return { x, y };
+    });
+}
+
 /** The camera settled on the unit's pin: focus zoom, center within tolerance. */
 export async function expectCameraFocusedOn(page: Page, unit: CameraUnit): Promise<void> {
   const map = page.getByTestId("map-view");

@@ -101,6 +101,15 @@ vi.mock("maplibre-gl", () => {
     getZoom(): number {
       return 0;
     }
+    /**
+     * Deterministic stand-in for the wrapper's pin-point observability: the
+     * component projects every pin's coordinates, so the mock supplies a
+     * stable point per lnglat (the prop tests assert selection state, not
+     * projected values).
+     */
+    project(lnglat: [number, number]): { x: number; y: number } {
+      return { x: lnglat[0], y: lnglat[1] };
+    }
     isStyleLoaded(): boolean {
       return this.styleLoaded;
     }
