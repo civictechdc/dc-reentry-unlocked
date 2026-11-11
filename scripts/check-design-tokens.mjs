@@ -86,6 +86,7 @@ export const SOURCE_EXCLUSIONS = [
     "button-primary",
     "button-primary-hover",
     "button-quiet",
+    "button-close",
     "toggle-selected",
     "chip-active",
     "card-unit",

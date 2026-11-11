@@ -26,6 +26,7 @@
   --color-magenta-mid: #c88ec3;
   --color-magenta-strong: #7d4778;
   --color-magenta-deep: #4d1b4a;
+  --color-red-strong: #a92227;
   --color-surface-warning: #fff8e1;
   --color-pin-exact: #0b5fab;
   --color-pin-highlight: #d9340f;
@@ -49,6 +50,8 @@
   --color-accent: #2c6194;
   --color-accent-hover: #00345f;
   --color-accent-focus-ring: #1d4ed8;
+  --color-close: #a92227;
+  --color-ink-on-close: #ffffff;
   --spacing-none: 0rem;
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;

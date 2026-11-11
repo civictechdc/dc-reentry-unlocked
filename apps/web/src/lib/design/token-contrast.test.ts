@@ -221,11 +221,13 @@ export const EXPECTED_PAIR_IDS = [
   "text|on-accent ink|primary action hovered",
   "text|on-accent ink|toggle selected",
   "text|camera control glyph|hover on raised control",
+  "text|on-close ink|close control at rest",
   "text|badge text|confirmed badge",
   "text|badge text|needs-verification badge",
   "text|map label text|over the opaque bubble body",
   "non-text|essential control boundary|control outline on raised fill",
   "non-text|essential control boundary|control outline on page surface",
+  "non-text|close control boundary|red edge on raised fill",
   "non-text|selection outline|selected card outline on raised card",
   "non-text|selection outline|selected card outline across page gap",
   "non-text|selected toggle fill|accent fill against raised panel",
@@ -380,6 +382,17 @@ function matrixPairs(): MatrixPair[] {
       background: token("surface-raised"),
       threshold: NORMAL_TEXT,
     },
+    // The detail slide-over's close control: a dismissive red fill with
+    // white ink (the functional color is documented outside the tetrad);
+    // same pairing pattern as the action states.
+    {
+      role: "on-close ink",
+      kind: "text",
+      state: "close control at rest",
+      foreground: token("ink-on-close"),
+      background: token("close"),
+      threshold: NORMAL_TEXT,
+    },
     // Verification badges: 12px weight-600 text, asserted at the normal bar.
     {
       role: "badge text",
@@ -424,6 +437,16 @@ function matrixPairs(): MatrixPair[] {
       state: "control outline on page surface",
       foreground: token("line-strong"),
       background: token("surface"),
+      threshold: NON_TEXT,
+    },
+    // The close control's red edge (and the fill it shares color with) is
+    // the control's essential boundary against the raised panel it sits on.
+    {
+      role: "close control boundary",
+      kind: "non-text",
+      state: "red edge on raised fill",
+      foreground: token("close"),
+      background: token("surface-raised"),
       threshold: NON_TEXT,
     },
     {
@@ -516,6 +539,8 @@ describe("the WCAG token-pair contract over resolved design tokens", () => {
       "accent",
       "accent-hover",
       "accent-focus-ring",
+      "close",
+      "ink-on-close",
       "line-strong",
       "badge-confirmed-ink",
       "badge-confirmed-bg",

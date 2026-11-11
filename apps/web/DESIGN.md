@@ -43,6 +43,15 @@ colors:
   magenta-strong: "#7d4778"
   magenta-deep: "#4d1b4a"
 
+  # Functional dismissive red — the detail slide-over's close control.
+  # Deliberately OUTSIDE the tetrad: a control color, not a fifth brand
+  # hue. Built with the ramps' construction discipline (L 0.48, 8-bit
+  # rounding) at hue anchor 25°, but with chroma deliberately RAISED to
+  # 0.17 — above the 0.10 start, holding in gamut unreduced — because at
+  # 0.10 the red read as brown (user-reviewed); 25° keeps distance from
+  # the selection red (pin-highlight, hue 33°).
+  red-strong: "#a92227"
+
   # Layer 2 — semantic aliases: the names consumers use. Flat, readable,
   # unique. Values resolve to literal lowercase hex at export time.
   surface: "{colors.slate-faint}"
@@ -59,6 +68,8 @@ colors:
   accent: "{colors.blue-strong}"
   accent-hover: "{colors.blue-deep}"
   accent-focus-ring: "{colors.blue-ring}"
+  close: "{colors.red-strong}"
+  ink-on-close: "{colors.white}"
 
   # Layer 2 — status data paints, deliberately literal (never aliased to
   # brand tokens) so availability, selection, and verification semantics can
@@ -117,6 +128,10 @@ components:
   button-quiet:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+  button-close:
+    backgroundColor: "{colors.close}"
+    textColor: "{colors.ink-on-close}"
     rounded: "{rounded.control}"
   toggle-selected:
     backgroundColor: "{colors.accent}"
@@ -222,40 +237,62 @@ surface can carry.
 
 ### Primitives
 
-| Token               | Value     | L (OKLab) | Final C (reduced?) | Role                                              |
-| ------------------- | --------- | --------- | ------------------ | ------------------------------------------------- |
-| `white`             | `#ffffff` | 1.00      | —                  | Raised cards, controls, on-accent ink             |
-| `slate-faint`       | `#f5f7fa` | —         | —                  | Cool page wash behind everything                  |
-| `slate-ink`         | `#1b2a34` | —         | —                  | Body ink — near-black with a cool cast            |
-| `slate-muted`       | `#51606b` | —         | —                  | Secondary ink for de-emphasized text              |
-| `slate-line`        | `#cbd3d9` | —         | —                  | Quiet hairline borders (decorative)               |
-| `slate-line-strong` | `#84909a` | —         | —                  | Essential control boundaries                      |
-| `blue-faint`        | `#eef6ff` | 0.97      | 0.0146 (reduced)   | Selection tint derived from the accent hue        |
-| `blue-soft`         | `#c6e1ff` | 0.90      | 0.0504 (reduced)   | Blue ramp step (unplaced)                         |
-| `blue-mid`          | `#73a9e1` | 0.72      | 0.1000 (= start)   | Blue ramp step (unplaced)                         |
-| `blue-strong`       | `#2c6194` | 0.48      | 0.1000 (= start)   | The institutional action blue                     |
-| `blue-deep`         | `#00345f` | 0.32      | 0.0905 (reduced)   | Hover state of the action blue                    |
-| `blue-ring`         | `#1d4ed8` | —         | —                  | Focus ring, a literal outside the ramps (literal) |
-| `orange-faint`      | `#fff3e6` | 0.97      | 0.0216 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `orange-soft`       | `#ffd6a8` | 0.90      | 0.0755 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `orange-mid`        | `#cd995c` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `orange-strong`     | `#81520a` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `orange-deep`       | `#492b00` | 0.32      | 0.0692 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `green-faint`       | `#dfffe4` | 0.97      | 0.0483 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `green-soft`        | `#aef1bb` | 0.90      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `green-mid`         | `#75b683` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `green-strong`      | `#2c6d3e` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `green-deep`        | `#003f18` | 0.32      | 0.0881 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `magenta-faint`     | `#fff0fd` | 0.97      | 0.0238 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `magenta-soft`      | `#ffcaf9` | 0.90      | 0.0848 (reduced)   | Supporting tetrad hue (unplaced)                  |
-| `magenta-mid`       | `#c88ec3` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `magenta-strong`    | `#7d4778` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
-| `magenta-deep`      | `#4d1b4a` | 0.32      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| Token               | Value     | L (OKLab) | Final C (reduced?) | Role                                                    |
+| ------------------- | --------- | --------- | ------------------ | ------------------------------------------------------- |
+| `white`             | `#ffffff` | 1.00      | —                  | Raised cards, controls, on-accent ink                   |
+| `slate-faint`       | `#f5f7fa` | —         | —                  | Cool page wash behind everything                        |
+| `slate-ink`         | `#1b2a34` | —         | —                  | Body ink — near-black with a cool cast                  |
+| `slate-muted`       | `#51606b` | —         | —                  | Secondary ink for de-emphasized text                    |
+| `slate-line`        | `#cbd3d9` | —         | —                  | Quiet hairline borders (decorative)                     |
+| `slate-line-strong` | `#84909a` | —         | —                  | Essential control boundaries                            |
+| `blue-faint`        | `#eef6ff` | 0.97      | 0.0146 (reduced)   | Selection tint derived from the accent hue              |
+| `blue-soft`         | `#c6e1ff` | 0.90      | 0.0504 (reduced)   | Blue ramp step (unplaced)                               |
+| `blue-mid`          | `#73a9e1` | 0.72      | 0.1000 (= start)   | Blue ramp step (unplaced)                               |
+| `blue-strong`       | `#2c6194` | 0.48      | 0.1000 (= start)   | The institutional action blue                           |
+| `blue-deep`         | `#00345f` | 0.32      | 0.0905 (reduced)   | Hover state of the action blue                          |
+| `blue-ring`         | `#1d4ed8` | —         | —                  | Focus ring, a literal outside the ramps (literal)       |
+| `orange-faint`      | `#fff3e6` | 0.97      | 0.0216 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `orange-soft`       | `#ffd6a8` | 0.90      | 0.0755 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `orange-mid`        | `#cd995c` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `orange-strong`     | `#81520a` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `orange-deep`       | `#492b00` | 0.32      | 0.0692 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `green-faint`       | `#dfffe4` | 0.97      | 0.0483 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `green-soft`        | `#aef1bb` | 0.90      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-mid`         | `#75b683` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-strong`      | `#2c6d3e` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-deep`        | `#003f18` | 0.32      | 0.0881 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-faint`     | `#fff0fd` | 0.97      | 0.0238 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-soft`      | `#ffcaf9` | 0.90      | 0.0848 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-mid`       | `#c88ec3` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-strong`    | `#7d4778` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-deep`      | `#4d1b4a` | 0.32      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `red-strong`        | `#a92227` | 0.48      | 0.1700 (raised)    | Dismissive control red — close button (not a brand hue) |
 
 Neutrals carry no ramp: they are the dominant family and are picked by
 eye, not derived. `C = 0.1000 (= start)` means the starting chroma fit
 the gamut untouched; every lower value was reduced until the color
-landed inside sRGB.
+landed inside sRGB. `raised` marks the one deliberate departure:
+`red-strong`'s chroma was raised above the start at user review, because
+the start-chroma red read as brown.
+
+One control color is constructed with the same discipline but stands
+outside the tetrad: the functional dismissive red `red-strong`, built at
+lightness target 0.48 (the accent step) at hue anchor 25° with
+per-channel 8-bit rounding — but with chroma deliberately raised to
+0.17, above the ramps' 0.10 start, holding in gamut unreduced: at 0.10
+the red was reviewed as reading brown, not as the dismissive red a
+close control needs. It is not a fifth brand anchor: the brand
+rectangle stays blue 250°/orange 70°/green 150°/magenta 330°. The hue
+anchor was generated at 25° and 30°, and 25° was kept for the
+chroma-raised final hex, every value below measured on the final
+constructed hexes: the selection red `pin-highlight` measures oklch
+L 0.5803 C 0.2058 H 33.1°, and `#a92227` (L 0.4806, C 0.1705,
+H 24.9°) keeps an 8.20° hue gap and ΔL −0.0997 with margin on all
+three axes — a chroma-raised alternative at the same anchor, `#b00a1d`
+(C 0.1902), would have cut the chroma gap to ΔC −0.0156 — the close
+control must never read as a selected map pin. The verification badge
+pair is likewise distant (badge-unverified ink at hue 52.3°, its own
+pill pairing) and means verification, not dismissal.
 
 ### Semantic roles
 
@@ -300,6 +337,14 @@ landed inside sRGB.
   either collides with the fill or with hover. The literal clears 6:1 on
   all four asserted adjacencies, and its saturated royal blue keeps it
   unmistakable beside the muted steel of the new action fill.
+- **`close` (`#a92227`)** — the detail slide-over's close control: a red
+  fill with white ink (`ink-on-close`) and a red 1px edge separating the
+  fill from the raised panel (white ink 7.13:1 on the fill; the edge
+  7.13:1 against the panel, both above their bars). A dismissive
+  functional color, not a brand hue — built at the ramp discipline
+  (L 0.48, hue 25°) with chroma raised to 0.17 for a true red,
+  deliberately distinct from `pin-highlight` (selection red) and the
+  `badge-unverified-*` verification pair.
 
 ### Status and map paints (deliberately unaliased)
 
@@ -430,30 +475,31 @@ Recipes reference semantic tokens; hover and pressed variants are sibling
 entries with related keys. Pairs listed here are asserted by the contrast
 suite against the resolved values.
 
-| Entry                  | Background            | Text                   | Notes                         |
-| ---------------------- | --------------------- | ---------------------- | ----------------------------- |
-| `button-primary`       | `accent`              | `ink-on-accent`        | The one loud action           |
-| `button-primary-hover` | `accent-hover`        | `ink-on-accent`        | Hover/active variant          |
-| `button-quiet`         | `surface-raised`      | `ink`                  | Secondary controls            |
-| `toggle-selected`      | `accent`              | `ink-on-accent`        | Pressed filter toggle         |
-| `chip-active`          | `surface-selected`    | `ink`                  | Active filter chip            |
-| `card-unit`            | `surface-raised`      | `ink`                  | Unit card                     |
-| `badge-confirmed`      | `badge-confirmed-bg`  | `badge-confirmed-ink`  | Verification status           |
-| `badge-unverified`     | `badge-unverified-bg` | `badge-unverified-ink` | Verification status           |
-| `banner-disclosure`    | `surface-warning`     | `ink`                  | Referral-policy disclosure    |
-| `screen-page`          | `surface`             | `ink`                  | Page-level pairing            |
-| `map-pin-available`    | `pin-exact`           | —                      | Availability paint            |
-| `map-pin-highlighted`  | `pin-highlight`       | —                      | Selection paint               |
-| `map-pin-ring`         | `pin-highlight-ring`  | —                      | Highlight stroke paint        |
-| `map-pin-label`        | `pin-label-bg`        | `pin-label-ink`        | Address label on its bubble   |
-| `elevation-raised`     | —                     | —                      | `shadow` value, see Elevation |
+| Entry                  | Background            | Text                   | Notes                                |
+| ---------------------- | --------------------- | ---------------------- | ------------------------------------ |
+| `button-primary`       | `accent`              | `ink-on-accent`        | The one loud action                  |
+| `button-primary-hover` | `accent-hover`        | `ink-on-accent`        | Hover/active variant                 |
+| `button-quiet`         | `surface-raised`      | `ink`                  | Secondary controls                   |
+| `button-close`         | `close`               | `ink-on-close`         | Detail close; red fill, red 1px edge |
+| `toggle-selected`      | `accent`              | `ink-on-accent`        | Pressed filter toggle                |
+| `chip-active`          | `surface-selected`    | `ink`                  | Active filter chip                   |
+| `card-unit`            | `surface-raised`      | `ink`                  | Unit card                            |
+| `badge-confirmed`      | `badge-confirmed-bg`  | `badge-confirmed-ink`  | Verification status                  |
+| `badge-unverified`     | `badge-unverified-bg` | `badge-unverified-ink` | Verification status                  |
+| `banner-disclosure`    | `surface-warning`     | `ink`                  | Referral-policy disclosure           |
+| `screen-page`          | `surface`             | `ink`                  | Page-level pairing                   |
+| `map-pin-available`    | `pin-exact`           | —                      | Availability paint                   |
+| `map-pin-highlighted`  | `pin-highlight`       | —                      | Selection paint                      |
+| `map-pin-ring`         | `pin-highlight-ring`  | —                      | Highlight stroke paint               |
+| `map-pin-label`        | `pin-label-bg`        | `pin-label-ink`        | Address label on its bubble          |
+| `elevation-raised`     | —                     | —                      | `shadow` value, see Elevation        |
 
 Essential non-text boundaries (control outlines in `line-strong`, the
-selection outline in `accent`, focus rings in `accent-focus-ring`, pin
-strokes in `pin-highlight-ring` and `pin-ring`) are asserted at the 3:1
-non-text threshold against the surfaces they actually draw across;
-decorative `line` hairlines and raster-tile adjacency are explicitly not
-asserted.
+close control's red edge in `close`, the selection outline in `accent`,
+focus rings in `accent-focus-ring`, pin strokes in `pin-highlight-ring`
+and `pin-ring`) are asserted at the 3:1 non-text threshold against the
+surfaces they actually draw across; decorative `line` hairlines and
+raster-tile adjacency are explicitly not asserted.
 
 ## Do's and Don'ts
 
@@ -475,4 +521,6 @@ asserted.
   bridge constants; never hand-edit the generated stylesheet or splice
   literals into components.
 - Don't introduce a second shadow, a second action hue, or radii outside
-  `control` and `pill`.
+  `control` and `pill`. The close button's red is the one sanctioned
+  dismissive control color — deliberately not a brand hue, and still no
+  other second action hue.

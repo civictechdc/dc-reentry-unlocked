@@ -239,9 +239,9 @@
   .close {
     font: inherit;
     line-height: 1;
-    border: 1px solid var(--color-line-strong);
-    background: var(--color-surface-raised);
-    color: var(--color-ink);
+    border: 1px solid var(--color-close);
+    background: var(--color-close);
+    color: var(--color-ink-on-close);
     border-radius: var(--rounded-control);
     padding: 0.25rem 0.6rem;
   }
