@@ -11,10 +11,37 @@ colors:
   slate-muted: "#51606b"
   slate-line: "#cbd3d9"
   slate-line-strong: "#84909a"
-  blue-faint: "#e3f0fd"
-  blue-strong: "#0b5fab"
-  blue-deep: "#094a86"
+  # Blue owns actions. Its five-step ramp is the tetradic candidate for the
+  # action hue, built at hue anchor 250° (construction recorded under
+  # "Ramp construction" below).
+  blue-faint: "#eef6ff"
+  blue-soft: "#c6e1ff"
+  blue-mid: "#73a9e1"
+  blue-strong: "#2c6194"
+  blue-deep: "#00345f"
+  # Keyboard focus boundary — kept a literal, deliberately outside the
+  # ramp grid: no ramp step passes the ring's 3:1 adjacency on every light
+  # surface while staying distinct from the action states (see Colors).
   blue-ring: "#1d4ed8"
+
+  # Supporting tetrad hues at anchors 70°/150°/330°, landed as unplaced
+  # primitives: nothing consumes them yet, and any future placement is a
+  # separate reviewed decision. They are never status colors.
+  orange-faint: "#fff3e6"
+  orange-soft: "#ffd6a8"
+  orange-mid: "#cd995c"
+  orange-strong: "#81520a"
+  orange-deep: "#492b00"
+  green-faint: "#dfffe4"
+  green-soft: "#aef1bb"
+  green-mid: "#75b683"
+  green-strong: "#2c6d3e"
+  green-deep: "#003f18"
+  magenta-faint: "#fff0fd"
+  magenta-soft: "#ffcaf9"
+  magenta-mid: "#c88ec3"
+  magenta-strong: "#7d4778"
+  magenta-deep: "#4d1b4a"
 
   # Layer 2 — semantic aliases: the names consumers use. Flat, readable,
   # unique. Values resolve to literal lowercase hex at export time.
@@ -143,9 +170,11 @@ decoration that competes with data.
 Neutrals dominate every screen. Blue appears only where interaction or
 identity demands it. Status colors (map pins, the selection highlight, and
 verification badges) carry data meaning and stay independent of the brand
-palette even where values coincide. A tetradic supporting palette (anchored
-on complementary hue pairs) is planned as a separate reviewed candidate —
-not yet landed — and must keep these status semantics intact.
+palette even where values coincide. Beneath the neutrals sits a landed
+tetradic supporting palette — two complementary hue pairs anchored at
+blue 250°/orange 70° and green 150°/magenta 330°, each held as a
+five-step ramp — with blue owning actions and the orange, green, and
+magenta ramps unplaced until a use earns them.
 
 ## Colors
 
@@ -161,20 +190,72 @@ Tokens layer in three strata:
    tokens and document pairing and contrast. They emit no CSS custom
    properties of their own.
 
+### Ramp construction
+
+Every brand hue is held as a five-step ramp — `faint`, `soft`, `mid`,
+`strong`, `deep` — derived mechanically, not picked by eye:
+
+- **Hue anchors** — blue 250°, orange 70°, green 150°, magenta 330°:
+  two complementary pairs (250°/70° and 150°/330°) forming the tetradic
+  rectangle. Anchors are fixed per ramp; no step shifts hue.
+- **Lightness targets** — 0.97 / 0.90 / 0.72 / 0.48 / 0.32 in OKLab L,
+  the same five steps for every hue.
+- **Chroma** — each step starts at C = 0.10 and, when that color falls
+  outside sRGB, the chroma is reduced by binary search (tolerance 1e-4
+  on C) to the largest value still inside the gamut. "Inside the gamut"
+  means every linear-sRGB channel lies within [0, 1] under the CSS
+  Color 4 OKLab → linear sRGB transform.
+- **8-bit rounding** — surviving linear channels are gamma-encoded and
+  rounded per channel; the YAML and `:root` hold only the resulting
+  opaque sRGB hex literals, never `oklch()`.
+- The conversion math was verified against published OKLab reference
+  values (Ottosson's sRGB → OKLab figures and the OKLCH forms of the
+  sRGB primaries) before any ramp was trusted: maximum observed error
+  1.8e-6, with exact 8-bit round trips on the primaries.
+
+The ramps are candidates for review, not contrast guarantees: contrast
+is asserted only where a semantic role actually consumes a step (the
+matrix under Components). The final chroma per step is recorded in the
+table below so gamut reductions are visible — at the pale end it is the
+gamut, not the construction, that caps how much hue a near-white
+surface can carry.
+
 ### Primitives
 
-| Token               | Value     | Role                                            |
-| ------------------- | --------- | ----------------------------------------------- |
-| `white`             | `#ffffff` | Raised cards, controls, on-accent ink           |
-| `slate-faint`       | `#f5f7fa` | Cool page wash behind everything                |
-| `slate-ink`         | `#1b2a34` | Body ink — near-black with a cool cast          |
-| `slate-muted`       | `#51606b` | Secondary ink for de-emphasized text            |
-| `slate-line`        | `#cbd3d9` | Quiet hairline borders (decorative)             |
-| `slate-line-strong` | `#84909a` | Essential control boundaries                    |
-| `blue-faint`        | `#e3f0fd` | Selection tint derived from the accent hue      |
-| `blue-strong`       | `#0b5fab` | The institutional action blue                   |
-| `blue-deep`         | `#094a86` | Hover state of the action blue                  |
-| `blue-ring`         | `#1d4ed8` | Keyboard focus ring, visibly distinct from fill |
+| Token               | Value     | L (OKLab) | Final C (reduced?) | Role                                              |
+| ------------------- | --------- | --------- | ------------------ | ------------------------------------------------- |
+| `white`             | `#ffffff` | 1.00      | —                  | Raised cards, controls, on-accent ink             |
+| `slate-faint`       | `#f5f7fa` | —         | —                  | Cool page wash behind everything                  |
+| `slate-ink`         | `#1b2a34` | —         | —                  | Body ink — near-black with a cool cast            |
+| `slate-muted`       | `#51606b` | —         | —                  | Secondary ink for de-emphasized text              |
+| `slate-line`        | `#cbd3d9` | —         | —                  | Quiet hairline borders (decorative)               |
+| `slate-line-strong` | `#84909a` | —         | —                  | Essential control boundaries                      |
+| `blue-faint`        | `#eef6ff` | 0.97      | 0.0146 (reduced)   | Selection tint derived from the accent hue        |
+| `blue-soft`         | `#c6e1ff` | 0.90      | 0.0504 (reduced)   | Blue ramp step (unplaced)                         |
+| `blue-mid`          | `#73a9e1` | 0.72      | 0.1000 (= start)   | Blue ramp step (unplaced)                         |
+| `blue-strong`       | `#2c6194` | 0.48      | 0.1000 (= start)   | The institutional action blue                     |
+| `blue-deep`         | `#00345f` | 0.32      | 0.0905 (reduced)   | Hover state of the action blue                    |
+| `blue-ring`         | `#1d4ed8` | —         | —                  | Focus ring, a literal outside the ramps (literal) |
+| `orange-faint`      | `#fff3e6` | 0.97      | 0.0216 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `orange-soft`       | `#ffd6a8` | 0.90      | 0.0755 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `orange-mid`        | `#cd995c` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `orange-strong`     | `#81520a` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `orange-deep`       | `#492b00` | 0.32      | 0.0692 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `green-faint`       | `#dfffe4` | 0.97      | 0.0483 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `green-soft`        | `#aef1bb` | 0.90      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `green-mid`         | `#75b683` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `green-strong`      | `#2c6d3e` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `green-deep`        | `#003f18` | 0.32      | 0.0881 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `magenta-faint`     | `#fff0fd` | 0.97      | 0.0238 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `magenta-soft`      | `#ffcaf9` | 0.90      | 0.0848 (reduced)   | Supporting tetrad hue (unplaced)                  |
+| `magenta-mid`       | `#c88ec3` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `magenta-strong`    | `#7d4778` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+| `magenta-deep`      | `#4d1b4a` | 0.32      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                  |
+
+Neutrals carry no ramp: they are the dominant family and are picked by
+eye, not derived. `C = 0.1000 (= start)` means the starting chroma fit
+the gamut untouched; every lower value was reduced until the color
+landed inside sRGB.
 
 ### Semantic roles
 
@@ -182,7 +263,7 @@ Tokens layer in three strata:
   white cards read as lifted without any shadow increase.
 - **`surface-raised` (`#ffffff`)** — cards, filter controls, header. The
   white lifting mechanism of the whole layout.
-- **`surface-selected` (`#e3f0fd`)** — active chips and pressed control
+- **`surface-selected` (`#eef6ff`)** — active chips and pressed control
   state; a whisper of the accent hue, not a new color.
 - **`surface-warning` (`#fff8e1`)** — the disclosure banner only. Held as a
   literal, outside all brand references, so its cautionary warm cast cannot
@@ -201,13 +282,24 @@ Tokens layer in three strata:
   both below the 3:1 non-text threshold an essential boundary must meet —
   so it was darkened to `#84909a` (3.26:1 on white, 3.04:1 on the page
   wash) instead of exempting the pair.
-- **`accent` (`#0b5fab`)** — primary actions, selected-state outline, and
-  the document theme color.
-- **`accent-hover` (`#094a86`)** — the pressed/hovered action state, one
-  step deeper for visible feedback.
-- **`accent-focus-ring` (`#1d4ed8`)** — the shared `:focus-visible` outline;
-  deliberately a different blue than the fill so focus stays legible on and
-  next to action-colored elements.
+- **`accent` (`#2c6194`)** — primary actions, selected-state outline, and
+  the document theme color. The `strong` step of the blue ramp: its OKLab
+  lightness matches the blue it replaces (0.4816 vs 0.4833) and its hue
+  sits within ~3° of it (249.9° vs 252.5°, against the 250° anchor), with
+  chroma held at the ramp's construction value rather than picked by eye.
+- **`accent-hover` (`#00345f`)** — the pressed/hovered action state, one
+  ramp step deeper (L 0.48 → 0.32) for visible feedback.
+- **`accent-focus-ring` (`#1d4ed8`)** — the shared `:focus-visible`
+  outline; deliberately a different blue than the fill so focus stays
+  legible on and next to action-colored elements. It is the one brand
+  primitive kept outside the ramp grid, and that is a considered choice:
+  the ramp's pale steps fail the ring outright on light surfaces
+  (`blue-mid`, the nearest candidate, measures 2.3–2.5:1 against every
+  surface the ring draws across — below the 3:1 non-text threshold), while
+  the dark steps are the action states themselves, leaving a ring that
+  either collides with the fill or with hover. The literal clears 6:1 on
+  all four asserted adjacencies, and its saturated royal blue keeps it
+  unmistakable beside the muted steel of the new action fill.
 
 ### Status and map paints (deliberately unaliased)
 
@@ -225,12 +317,15 @@ Tokens layer in three strata:
 | `badge-unverified-bg`  | `#ffe8cc` | Needs-verification badge background           |
 | `badge-unverified-ink` | `#7c3a00` | Needs-verification badge text                 |
 
-These stay literal even where a value equals a brand token (`pin-exact` is
-`#0b5fab`, the same hex as `accent`; `pin-ring` and `pin-label-bg` are
-`#ffffff`, the same hex as `white` — with no reference between them): pins
-mean availability, highlight means selection, badges mean verification
-status — none may inherit palette edits meant for actions. Supporting brand
-hues must never pose as status indicators.
+These stay literal even where a value equals a brand token (`pin-ring`
+and `pin-label-bg` are `#ffffff`, the same hex as `white` — with no
+reference between them), and they stay literal where values once
+coincided and no longer do: `pin-exact` is `#0b5fab` while the action
+blue moved to its ramp value `#2c6194`, exactly the independence this
+rule exists to protect. Pins mean availability, highlight means
+selection, badges mean verification status — none may inherit palette
+edits meant for actions. Supporting brand hues must never pose as
+status indicators.
 
 Map paint colors and the label-bubble bitmap channels are consumed outside
 CSS (MapLibre style JSON and a typed-array bitmap), so they are checked
@@ -365,6 +460,13 @@ asserted.
 - Do use `accent` only for the primary action or selection state in a view.
 - Don't alias status tokens (`pin-*`, `badge-*`, `surface-warning`) to
   brand tokens — equal values are coincidence, not coupling.
+- Do keep the orange, green, and magenta ramps as unplaced primitives
+  until a reviewed use exists; blue owns actions, and a supporting hue
+  is never placed on a live component merely to demonstrate the tetrad.
+- Don't let a supporting hue present as availability, selection, or
+  verification status — green and orange in particular sit near the
+  badge and pin hues, and the status tokens above stay the only colors
+  that carry that meaning.
 - Do keep text pairs at WCAG AA (4.5:1 normal text); large-text 3:1 claims
   require explicit size/weight evidence.
 - Don't treat `line` as a boundary that must be seen — use `line-strong`

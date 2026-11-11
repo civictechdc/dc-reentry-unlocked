@@ -11,7 +11,8 @@ import {
 /**
  * Blocking WCAG 2.x token-pair contract over the role/state/adjacency
  * matrix: body and muted ink on every used surface, on-accent text in each
- * action state, verification badges, the map address-label, focus rings,
+ * action state, verification badges, the map address-label, action tokens
+ * consumed as ink (the camera-control hover glyph), focus rings,
  * the selection outline, and essential control/pin boundaries. Thresholds
  * compare unrounded: normal text >= 4.5:1, large text >= 3:1 only with
  * explicit size/weight evidence, essential non-text >= 3:1 against the
@@ -219,6 +220,7 @@ export const EXPECTED_PAIR_IDS = [
   "text|on-accent ink|primary action at rest",
   "text|on-accent ink|primary action hovered",
   "text|on-accent ink|toggle selected",
+  "text|camera control glyph|hover on raised control",
   "text|badge text|confirmed badge",
   "text|badge text|needs-verification badge",
   "text|map label text|over the opaque bubble body",
@@ -364,6 +366,18 @@ function matrixPairs(): MatrixPair[] {
       state: "toggle selected",
       foreground: token("ink-on-accent"),
       background: token("accent"),
+      threshold: NORMAL_TEXT,
+    },
+    // Action tokens also render as ink, not just as fills: the map
+    // camera-control glyph recolors to accent-hover on hover while its own
+    // raised fill stays put (the active state keeps ink on the selected
+    // tint, already asserted above).
+    {
+      role: "camera control glyph",
+      kind: "text",
+      state: "hover on raised control",
+      foreground: token("accent-hover"),
+      background: token("surface-raised"),
       threshold: NORMAL_TEXT,
     },
     // Verification badges: 12px weight-600 text, asserted at the normal bar.
