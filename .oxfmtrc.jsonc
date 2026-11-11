@@ -23,6 +23,10 @@
     // contract (the `pnpm docgen:model` + git diff drift gate); the formatter
     // must not touch it
     "docs/data-model.md",
+    // generated design-token stylesheet: byte-identical regeneration from
+    // apps/web/DESIGN.md is the contract (the `pnpm design:check` export
+    // gate); the formatter must not touch it
+    "apps/web/src/generated/design-tokens.css",
     // in-repo OpenSpec planning artifacts: their markdown is produced and
     // maintained by the openspec workflow itself — reformatted copies would
     // fork them from the openspec tooling conventions they follow

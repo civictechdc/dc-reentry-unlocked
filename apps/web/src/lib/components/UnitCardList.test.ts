@@ -109,6 +109,39 @@ describe("zero-bedroom presentation vocabulary", () => {
   });
 });
 
+describe("card housing-type presentation through the list", () => {
+  test("shows the real housing-type label on the card row for a known housing type", () => {
+    store.units = [aUnit().withId("known-type").build()];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(
+        m.card_housing_type({ type: m.taxonomy_housing_transitional() }),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test("shows the honest unknown marker on the card row for an unlisted housing type", () => {
+    store.units = [aUnit().withId("unknown-type").withUnknownHousingType().build()];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+    expect(
+      within(card as HTMLElement).getByText(
+        m.card_housing_type({ type: m.detail_value_unknown() }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(
+        m.card_housing_type({ type: m.taxonomy_housing_transitional() }),
+      ),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("unit card list states", () => {
   test("shows skeleton loading while nothing has loaded yet", () => {
     store.units = null;

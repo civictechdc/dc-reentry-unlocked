@@ -1,16 +1,14 @@
 <script lang="ts">
-  import type { FilterDefinition, UnitCard } from "@dc-reentry/shared";
+  import type { UnitCard } from "@dc-reentry/shared";
   import { m } from "#lib/paraglide/messages.js";
-  import { cardBedroomsValue } from "./detail-values.ts";
+  import { cardBedroomsValue, detailValueLabel } from "./detail-values.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
 
   let {
     card,
-    definition,
     selected = false,
   }: {
     card: UnitCard;
-    definition?: FilterDefinition;
     selected?: boolean;
   } = $props();
 
@@ -19,12 +17,7 @@
     uiState.hoveredCardUnitId === card.id || uiState.hoveredPinUnitId === card.id,
   );
   const isOpen = $derived(uiState.selectedUnitId === card.id);
-  const housingTypeLabel = $derived(
-    definition
-      ? (definition.options?.find((option) => option.value === card.program.housingType)?.label ??
-          m.detail_value_unknown())
-      : m.detail_value_unknown(),
-  );
+  const housingTypeLabel = $derived(detailValueLabel(card.program.housingType));
   const badgeLabel = $derived(
     card.verificationBadge === "confirmed"
       ? m.card_badge_confirmed()
@@ -90,30 +83,30 @@
 
 <style>
   .unit-card {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
     overflow: hidden;
     box-shadow: var(--shadow);
   }
   .unit-card.selected,
   .unit-card.highlighted {
-    border-color: var(--accent);
-    outline: 2px solid var(--accent);
+    border-color: var(--color-accent);
+    outline: 2px solid var(--color-accent);
   }
   .card-body {
     display: block;
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: var(--spacing-md) var(--spacing-lg);
     text-align: left;
     font: inherit;
     border: 0;
     background: transparent;
-    color: var(--ink);
+    color: var(--color-ink);
   }
   .card-head {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
     justify-content: space-between;
     align-items: flex-start;
   }
@@ -125,30 +118,30 @@
   }
   .provider {
     font-weight: 400;
-    font-size: 0.875rem;
-    color: var(--ink-muted);
+    font-size: var(--font-size-small);
+    color: var(--color-ink-muted);
   }
   .badge {
     font-size: 0.75rem;
     font-weight: 600;
     padding: 0.15rem 0.5rem;
-    border-radius: 999px;
+    border-radius: var(--rounded-pill);
     white-space: nowrap;
   }
   .badge-confirmed {
-    background: var(--badge-confirmed-bg);
-    color: var(--badge-confirmed-ink);
+    background: var(--color-badge-confirmed-bg);
+    color: var(--color-badge-confirmed-ink);
   }
   .badge-needs-verification {
-    background: var(--badge-unverified-bg);
-    color: var(--badge-unverified-ink);
+    background: var(--color-badge-unverified-bg);
+    color: var(--color-badge-unverified-ink);
   }
   .specs {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem 1.25rem;
     margin: 0.5rem 0 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-small);
   }
   .specs div {
     margin: 0;

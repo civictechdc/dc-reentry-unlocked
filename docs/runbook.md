@@ -70,6 +70,38 @@ lsof -nP -iTCP:3000 -iTCP:5173 -sTCP:LISTEN
 and kill the listening PID(s) found there (`lsof` shows no listeners when
 both servers are really stopped).
 
+### Stale servers poison the local e2e suites
+
+The Playwright configs run with `reuseExistingServer` enabled outside CI:
+any process already listening on port 3000 is adopted as "the API" without
+receiving the e2e environment. Two failure shapes come from that, both
+investigated from a green tree (2026-11-10):
+
+- **`e2e:prod` fails with pins never attaching** and the page alerting "We
+  couldn't reach the housing service". An adopted orphan API runs with the
+  default CORS allow list (dev origin only), so the production probe's page
+  — served on port 4317 — has its cross-origin units fetch blocked by the
+  browser. The app shell, map, and worker all look healthy, which makes the
+  symptom point far from the cause.
+- **Late e2e tests start failing after back-to-back full-suite runs**
+  against one long-lived API: the per-client rate limit (100 requests per
+  minute, one shared budget across all requests) saturates and the client
+  surfaces the same unreachable alert.
+
+Diagnosis one-liner — a correctly booted e2e API answers with an
+`access-control-allow-origin` header for the prod origin; an orphan does
+not:
+
+```sh
+curl -s -D - -o /dev/null -H "Origin: http://localhost:4317" \
+  http://localhost:3000/units | grep -i access-control
+```
+
+Prevention is the stopping guidance at the top of this section: before
+`pnpm -C apps/web e2e` or `e2e:prod`, stop stray servers on
+3000/4317/5173 (`lsof -ti :3000 -i :4317 -i :5173 | xargs kill`) so
+Playwright boots its own configured stack.
+
 ## 2. Development in a dev container
 
 No local Node/pnpm toolchain at all is fine: the repo's `.devcontainer/`

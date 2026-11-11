@@ -25,25 +25,25 @@
   .error-panel {
     max-width: 40rem;
     margin: 4rem auto;
-    padding: 2rem;
-    background: var(--surface-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding: var(--spacing-xxl);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--rounded-control);
   }
   h2 {
     margin-top: 0;
   }
   .cta {
     display: inline-block;
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background: var(--accent);
-    color: var(--ink-on-accent);
-    border-radius: var(--radius);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-accent);
+    color: var(--color-ink-on-accent);
+    border-radius: var(--rounded-control);
     text-decoration: none;
     font-weight: 600;
   }
   .cta:hover {
-    background: var(--accent-hover);
+    background: var(--color-accent-hover);
   }
 </style>

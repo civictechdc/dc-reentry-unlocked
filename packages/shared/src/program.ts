@@ -32,7 +32,7 @@ export const GENDERS = ["men", "women", "all"] as const;
 
 /**
  * Unknown honesty (spec: "Unknown is a representable state"): EVERY
- * policy/eligibility field supports unknown ("not publicly listed"). The
+ * policy/eligibility field supports unknown (the honest "Unknown"). The
  * enumerated eligibility fields extend their taxonomy with the same
  * "unknown" literal the tri-state PolicyState uses — one representation,
  * consistent across the contract. "unknown" is a data state only; filter
@@ -40,11 +40,11 @@ export const GENDERS = ["men", "women", "all"] as const;
  */
 const UnknownSchema = Type.Literal("unknown");
 
-const UNKNOWN_MEANING = "Not publicly listed — the honest unknown, never a fabricated value.";
+const UNKNOWN_MEANING = "The honest unknown — never a fabricated value.";
 
-/** Housing type: a taxonomy value, or "not publicly listed". */
+/** Housing type: a taxonomy value, or the honest "Unknown". */
 export const HousingTypeSchema = Type.Union([Type.Enum([...HOUSING_TYPES]), UnknownSchema], {
-  description: 'Housing type: a taxonomy value, or "unknown" ("not publicly listed").',
+  description: 'Housing type: a taxonomy value, or "unknown" (the honest "Unknown").',
   "x-enum-meanings": {
     "emergency-shelter": "Emergency shelter.",
     transitional: "Transitional housing.",
@@ -56,9 +56,9 @@ export const HousingTypeSchema = Type.Union([Type.Enum([...HOUSING_TYPES]), Unkn
 });
 export type HousingType = Static<typeof HousingTypeSchema>;
 
-/** Length of stay: a taxonomy value, or "not publicly listed". */
+/** Length of stay: a taxonomy value, or the honest "Unknown". */
 export const LengthOfStaySchema = Type.Union([Type.Enum([...LENGTHS_OF_STAY]), UnknownSchema], {
-  description: 'Length of stay: a taxonomy value, or "unknown" ("not publicly listed").',
+  description: 'Length of stay: a taxonomy value, or "unknown" (the honest "Unknown").',
   "x-enum-meanings": {
     "emergency-nightly": "Emergency shelter, priced nightly.",
     "short-term-up-to-90-days": "Short-term stay, up to 90 days.",
@@ -69,9 +69,9 @@ export const LengthOfStaySchema = Type.Union([Type.Enum([...LENGTHS_OF_STAY]), U
 });
 export type LengthOfStay = Static<typeof LengthOfStaySchema>;
 
-/** Population served: a taxonomy value, or "not publicly listed". */
+/** Population served: a taxonomy value, or the honest "Unknown". */
 export const PopulationSchema = Type.Union([Type.Enum([...POPULATIONS]), UnknownSchema], {
-  description: 'Population served: a taxonomy value, or "unknown" ("not publicly listed").',
+  description: 'Population served: a taxonomy value, or "unknown" (the honest "Unknown").',
   "x-enum-meanings": {
     individuals: "Individuals.",
     families: "Families.",
@@ -81,9 +81,9 @@ export const PopulationSchema = Type.Union([Type.Enum([...POPULATIONS]), Unknown
 });
 export type Population = Static<typeof PopulationSchema>;
 
-/** Gender served: a taxonomy value, or "not publicly listed". */
+/** Gender served: a taxonomy value, or the honest "Unknown". */
 export const GenderSchema = Type.Union([Type.Enum([...GENDERS]), UnknownSchema], {
-  description: 'Gender served: a taxonomy value, or "unknown" ("not publicly listed").',
+  description: 'Gender served: a taxonomy value, or "unknown" (the honest "Unknown").',
   "x-enum-meanings": {
     men: "Men.",
     women: "Women.",
@@ -95,18 +95,18 @@ export type Gender = Static<typeof GenderSchema>;
 
 /**
  * Housing program: the policy-bearing layer between provider and unit.
- * Every eligibility/policy field carries the unknown state ("not publicly
- * listed") — tri-state for policy fields, taxonomy + "unknown" for the
- * enumerated eligibility fields. Unknown is never fabricated as yes/no.
+ * Every eligibility/policy field carries the unknown state ("Unknown") —
+ * tri-state for policy fields, taxonomy + "unknown" for the enumerated
+ * eligibility fields. Unknown is never fabricated as yes/no.
  */
 export const ProgramSchema = Type.Object(
   {
     id: Type.String({ description: "Stable program identifier." }),
     /** Program name shown in the detail contact block. */
     name: Type.String({ description: "Program name shown in the detail contact block." }),
-    /** How the application process works, when publicly listed. */
+    /** How the application process works, when the source states it. */
     applicationProcess: Type.Optional(
-      Type.String({ description: "How the application process works, when publicly listed." }),
+      Type.String({ description: "How the application process works, when the source states it." }),
     ),
     housingType: HousingTypeSchema,
     lengthOfStay: LengthOfStaySchema,
@@ -124,7 +124,7 @@ export const ProgramSchema = Type.Object(
   {
     description:
       "Housing program: the policy-bearing layer between provider and unit. Every " +
-      'eligibility/policy field carries the unknown state ("not publicly listed") — tri-state ' +
+      'eligibility/policy field carries the unknown state ("Unknown") — tri-state ' +
       'for the policy fields, taxonomy + "unknown" for the enumerated eligibility fields. ' +
       "Unknown is never fabricated as yes/no.",
   },

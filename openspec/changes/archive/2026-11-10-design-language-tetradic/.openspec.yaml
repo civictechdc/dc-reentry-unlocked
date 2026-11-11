@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-11-09
+goal: "Create a maintainable, well-organised design language for the web
+  app — easy to modify, re-use, and extend, with readable names — evaluating
+  the Google Labs DESIGN.md format (github.com/google-labs-code/design.md)
+  as its artifact, grounding CSS usage in the CSS Snapshot 2026 baseline
+  with an explicit fallback doctrine, and exploring a WCAG-conformant
+  tetradic color scheme"

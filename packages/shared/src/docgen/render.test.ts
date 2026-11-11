@@ -96,7 +96,7 @@ test("unknown eligibility fields render the taxonomy plus the honest unknown", (
     expect(constraints).toContain(`\`${value}\``);
   }
   expect(constraints).toContain("`unknown`");
-  expect(constraints).toContain("Not publicly listed");
+  expect(constraints).toContain("The honest unknown — never a fabricated value.");
 });
 
 test("every worked example the doc renders validates against its schema", () => {

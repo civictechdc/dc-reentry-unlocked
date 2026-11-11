@@ -1,6 +1,7 @@
 import { aUnit } from "@dc-reentry/shared/testing";
 import { describe, expect, test } from "vitest";
 import type { CameraMap } from "./map-config.ts";
+import { PIN_LABEL_BG, PIN_LABEL_INK, rgbChannels } from "./map-colors.ts";
 import {
   LOCALE_MAP_CENTER,
   LOCALE_MAP_ZOOM,
@@ -158,7 +159,7 @@ describe("pin address labels", () => {
     // the opaque bubble replaces the halo pair
     expect(paint).not.toHaveProperty("text-halo-color");
     expect(paint).not.toHaveProperty("text-halo-width");
-    expect(paint["text-color"]).toBe("#1f2937");
+    expect(paint["text-color"]).toBe(PIN_LABEL_INK);
 
     const customized = pinLabelLayerDefinition(idleFilter, {
       textSize: 18,
@@ -325,7 +326,7 @@ describe("the pin label bubble bitmap", () => {
     ]);
     const bodyCenter = pixelAt(image, Math.floor(image.width / 2), 16);
     expect(bodyCenter[3], "the body interior is opaque white").toBe(255);
-    expect([bodyCenter[0], bodyCenter[1], bodyCenter[2]]).toEqual([255, 255, 255]);
+    expect([bodyCenter[0], bodyCenter[1], bodyCenter[2]]).toEqual([...rgbChannels(PIN_LABEL_BG)]);
     const border = pixelAt(image, Math.floor(image.width / 2), 1);
     expect(border[3], "the body border is opaque").toBe(255);
     expect(border[0]).toBeLessThan(255);
@@ -334,7 +335,9 @@ describe("the pin label bubble bitmap", () => {
     expect(arcPixel[0]).toBeLessThan(255);
     const innerCorner = pixelAt(image, 4, 4);
     expect(innerCorner[3]).toBe(255);
-    expect([innerCorner[0], innerCorner[1], innerCorner[2]]).toEqual([255, 255, 255]);
+    expect([innerCorner[0], innerCorner[1], innerCorner[2]]).toEqual([
+      ...rgbChannels(PIN_LABEL_BG),
+    ]);
   });
 
   test("the tail renders as one piece with the body: white fill across the junction, outline flowing around the tail edges", () => {
@@ -344,11 +347,11 @@ describe("the pin label bubble bitmap", () => {
     expect(
       pixelAt(image, Math.floor(image.width / 2), bodyBottom),
       "no border across the junction",
-    ).toEqual([255, 255, 255, 255]);
+    ).toEqual([...rgbChannels(PIN_LABEL_BG), 255]);
     expect(
       pixelAt(image, Math.floor(image.width / 2), bodyBottom + 2),
       "white fill continues through the junction into the tail",
-    ).toEqual([255, 255, 255, 255]);
+    ).toEqual([...rgbChannels(PIN_LABEL_BG), 255]);
     // the body's bottom edge outside the tail span keeps its gray border
     const bottomEdge = pixelAt(image, 10, bodyBottom);
     expect(bottomEdge[3]).toBe(255);

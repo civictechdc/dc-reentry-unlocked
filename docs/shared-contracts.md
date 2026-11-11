@@ -65,13 +65,13 @@ import type { Provider, Program, Unit, UnitCard } from "@dc-reentry/shared";
 Every policy/eligibility field supports unknown: the tri-state policy fields
 and the enumerated eligibility fields (housing type, length of stay,
 population, gender) all carry the same `"unknown"` literal. Unknown means
-"not publicly listed" — never fabricated. Filter matching honors this at the
-API layer: boolean filters match unknown against "no" selections; enum
-filters match unknown against every value selection. Detail data always
-retains the honest unknown — a card's own `"unknown"` value (on a policy
-field or an eligibility field) IS the machine-readable "policy not listed"
-marker. Unknown is a data state only; the filter option lists stay the
-pinned taxonomies.
+the source has not stated the value — never fabricated. Filter matching
+honors this at the API layer: boolean filters match unknown against "no"
+selections; enum filters match unknown against every value selection.
+Detail data always retains the honest unknown — a card's own `"unknown"`
+value (on a policy field or an eligibility field) IS the machine-readable
+"policy not listed" marker. Unknown is a data state only; the filter option
+lists stay the pinned taxonomies.
 
 ```ts
 import { PolicyStateSchema, Value } from "@dc-reentry/shared";

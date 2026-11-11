@@ -21,6 +21,7 @@ import {
   unitsToFeatureCollection,
   ZOOM_STEP,
 } from "#lib/map/map-config.ts";
+import { PIN_EXACT } from "#lib/map/map-colors.ts";
 
 /**
  * maplibre-gl is mocked in component tests (fast surface); the real-map
@@ -481,7 +482,7 @@ describe("MapLibre map wrapper (mocked maplibre)", () => {
     const baseLayer = created.layers.find((layer) => layer.id === "units-pins-base");
     expect(baseLayer).toBeTruthy();
     const paint = baseLayer!.paint as Record<string, unknown>;
-    expect(paint["circle-color"]).toBe("#0b5fab");
+    expect(paint["circle-color"]).toBe(PIN_EXACT);
     expect(paint["circle-radius"]).toBe(6);
   });
 

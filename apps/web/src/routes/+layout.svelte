@@ -24,23 +24,23 @@
     position: absolute;
     left: -9999px;
     top: 0;
-    background: var(--surface-raised);
-    color: var(--ink);
-    padding: 0.5rem 1rem;
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+    padding: var(--spacing-sm) var(--spacing-lg);
     z-index: 100;
   }
   .skip-link:focus-visible {
     left: 0;
   }
   .app-header {
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--line);
-    padding: 0.5rem 1rem;
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-line);
+    padding: var(--spacing-sm) var(--spacing-lg);
   }
   .app-title {
     font-size: 1.125rem;
     margin: 0;
-    color: var(--ink);
+    color: var(--color-ink);
   }
   main {
     padding: 0;

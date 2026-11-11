@@ -132,9 +132,9 @@
 
 <style>
   .filter-bar {
-    background: var(--surface-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--rounded-control);
     padding: 0.375rem 0.75rem;
     display: grid;
     gap: 0.375rem;
@@ -154,7 +154,7 @@
   .control-label {
     font-weight: 600;
     font-size: 0.8rem;
-    color: var(--ink);
+    color: var(--color-ink);
   }
   select {
     font: inherit;
@@ -163,15 +163,15 @@
        if font or line-height drifts. */
     min-height: 1.5rem;
     padding: 0.125rem 0.375rem;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
   .toggle-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: var(--spacing-xs);
   }
   .toggle-group button {
     font: inherit;
@@ -180,35 +180,35 @@
        if font or line-height drifts. */
     min-height: 1.5rem;
     padding: 0.125rem 0.5rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-pill);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
   .toggle-group button[aria-pressed="true"] {
-    background: var(--accent);
-    color: var(--ink-on-accent);
-    border-color: var(--accent);
+    background: var(--color-accent);
+    color: var(--color-ink-on-accent);
+    border-color: var(--color-accent);
   }
   .filter-footer {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--spacing-lg);
     font-size: 0.8rem;
   }
   .unsupported-notice {
     margin: 0;
     font-size: 0.8rem;
-    color: var(--ink-muted);
+    color: var(--color-ink-muted);
   }
   .clear-all {
     margin-left: auto;
     font: inherit;
     font-size: 0.8rem;
     padding: 0.3rem 0.75rem;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
 </style>

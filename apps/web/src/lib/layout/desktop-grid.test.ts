@@ -50,8 +50,8 @@ describe("the desktop chrome density", () => {
   test("compacts the desktop frame's gap and padding so the panes reclaim the chrome around them", () => {
     const layout = ruleBlock(routeCss, ".desktop-layout");
 
-    expect(layout).toContain("gap: 0.5rem");
-    expect(layout).toContain("padding: 0.5rem");
+    expect(layout).toContain("gap: var(--spacing-sm)");
+    expect(layout).toContain("padding: var(--spacing-sm)");
   });
 
   test("reclaims the dead bottom slack in the layout height so the map row grows instead of the overhead", () => {
@@ -199,8 +199,8 @@ describe("the map pane frame", () => {
   test("frames the map pane with a small border and radius wherever it renders", () => {
     const mapView = ruleBlock(mapCss, ".map-view");
 
-    expect(mapView).toContain("border: 1px solid var(--line-strong)");
-    expect(mapView).toContain("border-radius: var(--radius)");
+    expect(mapView).toContain("border: 1px solid var(--color-line-strong)");
+    expect(mapView).toContain("border-radius: var(--rounded-control)");
     // The corner-clip mechanism: without it the square canvas corners poke
     // out of the rounded frame.
     expect(mapView).toContain("overflow: hidden");

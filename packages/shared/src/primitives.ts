@@ -4,7 +4,7 @@ import Type, { type Static } from "typebox";
  * Primitives shared by every contract in this package.
  *
  * Unknown honesty (spec: "Unknown is a representable state"): EVERY
- * policy/eligibility field supports unknown ("not publicly listed"). The
+ * policy/eligibility field supports unknown (the honest "Unknown"). The
  * enumerated eligibility fields extend their taxonomy with the same
  * "unknown" literal the tri-state PolicyState uses — one representation,
  * consistent across the contract. Unknown is a data state only; filter
@@ -19,18 +19,18 @@ export const SchemaVersionSchema = Type.Literal(SCHEMA_VERSION, {
 });
 
 /**
- * Tri-state policy value: known yes / known no / unknown ("not publicly
- * listed"). Boolean filter semantics map `unknown` against "no" selections
+ * Tri-state policy value: known yes / known no / unknown ("Unknown").
+ * Boolean filter semantics map `unknown` against "no" selections
  * (API layer), while detail data always retains the honest unknown.
  */
 export const POLICY_STATES = ["yes", "no", "unknown"] as const;
 
 export const PolicyStateSchema = Type.Enum([...POLICY_STATES], {
-  description: 'Tri-state policy value: known yes / known no / unknown ("not publicly listed").',
+  description: 'Tri-state policy value: known yes / known no / unknown ("Unknown").',
   "x-enum-meanings": {
     yes: "The policy applies.",
     no: "The policy does not apply.",
-    unknown: "Not publicly listed — never fabricated as yes or no.",
+    unknown: "Unknown — never fabricated as yes or no.",
   },
 });
 export type PolicyState = Static<typeof PolicyStateSchema>;

@@ -18,7 +18,8 @@
     "docgen:model": "pnpm -C packages/shared docgen:model",
     "typecheck": "pnpm exec tsc -p packages/shared && pnpm exec tsc -p apps/api && pnpm exec tsc -p tools/datagen && pnpm -C apps/web check",
     "typecheck:web": "pnpm -C apps/web check",
-    "arch:check": "pnpm exec dependency-cruiser ."
+    "arch:check": "pnpm exec dependency-cruiser .",
+    "design:check": "pnpm -C apps/web design:lint && pnpm -C apps/web design:export:check && pnpm -C apps/web design:drift"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

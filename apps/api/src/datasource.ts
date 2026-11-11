@@ -93,7 +93,7 @@ function matchesChoice(
 ): boolean {
   switch (definition.control) {
     case "boolean":
-      // Unknown-at-source honesty: a not-publicly-listed policy matches a
+      // Unknown-at-source honesty: an unknown-at-source policy matches a
       // "no" selection, never a "yes" (one is never fabricated).
       if (choice === "yes") {
         return value === "yes";

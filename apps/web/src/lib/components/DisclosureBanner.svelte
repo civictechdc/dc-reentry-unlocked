@@ -15,10 +15,10 @@
 
 <style>
   .banner {
-    background: var(--surface-warning);
-    border-bottom: 1px solid var(--line-strong);
-    color: var(--ink);
-    padding: 0.5rem 1rem;
+    background: var(--color-surface-warning);
+    border-bottom: 1px solid var(--color-line-strong);
+    color: var(--color-ink);
+    padding: var(--spacing-sm) var(--spacing-lg);
   }
   .banner-title {
     display: block;
@@ -29,7 +29,7 @@
     max-width: 80ch;
   }
   p {
-    font-size: 0.875rem;
+    font-size: var(--font-size-small);
     line-height: 1.4;
   }
 </style>

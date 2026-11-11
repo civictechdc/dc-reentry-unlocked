@@ -53,7 +53,7 @@ Four endpoints are served under these rules:
   superset of the UI control semantics — single-select UIs send one value,
   API consumers may union.
 - Unknown filter names or values are rejected with `400 invalid-filter`.
-- Unknown-at-source handling: a "not publicly listed" policy field matches
+- Unknown-at-source handling: a policy field unknown at the source matches
   every **no** boolean selection and every enum value selection, and the
   unit card still carries its honest `"unknown"` value — the
   machine-readable "policy not listed" marker.

@@ -52,7 +52,7 @@ runs typecheck + arch:check regardless. Conventional Commits only:
 
 ## Domain rules that trip agents
 
-- Unknown ("not publicly listed") is a representable state — never fold it
+- Unknown (rendered "Unknown") is a representable state — never fold it
   into yes/no. See `docs/glossary.md` and AGENTS.md "Unknown honesty".
 - Only **available** units surface; not-available and unverified-availability
   units are hidden from listings, map pins, and card lists.

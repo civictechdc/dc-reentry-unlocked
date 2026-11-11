@@ -61,6 +61,13 @@ jobs:
       - name: Audit production dependencies
         run: pnpm audit --prod
 
+      - name: Design tokens (lint + regeneration identity + hand-written drift)
+        # Lints apps/web/DESIGN.md, re-exports the generated token stylesheet
+        # into a temp file and requires the committed artifact to be tracked
+        # and byte-identical, and drift-checks hand-written typography and
+        # the color bridges against the source artifact.
+        run: pnpm design:check
+
       - name: Commit messages (PR range)
         if: github.event_name == 'pull_request'
         env:

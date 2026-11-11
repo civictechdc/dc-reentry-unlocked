@@ -15,7 +15,7 @@
   /**
    * Unit detail slide-over: opened by selecting a card or map pin while the
    * map stays visible; closing returns to the list in its prior state.
-   * Unknown policy fields render the honest "not publicly listed" — never
+   * Unknown policy fields render the honest "Unknown" — never
    * a fabricated value.
    */
   const unit = $derived(store.units?.find((card) => card.id === uiState.selectedUnitId) ?? null);
@@ -205,10 +205,10 @@
     width: min(26rem, 100%);
     max-height: 100%;
     overflow-y: auto;
-    background: var(--surface-raised);
-    border-left: 1px solid var(--line);
+    background: var(--color-surface-raised);
+    border-left: 1px solid var(--color-line);
     box-shadow: var(--shadow);
-    padding: 1rem;
+    padding: var(--spacing-lg);
     z-index: 30;
   }
   /* Phone width: the same slide-over renders as a full-screen bottom sheet.
@@ -222,7 +222,7 @@
       width: 100%;
       max-height: 100vh;
       border-left: 0;
-      border-top: 1px solid var(--line);
+      border-top: 1px solid var(--color-line);
       border-radius: 12px 12px 0 0;
     }
   }
@@ -230,7 +230,7 @@
     display: flex;
     align-items: start;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
   h2 {
     margin: 0;
@@ -239,21 +239,21 @@
   .close {
     font: inherit;
     line-height: 1;
-    border: 1px solid var(--line-strong);
-    background: var(--surface-raised);
-    color: var(--ink);
-    border-radius: var(--radius);
+    border: 1px solid var(--color-close);
+    background: var(--color-close);
+    color: var(--color-ink-on-close);
+    border-radius: var(--rounded-control);
     padding: 0.25rem 0.6rem;
   }
   .detail-section {
-    margin-top: 1rem;
+    margin-top: var(--spacing-lg);
   }
   h3 {
     font-size: 0.9rem;
     margin: 0 0 0.25rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--ink-muted);
+    color: var(--color-ink-muted);
   }
   dl {
     margin: 0;
@@ -263,13 +263,13 @@
   .row {
     display: grid;
     grid-template-columns: minmax(9rem, max-content) 1fr;
-    gap: 0.75rem;
+    gap: var(--spacing-md);
     font-size: 0.9rem;
-    border-bottom: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--color-line);
     padding-bottom: 0.3rem;
   }
   .row dt {
-    color: var(--ink-muted);
+    color: var(--color-ink-muted);
   }
   .row dd {
     margin: 0;

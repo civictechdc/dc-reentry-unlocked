@@ -8,10 +8,10 @@ import type {
 import { m } from "#lib/paraglide/messages.js";
 
 /**
- * Flexible value labels for program taxonomy fields inside the detail
- * panel: unknown renders the honest "not publicly listed" message, the
- * other taxonomy values resolve through their own message keys. No display
- * string is hardcoded here.
+ * Flexible value labels for program taxonomy fields, shared by the unit
+ * card rows and the detail panel: unknown renders the honest "Unknown"
+ * message, the other taxonomy values resolve through their own message
+ * keys. No display string is hardcoded here.
  */
 const taxonomyMessages: Record<string, string> = {
   "emergency-shelter": m.taxonomy_housing_emergency_shelter(),
@@ -81,7 +81,7 @@ export function detailValueLabel(
 
 /**
  * Dialable "tel:" href for a listed contact phone, derived from the value
- * exactly as publicly listed: digits survive, every separator drops, and a
+ * exactly as the source states it: digits survive, every separator drops, and a
  * "+" is kept only as the first character (no country-code invention, no
  * extension handling). The visible link text keeps the listed formatting;
  * this builds only the href.

@@ -429,8 +429,8 @@
        (desktop capped map, phone square). Overflow clips the canvas into the
        rounded corners; fixed-position descendants (the sr-pin focus bubble)
        are not clipped by it. */
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
     overflow: hidden;
   }
   .sr-pins {
@@ -470,11 +470,11 @@
     top: 0.5rem;
     left: 0.5rem;
     z-index: 60;
-    padding: 0.5rem 1rem;
-    background: var(--surface-raised);
-    border: 2px solid var(--accent);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-surface-raised);
+    border: 2px solid var(--color-accent);
     font: inherit;
-    color: var(--ink);
+    color: var(--color-ink);
   }
   .pin-label {
     /* Display artifact of the focus bubble only — never an interaction
@@ -505,7 +505,7 @@
     z-index: 10;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--spacing-xs);
   }
   .map-camera-controls button {
     width: 2rem;
@@ -514,31 +514,31 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
     font: inherit;
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
   }
   .map-camera-controls button:hover {
-    border-color: var(--accent);
-    color: var(--accent-hover);
+    border-color: var(--color-accent);
+    color: var(--color-accent-hover);
   }
   .map-camera-controls button:active {
-    background: var(--surface-selected);
-    border-color: var(--accent-hover);
+    background: var(--color-surface-selected);
+    border-color: var(--color-accent-hover);
   }
   .map-legend {
     margin: 0;
-    padding: 0.5rem 1rem;
-    background: var(--surface-raised);
-    border-top: 1px solid var(--line);
-    font-size: 0.875rem;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-line);
+    font-size: var(--font-size-small);
     display: flex;
-    gap: 1rem;
+    gap: var(--spacing-lg);
     flex-wrap: wrap;
   }
   .legend-item {
@@ -550,10 +550,10 @@
     display: inline-block;
     width: 0.75rem;
     height: 0.75rem;
-    border-radius: 999px;
-    border: 2px solid var(--surface-raised);
+    border-radius: var(--rounded-pill);
+    border: 2px solid var(--color-surface-raised);
   }
   .pin.exact {
-    background: var(--pin-exact);
+    background: var(--color-pin-exact);
   }
 </style>

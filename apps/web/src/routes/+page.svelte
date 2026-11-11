@@ -111,9 +111,9 @@
        capped at 32rem so a wide map column keeps room for its aspect cap. */
     grid-template-columns: minmax(0, 1fr) minmax(26rem, 32rem);
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
     height: calc(100vh - 8.25rem);
-    padding: 0.5rem;
+    padding: var(--spacing-sm);
     min-height: 0;
   }
   .filter-pane {
@@ -154,28 +154,28 @@
   .mobile-bar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--line);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-line);
   }
   .tab-buttons {
     display: flex;
-    gap: 0.25rem;
+    gap: var(--spacing-xs);
   }
   .tab-buttons button,
   .filter-open {
     font: inherit;
     padding: 0.45rem 1rem;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-    color: var(--ink);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--rounded-control);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
   .tab-buttons button[aria-selected="true"] {
-    background: var(--accent);
-    color: var(--ink-on-accent);
-    border-color: var(--accent);
+    background: var(--color-accent);
+    color: var(--color-ink-on-accent);
+    border-color: var(--color-accent);
   }
   .filter-open {
     margin-left: auto;

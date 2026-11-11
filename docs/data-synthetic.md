@@ -45,7 +45,7 @@ performance envelope the prototype assumes) across 8 wards. Realistic aspects:
 roughly three quarters of units are available with the rest not-available or
 unverified-availability, both confirmed and needs-verification flags appear,
 and every policy or eligibility field carries honest `unknown`
-("not publicly listed") states.
+("Unknown") states.
 
 ## Geography corpus provenance and licensing
 

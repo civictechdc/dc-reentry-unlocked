@@ -56,12 +56,12 @@ When("the active filters match zero units", async ({ page }: { page: Page }) => 
   await openApp(page);
   await expectResultsLoaded(page);
   // The synthetic corpus is deliberately dense — two-way selections always
-  // match, and enum selections also match not-publicly-listed values (the
+  // match, and enum selections also match unknown-at-source values (the
   // unknown-matches-every-selection honesty rule), so only stacked
   // boolean-yes requirements narrow hard. The minimal zero-match combination
   // (byte-frozen dataset, verified against the API:
   // /units?housing-type=emergency-shelter&population=families&referral-required=yes&ward=6
-  // -> zero rows): no referral-required, emergency-shelter-or-unlisted
+  // -> zero rows): no referral-required, emergency-shelter-or-unknown-at-source
   // family program exists in ward 6.
   await page.selectOption("#filter-housing-type", { label: "Emergency shelter" });
   await page.selectOption("#filter-population", { label: "Families" });

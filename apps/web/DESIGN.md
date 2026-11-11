@@ -1,0 +1,526 @@
+---
+version: alpha
+name: Civic Clean Light
+description: Light-only civic-clean visual identity for the housing inventory web app — one source of truth for color, typography, spacing, shape, and elevation tokens.
+colors:
+  # Layer 1 — primitives: appearance-named literal values. Consumers never
+  # reference these directly; semantic names below point at them.
+  white: "#ffffff"
+  slate-faint: "#f5f7fa"
+  slate-ink: "#1b2a34"
+  slate-muted: "#51606b"
+  slate-line: "#cbd3d9"
+  slate-line-strong: "#84909a"
+  # Blue owns actions. Its five-step ramp is the tetradic candidate for the
+  # action hue, built at hue anchor 250° (construction recorded under
+  # "Ramp construction" below).
+  blue-faint: "#eef6ff"
+  blue-soft: "#c6e1ff"
+  blue-mid: "#73a9e1"
+  blue-strong: "#2c6194"
+  blue-deep: "#00345f"
+  # Keyboard focus boundary — kept a literal, deliberately outside the
+  # ramp grid: no ramp step passes the ring's 3:1 adjacency on every light
+  # surface while staying distinct from the action states (see Colors).
+  blue-ring: "#1d4ed8"
+
+  # Supporting tetrad hues at anchors 70°/150°/330°, landed as unplaced
+  # primitives: nothing consumes them yet, and any future placement is a
+  # separate reviewed decision. They are never status colors.
+  orange-faint: "#fff3e6"
+  orange-soft: "#ffd6a8"
+  orange-mid: "#cd995c"
+  orange-strong: "#81520a"
+  orange-deep: "#492b00"
+  green-faint: "#dfffe4"
+  green-soft: "#aef1bb"
+  green-mid: "#75b683"
+  green-strong: "#2c6d3e"
+  green-deep: "#003f18"
+  magenta-faint: "#fff0fd"
+  magenta-soft: "#ffcaf9"
+  magenta-mid: "#c88ec3"
+  magenta-strong: "#7d4778"
+  magenta-deep: "#4d1b4a"
+
+  # Functional dismissive red — the detail slide-over's close control.
+  # Deliberately OUTSIDE the tetrad: a control color, not a fifth brand
+  # hue. Built with the ramps' construction discipline (L 0.48, 8-bit
+  # rounding) at hue anchor 25°, but with chroma deliberately RAISED to
+  # 0.17 — above the 0.10 start, holding in gamut unreduced — because at
+  # 0.10 the red read as brown (user-reviewed); 25° keeps distance from
+  # the selection red (pin-highlight, hue 33°).
+  red-strong: "#a92227"
+
+  # Layer 2 — semantic aliases: the names consumers use. Flat, readable,
+  # unique. Values resolve to literal lowercase hex at export time.
+  surface: "{colors.slate-faint}"
+  surface-raised: "{colors.white}"
+  surface-selected: "{colors.blue-faint}"
+  # Deliberately a literal, not a brand reference: the disclosure banner is
+  # a cautionary surface whose value must not move with brand edits.
+  surface-warning: "#fff8e1"
+  ink: "{colors.slate-ink}"
+  ink-muted: "{colors.slate-muted}"
+  ink-on-accent: "{colors.white}"
+  line: "{colors.slate-line}"
+  line-strong: "{colors.slate-line-strong}"
+  accent: "{colors.blue-strong}"
+  accent-hover: "{colors.blue-deep}"
+  accent-focus-ring: "{colors.blue-ring}"
+  close: "{colors.red-strong}"
+  ink-on-close: "{colors.white}"
+
+  # Layer 2 — status data paints, deliberately literal (never aliased to
+  # brand tokens) so availability, selection, and verification semantics can
+  # change independently of the palette. Equal values are coincidence, not
+  # aliasing.
+  pin-exact: "#0b5fab"
+  pin-highlight: "#d9340f"
+  pin-highlight-ring: "#ffffff"
+  # Map paint roles consumed outside CSS (MapLibre style JSON and the
+  # typed-array label-bubble bitmap) through checked bridge constants.
+  pin-ring: "#ffffff"
+  pin-label-bg: "#ffffff"
+  # Deliberately distinct from ink: the map address label keeps its own
+  # darker value regardless of any body-ink edit.
+  pin-label-ink: "#1f2937"
+  pin-label-border: "#cccccc"
+  badge-confirmed-bg: "#d1e7dd"
+  badge-confirmed-ink: "#0f5132"
+  badge-unverified-bg: "#ffe8cc"
+  badge-unverified-ink: "#7c3a00"
+typography:
+  body:
+    fontFamily: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+    fontSize: 1rem
+    fontWeight: 400
+    lineHeight: 1.45
+  small:
+    fontFamily: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+    fontSize: 0.875rem
+    fontWeight: 400
+    lineHeight: 1.45
+  heading:
+    fontFamily: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+    fontSize: 1.25rem
+    fontWeight: 400
+    lineHeight: 1.45
+spacing:
+  none: 0rem
+  xs: 0.25rem
+  sm: 0.5rem
+  md: 0.75rem
+  lg: 1rem
+  xl: 1.5rem
+  xxl: 2rem
+rounded:
+  control: 6px
+  pill: 999px
+components:
+  button-primary:
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.ink-on-accent}"
+    rounded: "{rounded.control}"
+  button-primary-hover:
+    backgroundColor: "{colors.accent-hover}"
+    textColor: "{colors.ink-on-accent}"
+  button-quiet:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+  button-close:
+    backgroundColor: "{colors.close}"
+    textColor: "{colors.ink-on-close}"
+    rounded: "{rounded.control}"
+  toggle-selected:
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.ink-on-accent}"
+    rounded: "{rounded.pill}"
+  chip-active:
+    backgroundColor: "{colors.surface-selected}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+  card-unit:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+  badge-confirmed:
+    backgroundColor: "{colors.badge-confirmed-bg}"
+    textColor: "{colors.badge-confirmed-ink}"
+    rounded: "{rounded.pill}"
+  badge-unverified:
+    backgroundColor: "{colors.badge-unverified-bg}"
+    textColor: "{colors.badge-unverified-ink}"
+    rounded: "{rounded.pill}"
+  banner-disclosure:
+    backgroundColor: "{colors.surface-warning}"
+    textColor: "{colors.ink}"
+  screen-page:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+  # Map paints are data, not chrome; they are recipes here and consumed
+  # outside CSS through checked constants, never by aliasing brand tokens.
+  map-pin-available:
+    backgroundColor: "{colors.pin-exact}"
+  map-pin-highlighted:
+    backgroundColor: "{colors.pin-highlight}"
+  map-pin-ring:
+    backgroundColor: "{colors.pin-highlight-ring}"
+  map-pin-label:
+    backgroundColor: "{colors.pin-label-bg}"
+    textColor: "{colors.pin-label-ink}"
+  elevation-raised:
+    shadow: "0 1px 3px rgb(27 42 52 / 0.25)"
+---
+
+## Overview
+
+The visual identity is **civic clean light**: a single light theme built on
+near-white neutral surfaces, dark desaturated slate ink, and one confident
+institutional blue that owns primary actions. It should read as trustworthy
+municipal infrastructure — calm, dense with information, and free of
+decoration that competes with data.
+
+Neutrals dominate every screen. Blue appears only where interaction or
+identity demands it. Status colors (map pins, the selection highlight, and
+verification badges) carry data meaning and stay independent of the brand
+palette even where values coincide. Beneath the neutrals sits a landed
+tetradic supporting palette — two complementary hue pairs anchored at
+blue 250°/orange 70° and green 150°/magenta 330°, each held as a
+five-step ramp — with blue owning actions and the orange, green, and
+magenta ramps unplaced until a use earns them.
+
+## Colors
+
+Tokens layer in three strata:
+
+1. **Primitives** — appearance-named literal hex values (`blue-strong`,
+   `slate-muted`). Nobody consumes a primitive directly.
+2. **Semantic aliases** — flat, readable role names (`accent`,
+   `surface-raised`) that reference primitives. These are the only names
+   components consume, and export resolves each to its literal hex so
+   runtime never walks a `var()` chain.
+3. **Component entries** — recipes under `components:` that reference
+   tokens and document pairing and contrast. They emit no CSS custom
+   properties of their own.
+
+### Ramp construction
+
+Every brand hue is held as a five-step ramp — `faint`, `soft`, `mid`,
+`strong`, `deep` — derived mechanically, not picked by eye:
+
+- **Hue anchors** — blue 250°, orange 70°, green 150°, magenta 330°:
+  two complementary pairs (250°/70° and 150°/330°) forming the tetradic
+  rectangle. Anchors are fixed per ramp; no step shifts hue.
+- **Lightness targets** — 0.97 / 0.90 / 0.72 / 0.48 / 0.32 in OKLab L,
+  the same five steps for every hue.
+- **Chroma** — each step starts at C = 0.10 and, when that color falls
+  outside sRGB, the chroma is reduced by binary search (tolerance 1e-4
+  on C) to the largest value still inside the gamut. "Inside the gamut"
+  means every linear-sRGB channel lies within [0, 1] under the CSS
+  Color 4 OKLab → linear sRGB transform.
+- **8-bit rounding** — surviving linear channels are gamma-encoded and
+  rounded per channel; the YAML and `:root` hold only the resulting
+  opaque sRGB hex literals, never `oklch()`.
+- The conversion math was verified against published OKLab reference
+  values (Ottosson's sRGB → OKLab figures and the OKLCH forms of the
+  sRGB primaries) before any ramp was trusted: maximum observed error
+  1.8e-6, with exact 8-bit round trips on the primaries.
+
+The ramps are candidates for review, not contrast guarantees: contrast
+is asserted only where a semantic role actually consumes a step (the
+matrix under Components). The final chroma per step is recorded in the
+table below so gamut reductions are visible — at the pale end it is the
+gamut, not the construction, that caps how much hue a near-white
+surface can carry.
+
+### Primitives
+
+| Token               | Value     | L (OKLab) | Final C (reduced?) | Role                                                    |
+| ------------------- | --------- | --------- | ------------------ | ------------------------------------------------------- |
+| `white`             | `#ffffff` | 1.00      | —                  | Raised cards, controls, on-accent ink                   |
+| `slate-faint`       | `#f5f7fa` | —         | —                  | Cool page wash behind everything                        |
+| `slate-ink`         | `#1b2a34` | —         | —                  | Body ink — near-black with a cool cast                  |
+| `slate-muted`       | `#51606b` | —         | —                  | Secondary ink for de-emphasized text                    |
+| `slate-line`        | `#cbd3d9` | —         | —                  | Quiet hairline borders (decorative)                     |
+| `slate-line-strong` | `#84909a` | —         | —                  | Essential control boundaries                            |
+| `blue-faint`        | `#eef6ff` | 0.97      | 0.0146 (reduced)   | Selection tint derived from the accent hue              |
+| `blue-soft`         | `#c6e1ff` | 0.90      | 0.0504 (reduced)   | Blue ramp step (unplaced)                               |
+| `blue-mid`          | `#73a9e1` | 0.72      | 0.1000 (= start)   | Blue ramp step (unplaced)                               |
+| `blue-strong`       | `#2c6194` | 0.48      | 0.1000 (= start)   | The institutional action blue                           |
+| `blue-deep`         | `#00345f` | 0.32      | 0.0905 (reduced)   | Hover state of the action blue                          |
+| `blue-ring`         | `#1d4ed8` | —         | —                  | Focus ring, a literal outside the ramps (literal)       |
+| `orange-faint`      | `#fff3e6` | 0.97      | 0.0216 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `orange-soft`       | `#ffd6a8` | 0.90      | 0.0755 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `orange-mid`        | `#cd995c` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `orange-strong`     | `#81520a` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `orange-deep`       | `#492b00` | 0.32      | 0.0692 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `green-faint`       | `#dfffe4` | 0.97      | 0.0483 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `green-soft`        | `#aef1bb` | 0.90      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-mid`         | `#75b683` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-strong`      | `#2c6d3e` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `green-deep`        | `#003f18` | 0.32      | 0.0881 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-faint`     | `#fff0fd` | 0.97      | 0.0238 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-soft`      | `#ffcaf9` | 0.90      | 0.0848 (reduced)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-mid`       | `#c88ec3` | 0.72      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-strong`    | `#7d4778` | 0.48      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `magenta-deep`      | `#4d1b4a` | 0.32      | 0.1000 (= start)   | Supporting tetrad hue (unplaced)                        |
+| `red-strong`        | `#a92227` | 0.48      | 0.1700 (raised)    | Dismissive control red — close button (not a brand hue) |
+
+Neutrals carry no ramp: they are the dominant family and are picked by
+eye, not derived. `C = 0.1000 (= start)` means the starting chroma fit
+the gamut untouched; every lower value was reduced until the color
+landed inside sRGB. `raised` marks the one deliberate departure:
+`red-strong`'s chroma was raised above the start at user review, because
+the start-chroma red read as brown.
+
+One control color is constructed with the same discipline but stands
+outside the tetrad: the functional dismissive red `red-strong`, built at
+lightness target 0.48 (the accent step) at hue anchor 25° with
+per-channel 8-bit rounding — but with chroma deliberately raised to
+0.17, above the ramps' 0.10 start, holding in gamut unreduced: at 0.10
+the red was reviewed as reading brown, not as the dismissive red a
+close control needs. It is not a fifth brand anchor: the brand
+rectangle stays blue 250°/orange 70°/green 150°/magenta 330°. The hue
+anchor was generated at 25° and 30°, and 25° was kept for the
+chroma-raised final hex, every value below measured on the final
+constructed hexes: the selection red `pin-highlight` measures oklch
+L 0.5803 C 0.2058 H 33.1°, and `#a92227` (L 0.4806, C 0.1705,
+H 24.9°) keeps an 8.20° hue gap and ΔL −0.0997 with margin on all
+three axes — a chroma-raised alternative at the same anchor, `#b00a1d`
+(C 0.1902), would have cut the chroma gap to ΔC −0.0156 — the close
+control must never read as a selected map pin. The verification badge
+pair is likewise distant (badge-unverified ink at hue 52.3°, its own
+pill pairing) and means verification, not dismissal.
+
+### Semantic roles
+
+- **`surface` (`#f5f7fa`)** — the page background. Slightly cool so pure
+  white cards read as lifted without any shadow increase.
+- **`surface-raised` (`#ffffff`)** — cards, filter controls, header. The
+  white lifting mechanism of the whole layout.
+- **`surface-selected` (`#eef6ff`)** — active chips and pressed control
+  state; a whisper of the accent hue, not a new color.
+- **`surface-warning` (`#fff8e1`)** — the disclosure banner only. Held as a
+  literal, outside all brand references, so its cautionary warm cast cannot
+  drift when the palette is reviewed.
+- **`ink` (`#1b2a34`)** — primary text everywhere.
+- **`ink-muted` (`#51606b`)** — secondary text: provider lines, helper
+  copy, de-emphasized metadata.
+- **`ink-on-accent` (`#ffffff`)** — text on any action-blue fill, in every
+  action state.
+- **`line` (`#cbd3d9`)** — decorative hairlines. Decorative only: nothing
+  essential depends on seeing it.
+- **`line-strong` (`#84909a`)** — the boundary an essential control
+  actually needs; every interactive control outline uses this role.
+  Inventory-time correction: the pre-existing value `#8a97a0` measured
+  2.99:1 against the white control fill and 2.79:1 against the page wash —
+  both below the 3:1 non-text threshold an essential boundary must meet —
+  so it was darkened to `#84909a` (3.26:1 on white, 3.04:1 on the page
+  wash) instead of exempting the pair.
+- **`accent` (`#2c6194`)** — primary actions, selected-state outline, and
+  the document theme color. The `strong` step of the blue ramp: its OKLab
+  lightness matches the blue it replaces (0.4816 vs 0.4833) and its hue
+  sits within ~3° of it (249.9° vs 252.5°, against the 250° anchor), with
+  chroma held at the ramp's construction value rather than picked by eye.
+- **`accent-hover` (`#00345f`)** — the pressed/hovered action state, one
+  ramp step deeper (L 0.48 → 0.32) for visible feedback.
+- **`accent-focus-ring` (`#1d4ed8`)** — the shared `:focus-visible`
+  outline; deliberately a different blue than the fill so focus stays
+  legible on and next to action-colored elements. It is the one brand
+  primitive kept outside the ramp grid, and that is a considered choice:
+  the ramp's pale steps fail the ring outright on light surfaces
+  (`blue-mid`, the nearest candidate, measures 2.3–2.5:1 against every
+  surface the ring draws across — below the 3:1 non-text threshold), while
+  the dark steps are the action states themselves, leaving a ring that
+  either collides with the fill or with hover. The literal clears 6:1 on
+  all four asserted adjacencies, and its saturated royal blue keeps it
+  unmistakable beside the muted steel of the new action fill.
+- **`close` (`#a92227`)** — the detail slide-over's close control: a red
+  fill with white ink (`ink-on-close`) and a red 1px edge separating the
+  fill from the raised panel (white ink 7.13:1 on the fill; the edge
+  7.13:1 against the panel, both above their bars). A dismissive
+  functional color, not a brand hue — built at the ramp discipline
+  (L 0.48, hue 25°) with chroma raised to 0.17 for a true red,
+  deliberately distinct from `pin-highlight` (selection red) and the
+  `badge-unverified-*` verification pair.
+
+### Status and map paints (deliberately unaliased)
+
+| Token                  | Value     | Meaning                                       |
+| ---------------------- | --------- | --------------------------------------------- |
+| `pin-exact`            | `#0b5fab` | Available unit's map pin (availability)       |
+| `pin-highlight`        | `#d9340f` | Selected/hovered pin (selection)              |
+| `pin-highlight-ring`   | `#ffffff` | Stroke that separates highlight from tiles    |
+| `pin-ring`             | `#ffffff` | Stroke that separates the base pin from tiles |
+| `pin-label-bg`         | `#ffffff` | Label bubble body the address text sits on    |
+| `pin-label-ink`        | `#1f2937` | Map address-label text on the bubble          |
+| `pin-label-border`     | `#cccccc` | Label bubble's soft bitmap border             |
+| `badge-confirmed-bg`   | `#d1e7dd` | Confirmed verification badge background       |
+| `badge-confirmed-ink`  | `#0f5132` | Confirmed badge text                          |
+| `badge-unverified-bg`  | `#ffe8cc` | Needs-verification badge background           |
+| `badge-unverified-ink` | `#7c3a00` | Needs-verification badge text                 |
+
+These stay literal even where a value equals a brand token (`pin-ring`
+and `pin-label-bg` are `#ffffff`, the same hex as `white` — with no
+reference between them), and they stay literal where values once
+coincided and no longer do: `pin-exact` is `#0b5fab` while the action
+blue moved to its ramp value `#2c6194`, exactly the independence this
+rule exists to protect. Pins mean availability, highlight means
+selection, badges mean verification status — none may inherit palette
+edits meant for actions. Supporting brand hues must never pose as
+status indicators.
+
+Map paint colors and the label-bubble bitmap channels are consumed outside
+CSS (MapLibre style JSON and a typed-array bitmap), so they are checked
+against these tokens through the explicit bridge constants in
+`src/lib/map/map-colors.ts` rather than custom properties; the drift
+checker fails when any constant drifts from its token here. The map
+address-label ink (`#1f2937`) keeps its distinct value as `pin-label-ink`
+(exported `--color-pin-label-ink`) rather than collapsing into `ink`. The
+document `theme-color` in `app.html` is checked against `accent`.
+
+## Typography
+
+One system font stack for everything — zero webfont payload, native
+rendering per platform:
+
+`system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`
+
+Three roles cover the app's type needs:
+
+- **`body`** — 1rem / 1.45 line-height, weight 400. All running text and
+  default control text.
+- **`small`** — 0.875rem, weight 400, inheriting the 1.45 line-height.
+  Card specifications, legends, active-chip labels, banner body copy.
+- **`heading`** — 1.25rem, weight 400, inheriting the 1.45 line-height.
+  Section-level scale for prominent headings.
+
+### Inventory of current component literals
+
+Weight and line-height literals found across the components and routes at
+inventory time (these govern the roles above and any later retrofit):
+
+- **Weight 700** — unit-card titles (`h2`, at 1rem) and the disclosure
+  banner title.
+- **Weight 600** — verification badges (0.75rem), filter legend/control
+  labels (0.8rem), the mobile sheet's apply button, the page's
+  filter-open button, and the error screen call-to-action.
+- **Weight 400** — the unit-card provider line (0.875rem) and everything
+  inheriting the body default.
+- **Line-height 1.45** — the body default, inherited by nearly all text.
+- **Line-height 1.4** — the disclosure banner paragraph at 0.875rem, the
+  one deliberate tightening of small prose.
+- **Line-height 1** — the map camera-control buttons (at 1.25rem) and the
+  detail slide-over close button; single-glyph controls, not prose.
+
+Sizes outside the three roles — 0.75rem, 0.8rem, 0.85rem, 0.9rem, 1.05rem,
+1.125rem — are exceptional dimensions that stay explicit until the repeated
+equal literals are retrofitted to the roles first.
+
+Typography custom properties are hand-written in `app.css` and drift-checked
+against this section because the exporter deliberately omits the family.
+
+## Layout
+
+Spacing follows a 4px rhythm expressed in rem, with named steps instead of
+ad-hoc values:
+
+| Step   | Value   | Intended use                           |
+| ------ | ------- | -------------------------------------- |
+| `none` | 0rem    | Explicit "no gap" intent               |
+| `xs`   | 0.25rem | Icon-to-label, inline nudges           |
+| `sm`   | 0.5rem  | Inside-component padding, tight stacks |
+| `md`   | 0.75rem | Card padding, list rhythm              |
+| `lg`   | 1rem    | Control padding, group separation      |
+| `xl`   | 1.5rem  | Section separation                     |
+| `xxl`  | 2rem    | Page-level separation                  |
+
+Repeated equal literals retrofit to these steps first; genuinely
+exceptional dimensions (viewport-driven heights, hit-target floors) stay
+explicit. Spacing and rounded values export verbatim into custom
+properties; dimension renames land with the runtime swap.
+
+## Elevation
+
+Elevation is quiet: exactly one shadow, carried by the raised surface that
+already lifts via pure white against the faint page wash.
+
+The shadow value is `"0 1px 3px rgb(27 42 52 / 0.25)"` — a 1px-offset,
+3px-blur ink shadow at 25% alpha, tight enough to read as paper edge rather
+than glow. It lives at `components.elevation-raised.shadow` (an entry the
+exporter does not turn into CSS, which is precisely why elevation stays
+hand-written in `app.css` and drift-checked against this entry) and is
+consumed by unit cards. No other elevation level exists; do not add one
+without removing this one.
+
+## Shapes
+
+Two rounded roles:
+
+- **`control` (6px)** — cards, buttons, selects, inputs, panels. Sharp
+  enough to feel institutional, soft enough to avoid harshness at dense
+  sizes.
+- **`pill` (999px)** — verification badges, active chips, toggle pills.
+  Full rounding marks the small, status-adjacent shapes; if a shape uses
+  `pill` it is metadata, never a container.
+
+Mixing is allowed only across these two roles; arbitrary radii are not
+part of the language.
+
+## Components
+
+Recipes reference semantic tokens; hover and pressed variants are sibling
+entries with related keys. Pairs listed here are asserted by the contrast
+suite against the resolved values.
+
+| Entry                  | Background            | Text                   | Notes                                |
+| ---------------------- | --------------------- | ---------------------- | ------------------------------------ |
+| `button-primary`       | `accent`              | `ink-on-accent`        | The one loud action                  |
+| `button-primary-hover` | `accent-hover`        | `ink-on-accent`        | Hover/active variant                 |
+| `button-quiet`         | `surface-raised`      | `ink`                  | Secondary controls                   |
+| `button-close`         | `close`               | `ink-on-close`         | Detail close; red fill, red 1px edge |
+| `toggle-selected`      | `accent`              | `ink-on-accent`        | Pressed filter toggle                |
+| `chip-active`          | `surface-selected`    | `ink`                  | Active filter chip                   |
+| `card-unit`            | `surface-raised`      | `ink`                  | Unit card                            |
+| `badge-confirmed`      | `badge-confirmed-bg`  | `badge-confirmed-ink`  | Verification status                  |
+| `badge-unverified`     | `badge-unverified-bg` | `badge-unverified-ink` | Verification status                  |
+| `banner-disclosure`    | `surface-warning`     | `ink`                  | Referral-policy disclosure           |
+| `screen-page`          | `surface`             | `ink`                  | Page-level pairing                   |
+| `map-pin-available`    | `pin-exact`           | —                      | Availability paint                   |
+| `map-pin-highlighted`  | `pin-highlight`       | —                      | Selection paint                      |
+| `map-pin-ring`         | `pin-highlight-ring`  | —                      | Highlight stroke paint               |
+| `map-pin-label`        | `pin-label-bg`        | `pin-label-ink`        | Address label on its bubble          |
+| `elevation-raised`     | —                     | —                      | `shadow` value, see Elevation        |
+
+Essential non-text boundaries (control outlines in `line-strong`, the
+close control's red edge in `close`, the selection outline in `accent`,
+focus rings in `accent-focus-ring`, pin strokes in `pin-highlight-ring`
+and `pin-ring`) are asserted at the 3:1 non-text threshold against the
+surfaces they actually draw across; decorative `line` hairlines and
+raster-tile adjacency are explicitly not asserted.
+
+## Do's and Don'ts
+
+- Do use `accent` only for the primary action or selection state in a view.
+- Don't alias status tokens (`pin-*`, `badge-*`, `surface-warning`) to
+  brand tokens — equal values are coincidence, not coupling.
+- Do keep the orange, green, and magenta ramps as unplaced primitives
+  until a reviewed use exists; blue owns actions, and a supporting hue
+  is never placed on a live component merely to demonstrate the tetrad.
+- Don't let a supporting hue present as availability, selection, or
+  verification status — green and orange in particular sit near the
+  badge and pin hues, and the status tokens above stay the only colors
+  that carry that meaning.
+- Do keep text pairs at WCAG AA (4.5:1 normal text); large-text 3:1 claims
+  require explicit size/weight evidence.
+- Don't treat `line` as a boundary that must be seen — use `line-strong`
+  for essential control edges.
+- Do consume tokens through the generated custom properties and the checked
+  bridge constants; never hand-edit the generated stylesheet or splice
+  literals into components.
+- Don't introduce a second shadow, a second action hue, or radii outside
+  `control` and `pill`. The close button's red is the one sanctioned
+  dismissive control color — deliberately not a brand hue, and still no
+  other second action hue.

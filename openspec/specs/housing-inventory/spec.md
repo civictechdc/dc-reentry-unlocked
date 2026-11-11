@@ -31,11 +31,11 @@ The data model SHALL capture two distinct concepts: a per-unit **availability st
 
 ### Requirement: Unknown is a representable state
 
-Every policy/eligibility field in the data model SHALL support an unknown ("not publicly listed") state distinct from yes and no. Consumer-facing detail views SHALL display unknown honestly as "not publicly listed" rather than rendering a fabricated yes/no.
+Every policy/eligibility field in the data model SHALL support an unknown state, meaning the source has not publicly supplied the value, distinct from yes and no. Consumer-facing detail views SHALL display unknown honestly as "Unknown" rather than rendering a fabricated yes/no.
 
 #### Scenario: Unknown policy displayed honestly
 - **WHEN** a unit's program has no known sobriety policy
-- **THEN** the detail view shows "not publicly listed" for that field, not "no"
+- **THEN** the detail view shows "Unknown" for that field, not "no"
 
 ### Requirement: Versioned, city-agnostic model
 

@@ -59,7 +59,7 @@ const POINTER_NUDGE =
   "House rules: AGENTS.md (local overrides in AGENTS.local.md if present) — work OpenSpec tasks first, run the task verification before claiming done.";
 
 const UNKNOWN_NUDGE =
-  'Unknown is a real state — inventory/filter fields unknown at source stay "not publicly listed" (boolean filters match unknown as no; enum filters match unknown with a "policy not listed" marker). Never fabricate a yes/no.';
+  'Unknown is a real state — inventory/filter fields unknown at source render as Unknown (boolean filters match unknown as no; enum filters match unknown with a "policy not listed" marker). Never fabricate a yes/no.';
 
 const SUSPECT_PATH_RE = /inventory|filter|schema|glossary/i;
 

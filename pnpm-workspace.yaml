@@ -85,3 +85,8 @@ audit:
     # the production runtime image). There is NO patched deepmerge yet —
     # REMOVE this entry the moment one ships. Accepted 2026-10-31.
     - GHSA-gcqx-w48m-w2h4
+    # zod via @google/design.md@0.4.0 (dev-only design-token CLI, sole
+    # consumer; it validates only repo-authored DESIGN.md content, nothing
+    # network- or user-supplied, and is unreachable in production). REMOVE
+    # when upstream ships zod >=4.6.6 or the dependency is dropped.
+    - GHSA-mrhx-c7xc-m3w5

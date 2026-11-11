@@ -71,7 +71,7 @@ test("an unknown sobriety policy acts like no when the filter is sobriety=no", a
   await app.close();
 });
 
-test("an unknown population is a match for every population selection and stays marked as not publicly listed", async () => {
+test("an unknown population is a match for every population selection and retains its unknown wire value", async () => {
   const app = await buildUnitsApp();
 
   for (const selection of ["individuals", "families", "both"]) {

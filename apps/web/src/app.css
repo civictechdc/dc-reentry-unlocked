@@ -1,45 +1,27 @@
 /**
- * Civic clean light theme — design tokens.
+ * Civic clean light theme — hand-written token surface and base styles.
+ *
+ * Color, spacing, and shape custom properties are GENERATED from DESIGN.md
+ * into ./generated/design-tokens.css and imported first below. This file
+ * hand-writes only what the exporter deliberately omits: the typography
+ * role properties, the single elevation shadow, and the light color
+ * scheme — each drift-checked against DESIGN.md by the design gate.
  * Text/UI pairings are contrast-checked against WCAG 2.1 AA (minimum 4.5:1
  * for text, 3:1 for large text and UI borders); the axe-core e2e suite
  * asserts no serious violations against the rendered app.
  */
+@import "./generated/design-tokens.css";
+
 :root {
-  /* Surfaces */
-  --surface: #f5f7fa;
-  --surface-raised: #ffffff;
-  --surface-warning: #fff8e1;
-  --surface-selected: #e3f0fd;
-
-  /* Ink */
-  --ink: #1b2a34;
-  --ink-muted: #51606b;
-  --ink-on-accent: #ffffff;
-
-  /* Lines */
-  --line: #cbd3d9;
-  --line-strong: #8a97a0;
-
-  /* Accent (primary actions, links) */
-  --accent: #0b5fab;
-  --accent-hover: #094a86;
-  --accent-focus-ring: #1d4ed8;
-
-  /* Map / status colors (data-carrying, notSure text) */
-  --pin-exact: #0b5fab;
-  --pin-highlight: #d9340f;
-  --pin-highlight-ring: #ffffff;
-
-  /* Badge colors */
-  --badge-confirmed-bg: #d1e7dd;
-  --badge-confirmed-ink: #0f5132;
-  --badge-unverified-bg: #ffe8cc;
-  --badge-unverified-ink: #7c3a00;
-
-  /* Shape & type */
-  --radius: 6px;
-  --shadow: 0 1px 3px rgb(27 42 52 / 0.25);
+  /* Typography roles (the exporter omits the typography family). */
+  --font-family-body: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --font-size-base: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-heading: 1.25rem;
+  --line-height-body: 1.45;
+
+  /* Elevation: exactly one shadow, carried by the raised surface. */
+  --shadow: 0 1px 3px rgb(27 42 52 / 0.25);
 
   color-scheme: light;
 }
@@ -56,22 +38,15 @@ body {
 }
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
+  font-family: var(--font-family-body);
   font-size: var(--font-size-base);
-  line-height: 1.45;
-  background: var(--surface);
-  color: var(--ink);
+  line-height: var(--line-height-body);
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 
 /* Shared focus ring for every interactive element. */
 :focus-visible {
-  outline: 3px solid var(--accent-focus-ring);
+  outline: 3px solid var(--color-accent-focus-ring);
   outline-offset: 2px;
 }

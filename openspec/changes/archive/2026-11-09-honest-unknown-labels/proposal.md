@@ -38,9 +38,12 @@ about program taxonomy:
 
 - `housing-inventory` — spec scenarios pinning the current marker wording
 - `housing-search-ui` — card rendering and marker copy
+- `housing-inventory-api` — its detail-view scenario quotes the marker
+  wording, so the reword ripples into this capability's scenarios
+  (added at planning, 2026-11-09; the proposal-stage list missed it)
 
-(Spawned at proposal stage with `skip_specs` set; delta specs are
-authored in this change's planning session, which unsets it.)
+(Spawned at proposal stage with `skip_specs` set; delta specs authored
+in this change's planning session, which unsets it.)
 
 ## Impact
 
