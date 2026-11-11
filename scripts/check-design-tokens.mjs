@@ -831,8 +831,13 @@ export function checkBridges(readFile, tokens, bridges = BRIDGES) {
       }
     } else {
       // HTML comment stripping, as the document theme-color bridge (and any
-      // pattern bridge over an HTML-ish file) has always used.
-      active = content.replace(/<!--[\s\S]*?-->/g, "");
+      // pattern bridge over an HTML-ish file) has always used. Terminated
+      // comments strip in full; an unterminated `<!--` (no `-->` anywhere
+      // after it) strips to end-of-string, so commented-out content in an
+      // unterminated comment is never scanned as active — the fail-closed
+      // direction for this checker. Every `<!--` opens a match that runs to
+      // `-->` or EOF, so the stripped output cannot contain a residual `<!--`.
+      active = content.replace(/<!--[\s\S]*?(?:-->|$)/g, "");
     }
     let literal;
     if (bridge.kind === "html-meta-theme-color") {

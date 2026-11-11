@@ -523,6 +523,27 @@ describe("bridge decoy hardening (pure)", () => {
     ]);
     expect(failures).toEqual([expect.stringMatching(/pattern did not match/s)]);
   });
+
+  test("a meta inside an unterminated comment is never scanned as active", () => {
+    // `<!--` with no closer strips to end-of-string: commented-out content
+    // in an unterminated comment must not satisfy the bridge.
+    const content = '<!-- <meta name="theme-color" content="#0b5fab">';
+    const failures = checkBridges(readFile(content), tokens, [
+      { id: "theme", file: "app.html", tokenPath: "colors.accent", pattern: GOOD_BRIDGE.pattern },
+    ]);
+    expect(failures).toEqual([expect.stringMatching(/pattern did not match/s)]);
+  });
+
+  test("a live meta after a terminated comment still satisfies the bridge", () => {
+    // The counterpart guard: the EOF arm must not over-consume a comment
+    // that has its closer — the live value after it stays active.
+    const content =
+      '<!-- <meta name="theme-color" content="#ffffff"> -->\n<meta name="theme-color" content="#0b5fab" />';
+    const failures = checkBridges(readFile(content), tokens, [
+      { id: "theme", file: "app.html", tokenPath: "colors.accent", pattern: GOOD_BRIDGE.pattern },
+    ]);
+    expect(failures).toEqual([]);
+  });
 });
 
 describe("map-colors canonical-declaration bridges (pure)", () => {
