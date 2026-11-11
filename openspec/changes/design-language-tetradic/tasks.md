@@ -23,8 +23,10 @@
 - [x] 3.1 Construct candidate primitives and narrowly scoped brand-role changes in DESIGN.md: OKLCH hue anchors 250°/70°/150°/330° (blue/orange + green/magenta complementary pairs), ramps `faint`/`soft`/`mid`/`strong`/`deep` with L targets 0.97/0.90/0.72/0.48/0.32 and C from 0.10 reduced into sRGB gamut, construction recorded in prose; neutrals dominant; blue owns actions; status tokens keep current values and stay unaliased; verify lint, contrast suite, and drift pass on the candidates before any review ask
 - [x] 3.2 Walkthrough-audience review of the candidate palette and its semantic distinction (exact approved ramp values are review outputs, never unattended implementer choices); verify activation stays blocked until the approval is recorded
 - [x] 3.3 Activate the approved values in DESIGN.md and regenerate; re-run lint, regeneration byte-identity, drift, tests, and rendered checks across the matrix; prove the rollback path by reverting palette values in DESIGN.md and regenerating (generated output never hand-patched, no gate dropped); verify all checks green on the activated state
+- [x] 3.4 Close-button dismissive red (user-requested palette amendment): construct `red-strong #8d4540` outside the tetrad at the ramp discipline, activate the user-chosen red-fill + white-ink treatment (`close`/`ink-on-close`) on the detail slide-over close button, extend the contrast matrix additively, record the approval addendum; verify gates green on the activated state
 
 ## 4. Integration verification
+
 
 - [ ] 4.1 Full verification sweep from the repo root: `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`, `pnpm arch:check`, `pnpm design:check`, `pnpm -C apps/web e2e` and `e2e:prod`, `openspec validate --all --strict`, and the tracking-reference grep from AGENTS.md (DESIGN.md and all committed files outside `openspec/` stay free of OpenSpec-internal references); verify all green
 
