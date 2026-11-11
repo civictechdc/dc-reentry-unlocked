@@ -20,9 +20,9 @@
 
 ## 3. Tetradic palette candidate and activation
 
-- [ ] 3.1 Construct candidate primitives and narrowly scoped brand-role changes in DESIGN.md: OKLCH hue anchors 250°/70°/150°/330° (blue/orange + green/magenta complementary pairs), ramps `faint`/`soft`/`mid`/`strong`/`deep` with L targets 0.97/0.90/0.72/0.48/0.32 and C from 0.10 reduced into sRGB gamut, construction recorded in prose; neutrals dominant; blue owns actions; status tokens keep current values and stay unaliased; verify lint, contrast suite, and drift pass on the candidates before any review ask
-- [ ] 3.2 Walkthrough-audience review of the candidate palette and its semantic distinction (exact approved ramp values are review outputs, never unattended implementer choices); verify activation stays blocked until the approval is recorded
-- [ ] 3.3 Activate the approved values in DESIGN.md and regenerate; re-run lint, regeneration byte-identity, drift, tests, and rendered checks across the matrix; prove the rollback path by reverting palette values in DESIGN.md and regenerating (generated output never hand-patched, no gate dropped); verify all checks green on the activated state
+- [x] 3.1 Construct candidate primitives and narrowly scoped brand-role changes in DESIGN.md: OKLCH hue anchors 250°/70°/150°/330° (blue/orange + green/magenta complementary pairs), ramps `faint`/`soft`/`mid`/`strong`/`deep` with L targets 0.97/0.90/0.72/0.48/0.32 and C from 0.10 reduced into sRGB gamut, construction recorded in prose; neutrals dominant; blue owns actions; status tokens keep current values and stay unaliased; verify lint, contrast suite, and drift pass on the candidates before any review ask
+- [x] 3.2 Walkthrough-audience review of the candidate palette and its semantic distinction (exact approved ramp values are review outputs, never unattended implementer choices); verify activation stays blocked until the approval is recorded
+- [x] 3.3 Activate the approved values in DESIGN.md and regenerate; re-run lint, regeneration byte-identity, drift, tests, and rendered checks across the matrix; prove the rollback path by reverting palette values in DESIGN.md and regenerating (generated output never hand-patched, no gate dropped); verify all checks green on the activated state
 
 ## 4. Integration verification
 
