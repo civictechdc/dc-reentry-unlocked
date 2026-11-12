@@ -2,4 +2,3 @@ schema: spec-driven
 created: 2026-11-06
 goal: Ownership invariants and datagen dataset-type derivation (findings
   DM-4/CO-6 of openspec/changes/archive/2026-11-06-domain-driven-review/domain-review.md)
-skip_specs: true
