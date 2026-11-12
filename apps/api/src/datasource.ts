@@ -206,6 +206,49 @@ function rejectDuplicateUnitIds(cards: readonly UnitCard[]): void {
   }
 }
 
+/**
+ * Boot-time integrity asserts on the dataset's Provider → Program → Unit
+ * tree: ownership in the frozen file is purely structural nesting, so the
+ * ids the records carry must agree with the structure they sit in. Provider
+ * ids are unique across the dataset, Program ids are globally unique, and
+ * every Unit names the Program that encloses it — empty Providers and
+ * Programs included, every availability state included (these checks run
+ * before any availability filtering). The first violation refuses the whole
+ * source: references are never repaired, duplicates never deduplicated,
+ * inventory never partially served.
+ */
+function rejectDatasetHierarchyViolations(dataset: DatasetFile): void {
+  // Deterministic category order: provider identities, then program
+  // identities, then per-unit ownership.
+  const providerIds = new Set<string>();
+  for (const provider of dataset.providers) {
+    if (providerIds.has(provider.id)) {
+      throw new Error(`dataset carries duplicate provider ids: ${provider.id}`);
+    }
+    providerIds.add(provider.id);
+  }
+  const programIds = new Set<string>();
+  for (const provider of dataset.providers) {
+    for (const program of provider.programs) {
+      if (programIds.has(program.id)) {
+        throw new Error(`dataset carries duplicate program ids: ${program.id}`);
+      }
+      programIds.add(program.id);
+    }
+  }
+  for (const provider of dataset.providers) {
+    for (const program of provider.programs) {
+      for (const unit of program.units) {
+        if (unit.programId !== program.id) {
+          throw new Error(
+            `dataset carries unit ${unit.id} with programId ${unit.programId} but enclosing program id ${program.id}`,
+          );
+        }
+      }
+    }
+  }
+}
+
 export function createMemoryHousingUnitsSource(
   cards: readonly UnitCard[],
   disclosure: string = SYNTHETIC_DISCLOSURE,
@@ -266,6 +309,10 @@ export async function createDatasetHousingUnitsSource(
       `Dataset ${datasetPath} carries a disclosure that differs from the served synthetic-provenance sentence — regenerate the dataset`,
     );
   }
+  // Hierarchy integrity at the trust boundary: duplicate Provider or Program
+  // identities, or a Unit naming a foreign Program, refuse the whole dataset
+  // before anything is projected into served inventory.
+  rejectDatasetHierarchyViolations(dataset);
   const cards: UnitCard[] = [];
   for (const provider of dataset.providers) {
     for (const program of provider.programs) {

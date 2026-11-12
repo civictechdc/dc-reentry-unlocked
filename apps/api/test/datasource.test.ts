@@ -1,4 +1,11 @@
-import { Value, UnitsResponseSchema, UnitCardSchema, type UnitCard } from "@dc-reentry/shared";
+import {
+  Value,
+  UnitsResponseSchema,
+  UnitCardSchema,
+  type Program,
+  type Provider,
+  type UnitCard,
+} from "@dc-reentry/shared";
 import { aUnit } from "@dc-reentry/shared/testing";
 import { expect, test } from "vitest";
 import {
@@ -111,36 +118,66 @@ test("available units keep the confirmation distinction: verified and needs-veri
 // is not fictional-only and duplicate-id-free.
 // ---------------------------------------------------------------------------
 
-/** Flatten a built unit card into the frozen dataset's nested file shape. */
-function cardToDatasetTree(card: UnitCard, header: Record<string, unknown>): object {
+/** The dataset header every fixture boots with (untampered). */
+const validHeader = (): Record<string, unknown> => ({
+  schemaVersion: SCHEMA_VERSION,
+  synthetic: true,
+  disclaimer: SYNTHETIC_DISCLOSURE,
+});
+
+/** Project a built unit card into the frozen dataset's unit row shape. */
+function unitRow(card: UnitCard): { id: string; programId: string } & Record<string, unknown> {
+  return {
+    id: card.id,
+    programId: card.programId,
+    address: card.address,
+    ward: card.ward,
+    quadrant: card.quadrant,
+    coordinates: card.coordinates,
+    bedrooms: card.bedrooms,
+    size: card.size,
+    cost: card.cost,
+    availabilityState: card.availabilityState,
+    availabilityConfirmed: card.availabilityConfirmed,
+  };
+}
+
+/** A nested dataset tree in the frozen file's shape, still tamperable. */
+interface DatasetTreeFixture {
+  providers: Array<
+    Provider & {
+      programs: Array<
+        Program & { units: Array<{ id: string; programId: string } & Record<string, unknown>> }
+      >;
+    }
+  >;
+}
+
+/** Assemble a dataset tree out of built provider/program/unit cards. */
+function datasetTree(
+  header: Record<string, unknown>,
+  providers: Array<{
+    provider: Provider;
+    programs: Array<{ program: Program; units: UnitCard[] }>;
+  }>,
+): DatasetTreeFixture {
   return {
     ...header,
-    providers: [
-      {
-        ...card.provider,
-        programs: [
-          {
-            ...card.program,
-            units: [
-              {
-                id: card.id,
-                programId: card.programId,
-                address: card.address,
-                ward: card.ward,
-                quadrant: card.quadrant,
-                coordinates: card.coordinates,
-                bedrooms: card.bedrooms,
-                size: card.size,
-                cost: card.cost,
-                availabilityState: card.availabilityState,
-                availabilityConfirmed: card.availabilityConfirmed,
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    providers: providers.map(({ provider, programs }) => ({
+      ...provider,
+      programs: programs.map(({ program, units }) => ({
+        ...program,
+        units: units.map(unitRow),
+      })),
+    })),
   };
+}
+
+/** Flatten a built unit card into the frozen dataset's nested file shape. */
+function cardToDatasetTree(card: UnitCard, header: Record<string, unknown>): DatasetTreeFixture {
+  return datasetTree(header, [
+    { provider: card.provider, programs: [{ program: card.program, units: [card] }] },
+  ]);
 }
 
 async function writeScratchDataset(body: string): Promise<string> {
@@ -303,5 +340,156 @@ test("duplicate unit ids in the loaded dataset fail source construction", () => 
 
   expect(() => createMemoryHousingUnitsSource([card, card])).toThrow(
     /dataset carries duplicate unit ids/i,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Dataset hierarchy integrity: Provider ids, Program ids, and each Unit's
+// Program reference are enforced across the complete tree — empty Providers
+// and Programs included, every availability state included — before any
+// inventory is projected for serving.
+// ---------------------------------------------------------------------------
+
+test("an available unit naming a foreign program refuses to boot the dataset source", async () => {
+  const card = aUnit().withId("owned-unit").build();
+  const tree = cardToDatasetTree(card, validHeader());
+  // the tamper: the unit row claims a program that does not enclose it
+  const row = tree.providers[0]?.programs[0]?.units[0];
+  if (row === undefined) throw new Error("the fixture's own unit row went missing");
+  row.programId = "program-somewhere-else";
+
+  const datasetPath = await writeScratchDataset(JSON.stringify(tree));
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries unit owned-unit with programId program-somewhere-else but enclosing program id program-test/,
+  );
+});
+
+test("a not-available unit naming a foreign program refuses to boot the dataset source", async () => {
+  const card = aUnit().withId("hidden-taken-unit").unavailable().build();
+  const tree = cardToDatasetTree(card, validHeader());
+  const row = tree.providers[0]?.programs[0]?.units[0];
+  if (row === undefined) throw new Error("the fixture's own unit row went missing");
+  row.programId = "program-somewhere-else";
+
+  const datasetPath = await writeScratchDataset(JSON.stringify(tree));
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries unit hidden-taken-unit with programId program-somewhere-else but enclosing program id program-test/,
+  );
+});
+
+test("an unverified-availability unit naming a foreign program refuses to boot the dataset source", async () => {
+  const card = aUnit().withId("hidden-unverified-unit").withUnverifiedAvailability().build();
+  const tree = cardToDatasetTree(card, validHeader());
+  const row = tree.providers[0]?.programs[0]?.units[0];
+  if (row === undefined) throw new Error("the fixture's own unit row went missing");
+  row.programId = "program-somewhere-else";
+
+  const datasetPath = await writeScratchDataset(JSON.stringify(tree));
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries unit hidden-unverified-unit with programId program-somewhere-else but enclosing program id program-test/,
+  );
+});
+
+test("a program id repeated within one provider refuses to boot the dataset source", async () => {
+  const card = aUnit().withId("owned-unit").build();
+  card.programId = "program-shared";
+  const datasetPath = await writeScratchDataset(
+    JSON.stringify(
+      datasetTree(validHeader(), [
+        {
+          provider: card.provider,
+          programs: [
+            { program: { ...card.program, id: "program-shared" }, units: [card] },
+            { program: { ...card.program, id: "program-shared" }, units: [] }, // the empty twin still counts
+          ],
+        },
+      ]),
+    ),
+  );
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries duplicate program ids: program-shared/,
+  );
+});
+
+test("a program id repeated across providers refuses to boot the dataset source", async () => {
+  const first = aUnit().withId("first-unit").build();
+  first.programId = "program-shared";
+  const second = aUnit().withId("second-unit").build();
+  second.programId = "program-shared";
+  const datasetPath = await writeScratchDataset(
+    JSON.stringify(
+      datasetTree(validHeader(), [
+        {
+          provider: { ...first.provider, id: "provider-one" },
+          programs: [{ program: { ...first.program, id: "program-shared" }, units: [first] }],
+        },
+        {
+          provider: { ...second.provider, id: "provider-two" },
+          programs: [{ program: { ...second.program, id: "program-shared" }, units: [second] }],
+        },
+      ]),
+    ),
+  );
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries duplicate program ids: program-shared/,
+  );
+});
+
+test("a provider id repeated on a program-less provider refuses to boot the dataset source", async () => {
+  const card = aUnit().withId("owned-unit").build();
+  const datasetPath = await writeScratchDataset(
+    JSON.stringify(
+      datasetTree(validHeader(), [
+        { provider: card.provider, programs: [{ program: card.program, units: [card] }] },
+        { provider: card.provider, programs: [] }, // the empty twin still counts
+      ]),
+    ),
+  );
+
+  await expect(createDatasetHousingUnitsSource(datasetPath)).rejects.toThrow(
+    /dataset carries duplicate provider ids: provider-test/,
+  );
+});
+
+test("hierarchy diagnostics fire in a pinned order: provider ids, then program ids, then unit ownership", async () => {
+  // every fixture below carries an ownership violation; the first two add
+  // identity duplicates so the category order stays observable
+  const owned = aUnit().withId("owned-unit").build();
+  owned.programId = "program-somewhere-else";
+
+  const everyViolation = datasetTree(validHeader(), [
+    { provider: owned.provider, programs: [{ program: owned.program, units: [owned] }] },
+    {
+      provider: owned.provider, // duplicate provider id
+      programs: [{ program: owned.program, units: [] }], // duplicate program id
+    },
+  ]);
+  const everyViolationPath = await writeScratchDataset(JSON.stringify(everyViolation));
+  await expect(createDatasetHousingUnitsSource(everyViolationPath)).rejects.toThrow(
+    /dataset carries duplicate provider ids: provider-test/,
+  );
+
+  const uniqueProviders = datasetTree(validHeader(), [
+    { provider: owned.provider, programs: [{ program: owned.program, units: [owned] }] },
+    {
+      provider: { ...owned.provider, id: "provider-two" },
+      programs: [{ program: owned.program, units: [] }], // duplicate program id
+    },
+  ]);
+  const programAndOwnershipPath = await writeScratchDataset(JSON.stringify(uniqueProviders));
+  await expect(createDatasetHousingUnitsSource(programAndOwnershipPath)).rejects.toThrow(
+    /dataset carries duplicate program ids: program-test/,
+  );
+
+  const ownershipOnlyPath = await writeScratchDataset(
+    JSON.stringify(cardToDatasetTree(owned, validHeader())),
+  );
+  await expect(createDatasetHousingUnitsSource(ownershipOnlyPath)).rejects.toThrow(
+    /dataset carries unit owned-unit with programId program-somewhere-else but enclosing program id program-test/,
   );
 });
