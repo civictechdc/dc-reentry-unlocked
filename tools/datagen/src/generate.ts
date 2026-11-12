@@ -15,6 +15,8 @@ import type {
   Population,
   Gender,
   PolicyState,
+  Program,
+  Provider,
   RoomType,
   Unit,
 } from "@dc-reentry/shared";
@@ -192,14 +194,15 @@ const POLICY_WEIGHTS: Record<
   ],
 };
 
-export interface PolicyFields {
-  referralRequired: PolicyState;
-  sobrietyRequired: PolicyState;
-  backgroundCheckRequired: PolicyState;
-  sexOffenseRestrictions: PolicyState;
-  treatmentRequired: PolicyState;
-  housingVouchersAccepted: PolicyState;
-}
+export type PolicyFields = Pick<
+  Program,
+  | "referralRequired"
+  | "sobrietyRequired"
+  | "backgroundCheckRequired"
+  | "sexOffenseRestrictions"
+  | "treatmentRequired"
+  | "housingVouchersAccepted"
+>;
 
 const PROGRAMS_PER_PROVIDER: readonly (readonly [number, number])[] = [
   [1, 2],
@@ -218,31 +221,9 @@ const AVAILABLE_SHARE = 0.76;
 const NOT_AVAILABLE_SHARE = 0.12;
 const CONFIRMED_SHARE_WHEN_AVAILABLE = 0.6;
 
-export interface DatasetProgram {
-  id: string;
-  name: string;
-  applicationProcess?: string;
-  housingType: HousingType;
-  lengthOfStay: LengthOfStay;
-  population: Population;
-  gender: Gender;
-  referralRequired: PolicyState;
-  sobrietyRequired: PolicyState;
-  backgroundCheckRequired: PolicyState;
-  sexOffenseRestrictions: PolicyState;
-  treatmentRequired: PolicyState;
-  housingVouchersAccepted: PolicyState;
-  units: Unit[];
-}
+export type DatasetProgram = Program & { units: Unit[] };
 
-export interface DatasetProvider {
-  id: string;
-  organization: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  programs: DatasetProgram[];
-}
+export type DatasetProvider = Provider & { programs: DatasetProgram[] };
 
 export interface Dataset {
   schemaVersion: typeof SCHEMA_VERSION;
