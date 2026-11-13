@@ -4,7 +4,7 @@ import { Writable } from "node:stream";
 import { expect, test } from "vitest";
 import { buildApp } from "../src/app";
 import { createMemoryHousingUnitsSource } from "../src/datasource";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 
 /** Captures pino's rendered JSON lines so log content can be asserted. */
 function captureLogger(): { logger: FastifyBaseLogger; lines: Array<Record<string, unknown>> } {
@@ -24,7 +24,7 @@ function captureLogger(): { logger: FastifyBaseLogger; lines: Array<Record<strin
 async function buildCapturedApp(rateLimit?: { max: number; timeWindowMs: number }) {
   const captured = captureLogger();
   const app = await buildApp({
-    unitSource: createMemoryHousingUnitsSource([aUnit().build()]),
+    unitSource: createMemoryHousingUnitsSource([aUnitCard().build()]),
     loggerInstance: captured.logger,
     ...(rateLimit ? { rateLimit } : {}),
   });

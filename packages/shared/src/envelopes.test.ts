@@ -10,7 +10,7 @@ import {
   UnitsResponseSchema,
   UNIT_FILTERS,
 } from "./index";
-import { aUnit } from "./testing";
+import { aUnitCard } from "./testing";
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value)) as unknown;
 
@@ -18,7 +18,7 @@ const validUnitsEnvelope = () => ({
   schemaVersion: SCHEMA_VERSION,
   synthetic: true as const,
   disclosure: SYNTHETIC_DISCLOSURE,
-  units: [aUnit().inWard(5).build()],
+  units: [aUnitCard().inWard(5).build()],
 });
 
 test("an available-units listing is a valid envelope and survives a round-trip", () => {
@@ -33,7 +33,7 @@ test("an available-units listing is a valid envelope and survives a round-trip",
 test("an unmarked payload is not a valid units envelope — synthetic provenance is required", () => {
   const unmarked = {
     schemaVersion: SCHEMA_VERSION,
-    units: [aUnit().inWard(5).build()],
+    units: [aUnitCard().inWard(5).build()],
   };
 
   expect(Value.Check(UnitsResponseSchema, unmarked)).toBe(false);
@@ -44,7 +44,7 @@ test("the synthetic marker is a literal true, never a false claim", () => {
     schemaVersion: SCHEMA_VERSION,
     synthetic: false,
     disclosure: SYNTHETIC_DISCLOSURE,
-    units: [aUnit().build()],
+    units: [aUnitCard().build()],
   };
 
   expect(Value.Check(UnitsResponseSchema, falseClaim)).toBe(false);
@@ -54,7 +54,7 @@ test("an envelope without the disclosure sentence fails validation", () => {
   const withoutDisclosure = {
     schemaVersion: SCHEMA_VERSION,
     synthetic: true as const,
-    units: [aUnit().build()],
+    units: [aUnitCard().build()],
   };
 
   expect(Value.Check(UnitsResponseSchema, withoutDisclosure)).toBe(false);

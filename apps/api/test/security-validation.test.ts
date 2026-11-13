@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 import { buildApp } from "../src/app";
 import { createMemoryHousingUnitsSource } from "../src/datasource";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 
 async function buildSecuredApp() {
   return buildApp({
-    unitSource: createMemoryHousingUnitsSource([aUnit().build()]),
+    unitSource: createMemoryHousingUnitsSource([aUnitCard().build()]),
     logLevel: "error",
   });
 }

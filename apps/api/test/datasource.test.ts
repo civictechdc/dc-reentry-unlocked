@@ -7,7 +7,7 @@ import {
   type Provider,
   type UnitCard,
 } from "@dc-reentry/shared";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { expect, test } from "vitest";
 import {
   createDatasetHousingUnitsSource,
@@ -79,8 +79,8 @@ test("every served card carries the frozen dataset's exact coordinates across th
 
 test("the data source is swappable: an injected dataset serves its available units", async () => {
   const source = createMemoryHousingUnitsSource([
-    aUnit().withId("u1").inWard(1).build(),
-    aUnit().withId("u2").build(),
+    aUnitCard().withId("u1").inWard(1).build(),
+    aUnitCard().withId("u2").build(),
   ]);
   const app = await buildApp({ unitSource: source, logLevel: "error" });
 
@@ -93,9 +93,9 @@ test("the data source is swappable: an injected dataset serves its available uni
 
 test("unavailable and unverified-availability units never leave the data source", () => {
   const source = createMemoryHousingUnitsSource([
-    aUnit().withId("available-1").build(),
-    aUnit().withId("taken").unavailable().build(),
-    aUnit().withId("hold").withUnverifiedAvailability().build(),
+    aUnitCard().withId("available-1").build(),
+    aUnitCard().withId("taken").unavailable().build(),
+    aUnitCard().withId("hold").withUnverifiedAvailability().build(),
   ]);
 
   const ids = source.listUnits().map((unit) => unit.id);
@@ -238,14 +238,14 @@ test("an empty results payload still carries the dataset provenance markers", as
 });
 
 test("a memory-backed source always serves the provenance markers too", () => {
-  const source = createMemoryHousingUnitsSource([aUnit().build()]);
+  const source = createMemoryHousingUnitsSource([aUnitCard().build()]);
 
   expect(source.synthetic).toBe(true);
   expect(source.disclosure.length).toBeGreaterThan(0);
 });
 
 test("a dataset without the synthetic provenance marker refuses to boot", async () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
       cardToDatasetTree(card, {
@@ -262,7 +262,7 @@ test("a dataset without the synthetic provenance marker refuses to boot", async 
 });
 
 test("a dataset whose disclosure drifts from the served provenance sentence refuses to boot", async () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
       cardToDatasetTree(card, {
@@ -281,7 +281,7 @@ test("a dataset whose disclosure drifts from the served provenance sentence refu
 test("a real-looking phone number in a tampered fixture fails source construction", () => {
   // a realistic Washington phone number that is not in the fictional 555-01XX block,
   // on its own uniquely-numbered card so the id guard does not fire first
-  const card = aUnit().withId("phone-guard-a").build();
+  const card = aUnitCard().withId("phone-guard-a").build();
   card.provider.phone = "(202) 555-5735";
 
   expect(() => createMemoryHousingUnitsSource([card])).toThrow(
@@ -290,21 +290,21 @@ test("a real-looking phone number in a tampered fixture fails source constructio
 });
 
 test("a non-example.org email in a tampered fixture fails source construction", () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   card.provider.email = "contact@attacker-real-estate.example.com";
 
   expect(() => createMemoryHousingUnitsSource([card])).toThrow(/not an example\.org/i);
 });
 
 test("a non-example.org website in a tampered fixture fails source construction", () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   card.provider.website = "https://attacker-real-estate.example.com";
 
   expect(() => createMemoryHousingUnitsSource([card])).toThrow(/not an example\.org/i);
 });
 
 test("a non-fictional phone also fails a dataset-source construction at the same seam", async () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   card.provider.phone = "(202) 555-5735";
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
@@ -322,7 +322,7 @@ test("a non-fictional phone also fails a dataset-source construction at the same
 });
 
 test("a unit row shaped like the removed approximate location refuses to boot the source", async () => {
-  const card = aUnit().withId("legacy-approximate-row").build();
+  const card = aUnitCard().withId("legacy-approximate-row").build();
   const payload = JSON.parse(
     JSON.stringify(
       cardToDatasetTree(card, {
@@ -353,7 +353,7 @@ test("a unit row shaped like the removed approximate location refuses to boot th
 });
 
 test("a subdomain of example.org still passes the contact pattern", () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   card.provider.website = "https://listings.example.org/search";
   card.provider.email = "intake@mail.example.org";
 
@@ -361,7 +361,7 @@ test("a subdomain of example.org still passes the contact pattern", () => {
 });
 
 test("duplicate unit ids in the loaded dataset fail source construction", () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
 
   expect(() => createMemoryHousingUnitsSource([card, card])).toThrow(
     /dataset carries duplicate unit ids/i,
@@ -376,7 +376,7 @@ test("duplicate unit ids in the loaded dataset fail source construction", () => 
 // ---------------------------------------------------------------------------
 
 test("an available unit naming a foreign program refuses to boot the dataset source", async () => {
-  const card = aUnit().withId("owned-unit").build();
+  const card = aUnitCard().withId("owned-unit").build();
   const tree = cardToDatasetTree(card, validHeader());
   // the tamper: the unit row claims a program that does not enclose it
   const row = tree.providers[0]?.programs[0]?.units[0];
@@ -391,7 +391,7 @@ test("an available unit naming a foreign program refuses to boot the dataset sou
 });
 
 test("a not-available unit naming a foreign program refuses to boot the dataset source", async () => {
-  const card = aUnit().withId("hidden-taken-unit").unavailable().build();
+  const card = aUnitCard().withId("hidden-taken-unit").unavailable().build();
   const tree = cardToDatasetTree(card, validHeader());
   const row = tree.providers[0]?.programs[0]?.units[0];
   if (row === undefined) throw new Error("the fixture's own unit row went missing");
@@ -405,7 +405,7 @@ test("a not-available unit naming a foreign program refuses to boot the dataset 
 });
 
 test("an unverified-availability unit naming a foreign program refuses to boot the dataset source", async () => {
-  const card = aUnit().withId("hidden-unverified-unit").withUnverifiedAvailability().build();
+  const card = aUnitCard().withId("hidden-unverified-unit").withUnverifiedAvailability().build();
   const tree = cardToDatasetTree(card, validHeader());
   const row = tree.providers[0]?.programs[0]?.units[0];
   if (row === undefined) throw new Error("the fixture's own unit row went missing");
@@ -419,7 +419,7 @@ test("an unverified-availability unit naming a foreign program refuses to boot t
 });
 
 test("a program id repeated within one provider refuses to boot the dataset source", async () => {
-  const card = aUnit().withId("owned-unit").build();
+  const card = aUnitCard().withId("owned-unit").build();
   card.programId = "program-shared";
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
@@ -441,9 +441,9 @@ test("a program id repeated within one provider refuses to boot the dataset sour
 });
 
 test("a program id repeated across providers refuses to boot the dataset source", async () => {
-  const first = aUnit().withId("first-unit").build();
+  const first = aUnitCard().withId("first-unit").build();
   first.programId = "program-shared";
-  const second = aUnit().withId("second-unit").build();
+  const second = aUnitCard().withId("second-unit").build();
   second.programId = "program-shared";
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
@@ -466,7 +466,7 @@ test("a program id repeated across providers refuses to boot the dataset source"
 });
 
 test("a provider id repeated on a program-less provider refuses to boot the dataset source", async () => {
-  const card = aUnit().withId("owned-unit").build();
+  const card = aUnitCard().withId("owned-unit").build();
   const datasetPath = await writeScratchDataset(
     JSON.stringify(
       datasetTree(validHeader(), [
@@ -484,7 +484,7 @@ test("a provider id repeated on a program-less provider refuses to boot the data
 test("hierarchy diagnostics fire in a pinned order: provider ids, then program ids, then unit ownership", async () => {
   // every fixture below carries an ownership violation; the first two add
   // identity duplicates so the category order stays observable
-  const owned = aUnit().withId("owned-unit").build();
+  const owned = aUnitCard().withId("owned-unit").build();
   owned.programId = "program-somewhere-else";
 
   const everyViolation = datasetTree(validHeader(), [

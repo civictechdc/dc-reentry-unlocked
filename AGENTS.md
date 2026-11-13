@@ -97,7 +97,7 @@ The task verification for your block's task must pass before you report done.
   policy when filtering no-referral` — a behavior claim, not a method name.
 - Arrange-Act-Assert bodies. Given/When/Then is philosophical, not literal —
   no keyword ceremony outside the e2e/Gherkin layer.
-- Fluent domain builders (`aUnit().inWard(5).withUnknownSobrietyPolicy()`)
+- Fluent domain builders (`aUnitCard().inWard(5).withUnknownSobrietyPolicy()`)
   live in the test-only `testing` subpath of `packages/shared`. Do not copy
   builder logic into individual workspaces.
 - Test bodies read as domain language, not as schema plumbing.

@@ -1,4 +1,4 @@
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { describe, expect, test } from "vitest";
 import type { CameraMap } from "./map-config.ts";
 import { PIN_LABEL_BG, PIN_LABEL_INK, rgbChannels } from "./map-colors.ts";
@@ -27,12 +27,12 @@ function pixelAt(image: BubbleImage, x: number, y: number): [number, number, num
   return [image.data[i]!, image.data[i + 1]!, image.data[i + 2]!, image.data[i + 3]!];
 }
 
-const unitInWard7 = aUnit()
+const unitInWard7 = aUnitCard()
   .withId("unit-exact")
   .inWard(7)
   .withCoordinates(38.9254, -77.0314)
   .build();
-const unitInWard3 = aUnit()
+const unitInWard3 = aUnitCard()
   .withId("unit-ward3")
   .inWard(3)
   .withCoordinates(38.9364, -77.079)
@@ -113,11 +113,11 @@ describe("unit pin placement", () => {
 
 describe("pin address labels", () => {
   test("every pin feature carries its unit's address as a property", () => {
-    const unitWithAddress = aUnit()
+    const unitWithAddress = aUnitCard()
       .withId("unit-labeled")
       .withExactAddress("1440 Test Street NW")
       .build();
-    const otherUnit = aUnit()
+    const otherUnit = aUnitCard()
       .withId("unit-neighbor")
       .withExactAddress("900 Neighbor Avenue SE")
       .build();
@@ -241,7 +241,7 @@ describe("the pin label text trims the city from a `<street>, <city>, <state> <z
   });
 
   test("every pin feature carries the trimmed label beside the untouched full address", () => {
-    const unit = aUnit()
+    const unit = aUnitCard()
       .withId("unit-labeled")
       .withExactAddress("1440 Test Street NW, Washington, DC 20001")
       .build();

@@ -26,37 +26,13 @@ import {
   UnitSchema,
   Value,
 } from "@dc-reentry/shared";
-import { aProvider, aProgram, aUnit } from "@dc-reentry/shared/testing";
-
-const sampleCard: UnitCard = aUnit().build();
-
-const aUnitEntity = (
-  overrides?: Partial<{
-    availabilityState: Unit["availabilityState"];
-    availabilityConfirmed: boolean;
-  }>,
-): Unit => ({
-  id: sampleCard.id,
-  programId: sampleCard.programId,
-  address: sampleCard.address,
-  ward: sampleCard.ward,
-  quadrant: sampleCard.quadrant,
-  coordinates: sampleCard.coordinates,
-  bedrooms: sampleCard.bedrooms,
-  size: sampleCard.size,
-  cost: sampleCard.cost,
-  availabilityState: overrides?.availabilityState ?? "available",
-  availabilityConfirmed: overrides?.availabilityConfirmed ?? true,
-});
+import { aProvider, aProgram, aUnit, aUnitCard } from "@dc-reentry/shared/testing";
 
 // docs/shared-contracts.md — Example 1: entity schemas
 test("example 1 compiles: entity schemas validate real providers, programs, units", () => {
   const someProvider = aProvider().build();
   const someProgram = aProgram().build();
-  const unitForTheInventory = aUnitEntity({
-    availabilityState: "unverified-availability",
-    availabilityConfirmed: false,
-  });
+  const unitForTheInventory = aUnit().withUnverifiedAvailability().needsVerification().build();
 
   expect(Value.Check(ProviderSchema, someProvider)).toBe(true);
   expect(Value.Check(ProgramSchema, someProgram)).toBe(true);
@@ -65,7 +41,7 @@ test("example 1 compiles: entity schemas validate real providers, programs, unit
 
 // Example 2: the flattened unit card
 test("example 2 compiles: the unit card validates a fluent-built unit card", () => {
-  const validCard: UnitCard = aUnit().inWard(5).build();
+  const validCard: UnitCard = aUnitCard().inWard(5).build();
 
   expect(validCard.coordinates).toEqual({ latitude: 38.913, longitude: -77.032 });
   expect(Value.Check(UnitCardSchema, validCard)).toBe(true);
@@ -75,7 +51,7 @@ test("example 2 compiles: the unit card validates a fluent-built unit card", () 
 test("example 3 compiles: derived TS types annotate real shapes", () => {
   const provider: Provider = aProvider().build();
   const program: Program = aProgram().build();
-  const unit: Unit = aUnitEntity();
+  const unit: Unit = aUnit().build();
 
   expect(provider.organization.length).toBeGreaterThan(0);
   expect(program.id.length).toBeGreaterThan(0);
@@ -112,7 +88,7 @@ test("example 7 compiles: envelopes validate real payloads", () => {
     schemaVersion: "0.2",
     synthetic: true as const,
     disclosure: "Synthetic prototype data — fictional providers. Never contact.",
-    units: [aUnit().build()],
+    units: [aUnitCard().build()],
   };
   const schemaPayloadFromApi = { schemaVersion: "0.2", filters: UNIT_FILTERS };
   const errorFromApi = {
@@ -129,7 +105,7 @@ test("example 7 compiles: envelopes validate real payloads", () => {
 
 // Example 8: test-only domain builders
 test("example 8 compiles: test-only builders arrange from the testing subpath", () => {
-  const unit = aUnit().inWard(5).withUnknownSobrietyPolicy().build();
+  const unit = aUnitCard().inWard(5).withUnknownSobrietyPolicy().build();
 
   expect(unit.program.sobrietyRequired).toBe("unknown");
 });

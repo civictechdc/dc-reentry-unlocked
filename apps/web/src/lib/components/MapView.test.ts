@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { tick } from "svelte";
 import { m } from "#lib/paraglide/messages.js";
@@ -340,12 +340,12 @@ import MapView from "./MapView.svelte";
 import UnitCard from "./UnitCard.svelte";
 
 let store: HousingStore;
-const unitInWard7 = aUnit()
+const unitInWard7 = aUnitCard()
   .withId("unit-exact")
   .inWard(7)
   .withCoordinates(38.9254, -77.0314)
   .build();
-const unitInWard3 = aUnit()
+const unitInWard3 = aUnitCard()
   .withId("unit-ward3")
   .inWard(3)
   .withCoordinates(38.9364, -77.079)
@@ -1429,7 +1429,7 @@ describe("stale pin-hover clearing", () => {
   });
 
   test("after a canvas pin click and selecting another unit's card, hovering a third card and unhovering it returns the label to the selected unit", async () => {
-    const unitC = aUnit().withId("unit-ward5").inWard(5).build();
+    const unitC = aUnitCard().withId("unit-ward5").inWard(5).build();
     const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3, unitC]);
     // The real card call sites share the singleton uiState with the map.
     render(UnitCard, { props: { card: unitInWard3 }, target: listPane });
@@ -1993,7 +1993,11 @@ describe("detail close returns focus to the opening control", () => {
 });
 
 describe("dismissal state machine (one empty-canvas click-off from every reachable state)", () => {
-  const unitWard5 = aUnit().withId("unit-ward5").inWard(5).withCoordinates(38.9, -77.03).build();
+  const unitWard5 = aUnitCard()
+    .withId("unit-ward5")
+    .inWard(5)
+    .withCoordinates(38.9, -77.03)
+    .build();
 
   /**
    * Mounts the map, every unit's card, and the detail slide-over together:

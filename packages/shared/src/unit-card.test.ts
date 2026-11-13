@@ -2,12 +2,12 @@ import { expect, test } from "vitest";
 import { Value } from "typebox/value";
 import type { UnitCard } from "./index";
 import { UnitCardSchema } from "./index";
-import { aUnit } from "./testing";
+import { aUnitCard } from "./testing";
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value)) as unknown;
 
 const sampleCard = () =>
-  aUnit().inWard(5).withUnknownSobrietyPolicy().atOrganization("Fresh Start Housing").build();
+  aUnitCard().inWard(5).withUnknownSobrietyPolicy().atOrganization("Fresh Start Housing").build();
 
 test("a built unit card passes schema conformance", () => {
   const card = sampleCard();
@@ -30,13 +30,13 @@ test("program policies and provider contacts ride along without further lookups"
 });
 
 test("available-but-unconfirmed units carry the needs-verification badge", () => {
-  const needingVerification = aUnit().available().needsVerification().build();
+  const needingVerification = aUnitCard().available().needsVerification().build();
 
   expect(needingVerification.availabilityState).toBe("available");
   expect(needingVerification.availabilityConfirmed).toBe(false);
   expect(needingVerification.verificationBadge).toBe("needs-verification");
 
-  const confirmed = aUnit().available().confirmed().build();
+  const confirmed = aUnitCard().available().confirmed().build();
   expect(confirmed.availabilityState).toBe("available");
   expect(confirmed.availabilityConfirmed).toBe(true);
   expect(confirmed.verificationBadge).toBe("confirmed");
@@ -44,9 +44,9 @@ test("available-but-unconfirmed units carry the needs-verification badge", () =>
 
 test("built cards distinguish all three availability states observably", () => {
   const cards: readonly UnitCard[] = [
-    aUnit().available().build(),
-    aUnit().unavailable().build(),
-    aUnit().withUnverifiedAvailability().build(),
+    aUnitCard().available().build(),
+    aUnitCard().unavailable().build(),
+    aUnitCard().withUnverifiedAvailability().build(),
   ];
 
   expect(cards.map((c) => c.availabilityState)).toEqual([
@@ -61,7 +61,7 @@ test("built cards distinguish all three availability states observably", () => {
 });
 
 test("a builder walks all three availability states under its own control", () => {
-  const builder = aUnit()
+  const builder = aUnitCard()
     .unavailable()
     .available()
     .withUnverifiedAvailability()
@@ -72,14 +72,14 @@ test("a builder walks all three availability states under its own control", () =
 });
 
 test("an eligibility field that is unknown rides the card honestly", () => {
-  const card = aUnit().withUnknownPopulation().build();
+  const card = aUnitCard().withUnknownPopulation().build();
 
   expect(card.program.population).toBe("unknown");
   expect(Value.Check(UnitCardSchema, card)).toBe(true);
 });
 
 test("two cards built from one builder never share nested fixtures", () => {
-  const builder = aUnit();
+  const builder = aUnitCard();
   const first = builder.build();
   first.program.referralRequired = "yes";
   first.provider.organization = "Renamed Clinic";
@@ -108,7 +108,7 @@ test("rejects the former approximate-location wire shape", () => {
 });
 
 test("a built card carries exact coordinates without extra arrangement", () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
 
   expect(card.coordinates).toEqual({ latitude: 38.913, longitude: -77.032 });
   expect(Value.Check(UnitCardSchema, card)).toBe(true);

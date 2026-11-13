@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { buildApp } from "../src/app";
 
 async function buildTestApp() {
@@ -30,7 +30,7 @@ test("the API boots and answers its health probe", async () => {
 });
 
 test("a stub data source keeps serving its units through the app wiring", async () => {
-  const card = aUnit().build();
+  const card = aUnitCard().build();
   const disclosure = "Stub disclosure sentence — fictional data only.";
   const app = await buildApp({
     logLevel: "error",
