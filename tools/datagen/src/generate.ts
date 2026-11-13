@@ -20,7 +20,7 @@ import type {
   RoomType,
   Unit,
 } from "@dc-reentry/shared";
-import { SCHEMA_VERSION, ROOM_TYPES } from "@dc-reentry/shared";
+import { SCHEMA_VERSION, ROOM_TYPES, SYNTHETIC_DISCLOSURE } from "@dc-reentry/shared";
 import {
   distanceAlongLineMeters,
   interpolateSegment,
@@ -240,10 +240,6 @@ export interface DatasetGeneration {
   corpusFormat: string;
   rng: string;
 }
-
-export const SYNTHETIC_DISCLAIMER =
-  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. " +
-  "Not real housing inventory; never contact these organizations.";
 
 export const GENERATOR_ID = "@dc-reentry/datagen (pnpm datagen)";
 const RNG_ID = "mulberry32 (fixed default seed, no wall-clock on the generation path)";
@@ -682,7 +678,7 @@ export function generateDataset(
   return {
     schemaVersion: SCHEMA_VERSION,
     synthetic: true,
-    disclaimer: SYNTHETIC_DISCLAIMER,
+    disclaimer: SYNTHETIC_DISCLOSURE,
     seed,
     generation: {
       generator: GENERATOR_ID,
