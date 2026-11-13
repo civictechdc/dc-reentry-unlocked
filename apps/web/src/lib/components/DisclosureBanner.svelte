@@ -1,16 +1,19 @@
 <script lang="ts">
+  import { SYNTHETIC_DISCLOSURE } from "@dc-reentry/shared";
   import { m } from "#lib/paraglide/messages.js";
 
   /**
-   * Persistent, prominent prompt-display disclosure banner (synthetic-data
-   * dataset disclaimer language). Rendered from the root layout, so every
-   * screen and the error surface carry it.
+   * Persistent, prominent prompt-display disclosure banner. The heading is
+   * catalog-driven; the body renders the shared contract's synthetic-data
+   * disclosure sentence directly, so it stays present regardless of API
+   * availability. Rendered from the root layout, so every screen and the
+   * error surface carry it.
    */
 </script>
 
 <div class="banner" role="note">
   <strong class="banner-title">{m.banner_heading()}</strong>
-  <p class="banner-body">{m.banner_body()}</p>
+  <p class="banner-body">{SYNTHETIC_DISCLOSURE}</p>
 </div>
 
 <style>

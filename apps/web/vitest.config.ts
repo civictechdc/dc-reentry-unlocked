@@ -7,9 +7,9 @@ import { defineConfig } from "vitest/config";
 /**
  * Component/store test configuration (fast failure surface — the real-map
  * and end-to-end behaviors are proven in the Playwright e2e suite instead).
- * The SvelteKit Vite plugin is deliberately NOT loaded here: routes stay
- * untested in Vitest and the e2e layer covers them against the real dev
- * server.
+ * The SvelteKit Vite plugin is deliberately NOT loaded here: route files can
+ * still mount directly through a test-only harness (root-layout-disclosure.test.ts)
+ * but `$app/*` runtime modules and the real router stay e2e-covered.
  */
 export default defineConfig({
   plugins: [
