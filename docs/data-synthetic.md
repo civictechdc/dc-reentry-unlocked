@@ -161,6 +161,13 @@ itself, so the data cannot be mistaken for a real inventory when it travels
 out of context. The disclosure fields are part of the frozen contract and
 guarded by a test invariant.
 
+The sentence itself has a single canonical home: the shared contract
+package exports it as `SYNTHETIC_DISCLOSURE` (`packages/shared`). The
+generator embeds that constant into the header, the API boot-checks the
+dataset header against it at startup, and the web banner renders the same
+constant directly — so the disclosure stays visible even when the API is
+unreachable.
+
 ## Where things live
 
 | Path                                     | Purpose                                                 |

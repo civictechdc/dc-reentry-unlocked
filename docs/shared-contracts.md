@@ -136,6 +136,12 @@ Value.Check(FilterSchemaResponseSchema, schemaPayloadFromApi);
 Value.Check(ErrorEnvelopeSchema, errorFromApi); // code is one of the ERROR_CODES
 ```
 
+The disclosure sentence itself is exported as `SYNTHETIC_DISCLOSURE` from
+the package's main entry. The web banner renders that constant directly —
+no fetch, no message-catalog entry — while the client still validates the
+full envelope, deliberately discarding the served `disclosure` in favor of
+the shared constant (only the units reach the UI).
+
 The pinned code vocabulary (`ERROR_CODES`, additive-only — new codes must
 never break an existing consumer's `switch`, so unknown codes degrade to a
 generic failure rendering) is documented with per-code meanings in the
