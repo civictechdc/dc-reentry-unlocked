@@ -27,24 +27,52 @@ When(
 Then(
   "map pins and card list both reflect exactly the matching units",
   async ({ page }: { page: Page }) => {
-    // The counts must agree three ways: what the API matched for the same
-    // selection, what the card list renders, and what the map pins render —
-    // both views draw from one result set. The oracle URL follows the same
-    // env override the app bundle uses (VITE_API_URL), so the suite stays
-    // honest against a relocated API base.
+    // Identity equality, three ways: the unit ids the API matched, the ids
+    // the card list renders, and the ids the map pin list renders must be
+    // the same set — equal-sized but different sets fail here, not just
+    // equal counts. The oracle URL follows the same env override the app
+    // bundle uses (VITE_API_URL), so the suite stays honest against a
+    // relocated API base.
     const apiBase = process.env.VITE_API_URL ?? "http://127.0.0.1:3000";
-    const apiCount = await fetch(`${apiBase}/units?ward=5&housing-type=transitional`)
-      .then((response) => response.json())
-      .then((payload: { units: unknown[] }) => payload.units.length);
+    const apiUnitIds = await fetch(`${apiBase}/units?ward=5&housing-type=transitional`)
+      .then((response) => {
+        if (!response.ok) {
+          // Origin + pathname only: a credential-bearing VITE_API_URL must
+          // never echo its query or userinfo into CI logs.
+          const oracleUrl = new URL(response.url);
+          throw new Error(
+            `oracle fetch failed: ${response.status} ${response.statusText} at ${oracleUrl.origin}${oracleUrl.pathname}`,
+          );
+        }
+        return response.json();
+      })
+      .then((payload: { units: { id: string }[] }) => payload.units.map((unit) => unit.id))
+      .then((ids) => ids.sort());
     // The refresh lands when the result-status line re-renders: gate the
     // synchronization assertions on it, not on a sleep.
-    await expect(page.locator(".result-count")).toContainText(`${apiCount} available unit`, {
-      timeout: 20_000,
-    });
+    await expect(page.locator(".result-count")).toContainText(
+      `${apiUnitIds.length} available unit`,
+      {
+        timeout: 20_000,
+      },
+    );
     const cardCount = await page.locator(".unit-list article").count();
     const pinCount = await page.getByTestId("map-pin-list").locator("button").count();
-    expect(cardCount, "the cards show every unit the API matched").toBe(apiCount);
+    const cardIds = (
+      await page
+        .locator(".unit-list article")
+        .evaluateAll((cards) => cards.map((card) => card.getAttribute("data-unit-id")))
+    ).sort();
+    const pinIds = (
+      await page
+        .getByTestId("map-pin-list")
+        .locator("button")
+        .evaluateAll((pins) => pins.map((pin) => pin.getAttribute("data-unit-id")))
+    ).sort();
+    expect(cardCount, "the cards show every unit the API matched").toBe(apiUnitIds.length);
     expect(pinCount, "the map pins show the same result set").toBe(cardCount);
+    expect(cardIds, "the cards show exactly the units the API matched").toEqual(apiUnitIds);
+    expect(pinIds, "the map pins show the same result set").toEqual(apiUnitIds);
     // No stragglers: every rendered card carries the applied ward filter.
     await expect(page.locator(".unit-list article").filter({ hasText: "Ward 5" })).toHaveCount(
       cardCount,
