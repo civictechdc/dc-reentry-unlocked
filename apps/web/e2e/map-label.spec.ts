@@ -141,6 +141,13 @@ test.describe("the pin address label renders on the map canvas", () => {
     // attributes are recorded before the hover — hovering a pin must never
     // move the camera the way a selection does.
     const mapRegion = page.getByTestId("map-view");
+    // The hover must land on a *rendered* pin: `data-pin-points` publishes
+    // projections before tiles rasterize, but the hover label arms only from
+    // MapLibre layer events, which fire on features queryable in the current
+    // frame — so the map settles before the pointer moves (webkit
+    // software-GL rasterizes slowest, and this single mouse-move has no
+    // later movement to correct it).
+    await settleMap(page);
     const canvasBox = await (await mapCanvas(page)).boundingBox();
     const pin = await canvasPinToHover(page, canvasBox!);
     const centerBefore = await mapRegion.getAttribute("data-map-center");
