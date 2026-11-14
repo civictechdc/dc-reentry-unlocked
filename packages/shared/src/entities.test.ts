@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Value } from "typebox/value";
-import type { Program } from "./index";
+import type { Program, Unit } from "./index";
 import {
   AvailabilityStateSchema,
   ProgramSchema,
@@ -10,35 +10,20 @@ import {
   UnitSchema,
   WardSchema,
 } from "./index";
-import { aProvider, aProgram } from "./testing";
+import { aProvider, aProgram, aUnit } from "./testing";
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value)) as unknown;
 
-const aUnitEntity = (
-  overrides?: Partial<{
-    ward: number;
-    availabilityState: "available" | "not-available" | "unverified-availability";
-    availabilityConfirmed: boolean;
-  }>,
-) => ({
-  id: "unit-1",
-  programId: "program-1",
-  address: "1440 Test Street NW",
-  ward: overrides?.ward ?? 5,
-  quadrant: "NW",
-  coordinates: { latitude: 38.913, longitude: -77.032 },
-  bedrooms: 1,
-  size: { squareFeet: 400, roomType: "efficiency" },
-  cost: 650,
-  availabilityState: overrides?.availabilityState ?? "available",
-  availabilityConfirmed: overrides?.availabilityConfirmed ?? true,
-});
-
 test("every tri-state availability state survives a JSON round-trip", () => {
   const states = ["available", "not-available", "unverified-availability"] as const;
+  const unitsByAvailability: Record<(typeof states)[number], Unit> = {
+    available: aUnit().available().build(),
+    "not-available": aUnit().unavailable().build(),
+    "unverified-availability": aUnit().withUnverifiedAvailability().build(),
+  };
 
   for (const availabilityState of states) {
-    const unit = aUnitEntity({ availabilityState });
+    const unit = unitsByAvailability[availabilityState];
 
     expect(Value.Check(AvailabilityStateSchema, availabilityState)).toBe(true);
     expect(Value.Check(UnitSchema, unit)).toBe(true);
@@ -63,13 +48,13 @@ test("a provider without listed contacts stays optional, never fabricated", () =
 });
 
 test("rejects a unit whose coordinates are null", () => {
-  const approximateShaped = { ...aUnitEntity(), coordinates: null };
+  const approximateShaped = { ...aUnit().build(), coordinates: null };
 
   expect(Value.Check(UnitSchema, approximateShaped)).toBe(false);
 });
 
 test("rejects a unit without coordinates", () => {
-  const withoutCoordinates: Record<string, unknown> = { ...aUnitEntity() };
+  const withoutCoordinates: Record<string, unknown> = { ...aUnit().build() };
   delete withoutCoordinates.coordinates;
 
   expect(Value.Check(UnitSchema, withoutCoordinates)).toBe(false);
@@ -122,15 +107,15 @@ test("a provider website is a web URL at the contract layer", () => {
 test("entity consumers tolerate future fields", () => {
   const evolved = { futureField: { note: "a contract revision added this" } };
 
-  expect(Value.Check(UnitSchema, { ...aUnitEntity(), ...evolved })).toBe(true);
+  expect(Value.Check(UnitSchema, { ...aUnit().build(), ...evolved })).toBe(true);
   expect(Value.Check(ProgramSchema, { ...aProgram().build(), ...evolved })).toBe(true);
   expect(Value.Check(ProviderSchema, { ...aProvider().build(), ...evolved })).toBe(true);
 });
 
 test("malformed units fail validation", () => {
-  expect(Value.Check(UnitSchema, { ...aUnitEntity(), ward: 12 })).toBe(false);
-  expect(Value.Check(UnitSchema, { ...aUnitEntity(), availabilityState: "maybe-available" })).toBe(
-    false,
-  );
-  expect(Value.Check(UnitSchema, { ...aUnitEntity(), address: "" })).toBe(false);
+  expect(Value.Check(UnitSchema, { ...aUnit().build(), ward: 12 })).toBe(false);
+  expect(
+    Value.Check(UnitSchema, { ...aUnit().build(), availabilityState: "maybe-available" }),
+  ).toBe(false);
+  expect(Value.Check(UnitSchema, { ...aUnit().build(), address: "" })).toBe(false);
 });

@@ -9,7 +9,7 @@
  */
 import { fc, test as fcTest } from "@fast-check/vitest";
 import { describe, expect, test } from "vitest";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import {
   pinLabelBubbleImage,
   pinLabelBubbleImageMetadata,
@@ -224,7 +224,7 @@ describe("unitsToFeatureCollection properties", () => {
     ({ scenario }) => {
       const { units, selectedUnitId } = scenario;
       const cards = units.map((unit) =>
-        aUnit()
+        aUnitCard()
           .withId(unit.id)
           .inWard(unit.ward)
           .withExactAddress(unit.address)
@@ -245,7 +245,7 @@ describe("unitsToFeatureCollection properties", () => {
   );
 
   test("the feature label carries the exact trimmed string for a canonical-shaped unit", () => {
-    const unit = aUnit()
+    const unit = aUnitCard()
       .withId("unit-canonical")
       .inWard(7)
       .withExactAddress("1440 Test Street NW, Washington, DC 20001")

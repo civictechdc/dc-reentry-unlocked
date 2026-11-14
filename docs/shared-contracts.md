@@ -153,7 +153,7 @@ Test code arranges fixtures through fluent builders from a test-only subpath
 (enforced by `pnpm arch:check` — production code must never import it).
 
 ```ts
-import { aProvider, aProgram, aUnit } from "@dc-reentry/shared/testing";
+import { aProvider, aProgram, aUnitCard } from "@dc-reentry/shared/testing";
 
-const unit = aUnit().inWard(5).withUnknownSobrietyPolicy().build();
+const unit = aUnitCard().inWard(5).withUnknownSobrietyPolicy().build();
 ```

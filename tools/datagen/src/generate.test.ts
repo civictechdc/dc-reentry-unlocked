@@ -180,16 +180,9 @@ function assertStructuralInvariants(dataset: Dataset): void {
 
   // Cards resolve through the hierarchy: every unit names a program under
   // the same provider it appears under.
-  const programIdsByProvider = new Map<string, Set<string>>();
   const allProgramIds = new Set<string>();
   for (const provider of dataset.providers) {
     for (const program of provider.programs) {
-      let ids = programIdsByProvider.get(provider.id);
-      if (!ids) {
-        ids = new Set();
-        programIdsByProvider.set(provider.id, ids);
-      }
-      ids.add(program.id);
       allProgramIds.add(program.id);
       expect(program.units.every((unit) => unit.programId === program.id)).toBe(true);
     }

@@ -1,5 +1,5 @@
 import type { UnitCard } from "@dc-reentry/shared";
-import { aUnit, type UnitCardBuilder } from "@dc-reentry/shared/testing";
+import { aUnitCard, type UnitCardBuilder } from "@dc-reentry/shared/testing";
 
 /**
  * Builder-arranged fixture shared by the units behavior tests and the
@@ -12,7 +12,7 @@ import { aUnit, type UnitCardBuilder } from "@dc-reentry/shared/testing";
  * test-directory helpers to read the shared test-only builders.
  */
 const shaped = (id: string, shape: (builder: UnitCardBuilder) => UnitCardBuilder): UnitCard =>
-  shape(aUnit().withId(id)).build();
+  shape(aUnitCard().withId(id)).build();
 
 export const fixtureDataset: UnitCard[] = [
   shaped("verified-exact-nw", (unit) => unit.inWard(1).confirmed()),

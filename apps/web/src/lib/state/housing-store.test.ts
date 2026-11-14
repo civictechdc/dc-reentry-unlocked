@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { UNIT_FILTERS, type FilterDefinition, type UnitCard } from "@dc-reentry/shared";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { HousingStore, SUPPORTED_CONTROLS, type LoadFailure } from "./housing-store.svelte";
 import { ClientError } from "#lib/api/client.js";
 import type { HousingTransport } from "#lib/api/client.ts";
@@ -35,7 +35,7 @@ function newStore(transport: RecordingTransport = new RecordingTransport()): {
 describe("housing store", () => {
   test("initialize loads the filter schema, then the unit list with an unfiltered path", async () => {
     const { store, transport } = newStore();
-    transport.cards = [aUnit().withId("unit-1").build()];
+    transport.cards = [aUnitCard().withId("unit-1").build()];
     await store.initialize();
 
     expect(store.units).toHaveLength(1);
@@ -93,7 +93,7 @@ describe("housing store", () => {
 
   test("a failing refresh keeps the last rendered results and flags the failure for retry", async () => {
     const { store, transport } = newStore();
-    transport.cards = [aUnit().withId("unit-1").build()];
+    transport.cards = [aUnitCard().withId("unit-1").build()];
     await store.initialize();
 
     transport.failNextRequest = true;

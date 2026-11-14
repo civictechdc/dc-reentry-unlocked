@@ -1,13 +1,13 @@
 import { expect, test } from "vitest";
 import { UnitCardSchema, Value } from "@dc-reentry/shared";
-import { aProvider, aProgram, aUnit } from "@dc-reentry/shared/testing";
+import { aProvider, aProgram, aUnitCard } from "@dc-reentry/shared/testing";
 
 // Consumer-side proof that the shared fluent builders arrange fixtures in
 // domain language — and that the built cards conform to the shared contract
 // the API is responsible for serving.
 
 test("api tests arrange a ward-5 unit with an unknown sobriety policy via the shared builder", () => {
-  const card = aUnit().inWard(5).withUnknownSobrietyPolicy().build();
+  const card = aUnitCard().inWard(5).withUnknownSobrietyPolicy().build();
 
   expect(card.ward).toBe(5);
   expect(card.program.sobrietyRequired).toBe("unknown");
@@ -15,7 +15,7 @@ test("api tests arrange a ward-5 unit with an unknown sobriety policy via the sh
 });
 
 test("a unit whose population is unknown still conforms to the card contract", () => {
-  const card = aUnit().withUnknownPopulation().build();
+  const card = aUnitCard().withUnknownPopulation().build();
 
   expect(card.program.population).toBe("unknown");
   expect(Value.Check(UnitCardSchema, card)).toBe(true);

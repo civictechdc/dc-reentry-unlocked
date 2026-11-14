@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { m } from "#lib/paraglide/messages.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
@@ -23,7 +23,7 @@ class FakeTransport {
 function makeCard(
   overrides: { id?: string; cost?: number; ward?: number; needsVerification?: boolean } = {},
 ) {
-  return aUnit()
+  return aUnitCard()
     .withId(overrides.id ?? "unit-1")
     .withCost(overrides.cost ?? 650)
     .inWard(overrides.ward ?? 1)
@@ -43,7 +43,7 @@ afterEach(() => cleanup());
 
 describe("zero-bedroom presentation vocabulary", () => {
   test("presents a zero-bedroom efficiency as Studio on the card", () => {
-    store.units = [aUnit().withId("studio-1").withBedrooms(0).build()];
+    store.units = [aUnitCard().withId("studio-1").withBedrooms(0).build()];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
@@ -55,7 +55,9 @@ describe("zero-bedroom presentation vocabulary", () => {
   });
 
   test("presents a zero-bedroom shared-room as the bed-available vocabulary on the card", () => {
-    store.units = [aUnit().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build()];
+    store.units = [
+      aUnitCard().withId("shared-1").withBedrooms(0).withRoomType("shared-room").build(),
+    ];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
@@ -73,7 +75,7 @@ describe("zero-bedroom presentation vocabulary", () => {
 
   test("presents a one-bedroom private-room as the numeric bedroom count on the card", () => {
     store.units = [
-      aUnit().withId("private-1").withBedrooms(1).withRoomType("private-room").build(),
+      aUnitCard().withId("private-1").withBedrooms(1).withRoomType("private-room").build(),
     ];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
@@ -85,7 +87,9 @@ describe("zero-bedroom presentation vocabulary", () => {
   });
 
   test("presents a two-bedroom apartment as the numeric bedroom count on the card", () => {
-    store.units = [aUnit().withId("apartment-1").withBedrooms(2).withRoomType("apartment").build()];
+    store.units = [
+      aUnitCard().withId("apartment-1").withBedrooms(2).withRoomType("apartment").build(),
+    ];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
@@ -97,7 +101,7 @@ describe("zero-bedroom presentation vocabulary", () => {
 
   test("presents a one-bedroom shared-room as the numeric bedroom count on the card", () => {
     store.units = [
-      aUnit().withId("shared-1br").withBedrooms(1).withRoomType("shared-room").build(),
+      aUnitCard().withId("shared-1br").withBedrooms(1).withRoomType("shared-room").build(),
     ];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
@@ -111,7 +115,7 @@ describe("zero-bedroom presentation vocabulary", () => {
 
 describe("card housing-type presentation through the list", () => {
   test("shows the real housing-type label on the card row for a known housing type", () => {
-    store.units = [aUnit().withId("known-type").build()];
+    store.units = [aUnitCard().withId("known-type").build()];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
@@ -124,7 +128,7 @@ describe("card housing-type presentation through the list", () => {
   });
 
   test("shows the honest unknown marker on the card row for an unlisted housing type", () => {
-    store.units = [aUnit().withId("unknown-type").withUnknownHousingType().build()];
+    store.units = [aUnitCard().withId("unknown-type").withUnknownHousingType().build()];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
@@ -155,15 +159,16 @@ describe("unit card list states", () => {
   test("renders loaded cards that scan without opening detail", async () => {
     store.units = [
       makeCard({ id: "unit-1", cost: 650, ward: 5 }),
-      aUnit().withId("unit-2").inWard(2).withCost(430).needsVerification().build(),
+      aUnitCard().withId("unit-2").inWard(2).withCost(430).needsVerification().build(),
     ];
     store.phase = "ready";
     render(UnitCardList, { props: { store } });
 
     const cards = screen.getAllByRole("article");
     expect(cards).toHaveLength(2);
+    // the default card is a zero-bedroom efficiency, presented as Studio
     expect(
-      within(cards[0] as HTMLElement).getByText(m.card_bedrooms({ bedrooms: 1 })),
+      within(cards[0] as HTMLElement).getByText(m.bedrooms_value_studio()),
     ).toBeInTheDocument();
     expect(within(cards[0] as HTMLElement).getByText(m.card_ward({ ward: 5 }))).toBeInTheDocument();
     expect(

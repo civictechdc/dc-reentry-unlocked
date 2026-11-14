@@ -3,7 +3,7 @@ import { expect } from "vitest";
 import { Value } from "typebox/value";
 import type { UnitCard } from "./index";
 import { UnitCardSchema, UnitSchema } from "./index";
-import { aUnit } from "./testing";
+import { aUnitCard } from "./testing";
 
 /**
  * Property-based conformance and round-trip for unit payloads. The arbitrary
@@ -38,7 +38,7 @@ const cardFromFields = (fields: {
   squareFeet: number;
   cost: number;
 }): UnitCard =>
-  aUnit()
+  aUnitCard()
     .inWard(fields.ward)
     .inQuadrant(fields.quadrant)
     .withExactAddress(fields.address)

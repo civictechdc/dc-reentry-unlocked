@@ -21,7 +21,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/svelte";
 import { fc, test as fcTest } from "@fast-check/vitest";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
-import { aUnit } from "@dc-reentry/shared/testing";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { afterEach, describe, expect, vi } from "vitest";
 import { tick } from "svelte";
 import { m as messages } from "#lib/paraglide/messages.js";
@@ -185,7 +185,7 @@ class FakeTransport {
   }
   async units() {
     return UNIT_IDS.map((id, index) =>
-      aUnit()
+      aUnitCard()
         .withId(id)
         .inWard(index + 1)
         .withCoordinates(38.9, -77.03)
