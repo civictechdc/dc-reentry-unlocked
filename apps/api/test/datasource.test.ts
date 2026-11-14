@@ -1,4 +1,5 @@
 import {
+  SYNTHETIC_DISCLOSURE,
   Value,
   UnitsResponseSchema,
   UnitCardSchema,
@@ -9,7 +10,6 @@ import {
 import { aUnit } from "@dc-reentry/shared/testing";
 import { expect, test } from "vitest";
 import {
-  SYNTHETIC_DISCLOSURE,
   createDatasetHousingUnitsSource,
   createMemoryHousingUnitsSource,
   defaultDatasetPath,
@@ -207,7 +207,32 @@ test("every served payload carries the synthetic markers, verbatim from the data
     disclaimer: string;
   };
   expect(payload.disclosure).toBe(dataset.disclaimer);
+  expect(payload.disclosure).toBe(SYNTHETIC_DISCLOSURE);
   expect(payload.disclosure.length).toBeGreaterThan(0);
+
+  await app.close();
+});
+
+test("an empty results payload still carries the dataset provenance markers", async () => {
+  const source = await createDatasetHousingUnitsSource(defaultDatasetPath());
+  const app = await buildApp({ unitSource: source, logLevel: "error" });
+
+  // a women's emergency shelter in ward 4: no available dataset unit
+  // matches all three selections, so the listing legitimately comes back
+  // empty — and the provenance envelope must still travel with it
+  const response = await app.inject("/units?housing-type=emergency-shelter&gender=women&ward=4");
+  const payload = response.json();
+
+  expect(response.statusCode).toBe(200);
+  expect(payload.units.length).toBe(0);
+  expect(payload.synthetic).toBe(true);
+
+  const { readFile } = await import("node:fs/promises");
+  const dataset = JSON.parse(await readFile(defaultDatasetPath(), "utf8")) as {
+    disclaimer: string;
+  };
+  expect(payload.disclosure).toBe(dataset.disclaimer);
+  expect(payload.disclosure).toBe(SYNTHETIC_DISCLOSURE);
 
   await app.close();
 });

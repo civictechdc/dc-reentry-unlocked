@@ -52,6 +52,7 @@ export {
 export type { FilterControl, FilterOption, FilterTarget, FilterDefinition } from "./filters";
 
 export {
+  SYNTHETIC_DISCLOSURE,
   UnitsResponseSchema,
   FilterSchemaResponseSchema,
   ERROR_CODES,

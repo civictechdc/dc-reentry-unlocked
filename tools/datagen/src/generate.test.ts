@@ -6,6 +6,7 @@ import { Value } from "@dc-reentry/shared";
 import {
   POLICY_STATES,
   ROOM_TYPES,
+  SYNTHETIC_DISCLOSURE,
   ProviderSchema,
   ProgramSchema,
   UnitSchema,
@@ -47,12 +48,7 @@ test("regenerating with the fixed default seed is byte-identical", () => {
 test("the dataset carries the synthetic disclosure in a fixed header block", () => {
   const dataset = generateDataset(DEFAULT_SEED, corpus);
   expect(dataset.synthetic).toBe(true);
-  expect(
-    dataset.disclaimer.length,
-    "a human-readable disclaimer is always present",
-  ).toBeGreaterThan(20);
-  expect(dataset.disclaimer).toMatch(/[Ss]ynthetic/);
-  expect(dataset.disclaimer).toMatch(/never contact/);
+  expect(dataset.disclaimer).toBe(SYNTHETIC_DISCLOSURE);
   expect(dataset.seed).toBe(DEFAULT_SEED);
   expect(dataset.generation.generator).toContain("datagen");
   expect(dataset.generation.rng).toContain("mulberry32");

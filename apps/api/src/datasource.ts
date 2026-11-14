@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   SCHEMA_VERSION,
+  SYNTHETIC_DISCLOSURE,
   UNIT_FILTERS,
   UnitCardSchema,
   ProgramSchema,
@@ -34,15 +35,6 @@ export type FilterSelection = Readonly<Record<string, readonly string[]>>;
 
 /** Single filter value selection — string values, or a selected list. */
 export type SingleFilterSelection = readonly string[];
-
-/**
- * Synthetic-provenance markers served on every units payload — the same
- * disclosure sentence the frozen dataset carries in its own header. The
- * dataset loader pins the file's wording to this constant, so the
- * generator, the dataset, and the served envelope can never disagree.
- */
-export const SYNTHETIC_DISCLOSURE =
-  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. Not real housing inventory; never contact these organizations.";
 
 export interface HousingUnitsSource {
   /** Hard provenance marker for the served envelope (never anything else). */

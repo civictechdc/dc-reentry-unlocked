@@ -6,19 +6,18 @@ import {
   ErrorEnvelopeSchema,
   FilterSchemaResponseSchema,
   SCHEMA_VERSION,
+  SYNTHETIC_DISCLOSURE,
   UnitsResponseSchema,
   UNIT_FILTERS,
 } from "./index";
 import { aUnit } from "./testing";
 
 const roundTrip = (value: unknown): unknown => JSON.parse(JSON.stringify(value)) as unknown;
-const sampleDisclosure = () =>
-  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. Not real housing inventory; never contact these organizations.";
 
 const validUnitsEnvelope = () => ({
   schemaVersion: SCHEMA_VERSION,
   synthetic: true as const,
-  disclosure: sampleDisclosure(),
+  disclosure: SYNTHETIC_DISCLOSURE,
   units: [aUnit().inWard(5).build()],
 });
 
@@ -44,7 +43,7 @@ test("the synthetic marker is a literal true, never a false claim", () => {
   const falseClaim = {
     schemaVersion: SCHEMA_VERSION,
     synthetic: false,
-    disclosure: sampleDisclosure(),
+    disclosure: SYNTHETIC_DISCLOSURE,
     units: [aUnit().build()],
   };
 

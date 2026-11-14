@@ -10,6 +10,13 @@ import { UnitCardSchema } from "./unit";
  */
 
 /**
+ * The one-sentence synthetic-data disclaimer, verbatim from the dataset —
+ * the single source every producer and renderer must serve byte-exact.
+ */
+export const SYNTHETIC_DISCLOSURE =
+  "Synthetic prototype data — fictional providers, generated addresses on real DC geography. Not real housing inventory; never contact these organizations.";
+
+/**
  * Successful units listing (only available units reach this envelope).
  * Both synthetic markers are REQUIRED on every payload: the API surface is
  * read-only and its data must never be mistakable for

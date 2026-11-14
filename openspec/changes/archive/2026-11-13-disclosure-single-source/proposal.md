@@ -28,8 +28,8 @@ The layer seam rules (correctly) forbid api↔datagen imports, so
 
 ### Modified Capabilities
 
-- `housing-inventory-api` — disclosure envelope semantics (if rendering
-  behavior changes)
+- `housing-inventory-api` — disclosure envelope semantics and startup refusal on disclosure drift
+- `housing-search-ui` — banner renders the contract disclosure sentence regardless of API availability; internationalization scope distinguishes UI chrome from contract data
 
 (Spawned at proposal stage with `skip_specs` set; delta specs are
 authored in this change's planning session, which unsets it.)
