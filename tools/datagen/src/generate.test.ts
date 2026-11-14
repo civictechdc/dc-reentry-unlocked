@@ -185,6 +185,7 @@ function assertStructuralInvariants(dataset: Dataset): void {
   // Cards resolve through the hierarchy: every unit names a program under
   // the same provider it appears under.
   const programIdsByProvider = new Map<string, Set<string>>();
+  const allProgramIds = new Set<string>();
   for (const provider of dataset.providers) {
     for (const program of provider.programs) {
       let ids = programIdsByProvider.get(provider.id);
@@ -193,9 +194,23 @@ function assertStructuralInvariants(dataset: Dataset): void {
         programIdsByProvider.set(provider.id, ids);
       }
       ids.add(program.id);
+      allProgramIds.add(program.id);
       expect(program.units.every((unit) => unit.programId === program.id)).toBe(true);
     }
   }
+
+  // Identifiers are collision-free: provider ids are unique across the whole
+  // dataset, and program ids are unique globally — across providers, not
+  // merely within each one.
+  const providerIds = dataset.providers.map((provider) => provider.id);
+  expect(new Set(providerIds).size, `provider ids unique across the dataset (${label})`).toBe(
+    providerIds.length,
+  );
+  const programCount = dataset.providers.reduce(
+    (count, provider) => count + provider.programs.length,
+    0,
+  );
+  expect(allProgramIds.size, `program ids unique across providers (${label})`).toBe(programCount);
 
   // Ward coverage: every ward 1–8 has units.
   for (let ward = 1; ward <= 8; ward++) {
