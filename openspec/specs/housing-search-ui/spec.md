@@ -23,7 +23,7 @@ The search UI SHALL present a map of unit location pins alongside the card list 
 
 #### Scenario: Responsive size classes render their confirmed forms
 - **WHEN** the window is resized across the size classes (phone, portrait tablet, landscape tablet, laptop, maximized desktop)
-- **THEN** each size renders its confirmed preferred layout form: at and below the 900px breakpoint (phones and portrait tablets) the tabbed list-first form with on-demand map; above it the desktop grid with the 3:2-capped map and a 26–32rem list column — with no broken intermediate states between classes
+- **THEN** each size renders its confirmed preferred layout form: at and below the 900px breakpoint (phones and portrait tablets) the tabbed map-first form with on-demand list (map tab initially active); above it the desktop grid with the 3:2-capped map and a 26–32rem list column — with no broken intermediate states between classes
 
 #### Scenario: Phone map tab renders square-ish in both orientations
 - **WHEN** the phone map tab is viewed in portrait or landscape
