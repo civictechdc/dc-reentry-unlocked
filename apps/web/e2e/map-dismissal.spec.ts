@@ -4,13 +4,17 @@ import {
   MIN_CHANGED_PIXELS,
   canvasShot,
   expectLabelCompositePresent,
-  expectLabelGeometry,
   labelGeometry,
   mapCanvas,
   pinFreeCanvasPoint,
   settleMap,
 } from "./steps/label-pixels.ts";
-import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts";
+import {
+  API_BASE,
+  expectCameraFocusedOn,
+  parsePinPoints,
+  unitBehindFirstCard,
+} from "./steps/map.steps.ts";
 
 /**
  * Canvas click/tap dismissal proofs. A canvas click that lands on NO pin
@@ -24,7 +28,10 @@ import { expectCameraFocusedOn, unitBehindFirstCard } from "./steps/map.steps.ts
  * Pixel proofs use the shared label machinery in `steps/label-pixels.ts`
  * (same-framing screenshots, scratch-page decoding, paint-family
  * classification); camera proofs read the `data-map-center` / `data-map-zoom`
- * attributes the map section refreshes on `moveend`.
+ * attributes the map section refreshes on `moveend`. The click-off
+ * dismissal proof sources its pin geometry from the `data-pin-points`
+ * attribute (engine-neutral DOM projections) rather than any engine's
+ * raster scan.
  *
  * Phone geometry fact this suite works within: the open detail sheet is a
  * fixed bottom sheet measured at the FULL viewport (390×844, anchored at
@@ -80,14 +87,13 @@ async function threeDistinctPinCards(page: Page): Promise<{
   second: { index: number; unit: ListedUnit };
   third: { index: number; unit: ListedUnit };
 }> {
-  const apiBase = process.env.VITE_API_URL ?? "http://localhost:3000";
   // The compose API can restart under matrix load; a bounded retry rides
   // out the restart window without masking a genuinely down API (still
   // fails loudly after the last attempt).
-  let response = await page.request.get(`${apiBase}/units`);
+  let response = await page.request.get(`${API_BASE}/units`);
   for (let attempt = 1; !response.ok() && attempt < 3; attempt++) {
     await page.waitForTimeout(2_000);
-    response = await page.request.get(`${apiBase}/units`);
+    response = await page.request.get(`${API_BASE}/units`);
   }
   expect(response.ok(), "the units endpoint answers for the card helper").toBeTruthy();
   const { units } = (await response.json()) as { units: ListedUnit[] };
@@ -110,26 +116,94 @@ async function threeDistinctPinCards(page: Page): Promise<{
   return { first: picked[0]!, second: picked[1]!, third: picked[2]! };
 }
 
+/**
+ * Margins for the attribute-derived pin-free click point below: every
+ * rendered pin center must clear the point by at least 60px — an order of
+ * magnitude beyond the pin circle's ~8px paint/hit radius, wide enough to
+ * absorb any engine's projection-timing and rasterization differences — and
+ * the point stays at least 20px inside every canvas edge (the old pixel
+ * scan's edge margin). The label-bubble band mirrors the bubble's worst-case
+ * paint extent around the LIVE label's pin (a full-width address bubble plus
+ * tail rides above it), which the selection camera has just centered.
+ */
+const PIN_CLEARANCE_PX = 60;
+const EDGE_CLEARANCE_PX = 20;
+const BUBBLE_HALF_WIDTH_PX = 260;
+const BUBBLE_TOP_ABOVE_PIN_PX = 110;
+const BUBBLE_BELOW_PIN_PX = 30;
+/** Off-viewport margin: a pin this far outside paints no clickable geometry. */
+const PIN_HIT_RADIUS_PX = 12;
+/** Grid sampling step for the clearance maximization. */
+const SCAN_STEP_PX = 4;
+
+/**
+ * The canvas point with maximal clearance from every RENDERED pin, computed
+ * from the map's `data-pin-points` attribute instead of any engine's raster:
+ * the component projects every pin to canvas-local CSS px and refreshes the
+ * attribute on `moveend` and unit-set changes, so the geometry is
+ * engine-neutral by construction. Off-viewport projections are not rendered
+ * and cannot enter the click hit-test, so only in-viewport pins (with a
+ * hit-radius margin) constrain the pick. The pick also excludes the label
+ * bubble of the unit whose label is live — call it with a selection open,
+ * after the camera has centered that pin, so its bubble band is the
+ * canvas-center band. A click through a bubble tail would still dismiss (the
+ * dismissal hit-test queries only the base pin layer), but the "empty
+ * canvas" click stays visually honest. Throws when no point meets the
+ * margins rather than clicking somewhere unsafe.
+ */
+async function maximallyClearCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+  const canvasBox = await (await mapCanvas(page)).boundingBox();
+  const width = canvasBox!.width;
+  const height = canvasBox!.height;
+  const pins = parsePinPoints(
+    await page.getByTestId("map-view").getAttribute("data-pin-points"),
+  ).filter(
+    (pin) =>
+      pin.x >= -PIN_HIT_RADIUS_PX &&
+      pin.x <= width + PIN_HIT_RADIUS_PX &&
+      pin.y >= -PIN_HIT_RADIUS_PX &&
+      pin.y <= height + PIN_HIT_RADIUS_PX,
+  );
+  expect(pins.length, "the map publishes its rendered pin centers").toBeGreaterThan(0);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const inLiveLabelBubbleBand = (x: number, y: number): boolean =>
+    Math.abs(x - centerX) <= BUBBLE_HALF_WIDTH_PX &&
+    y >= centerY - BUBBLE_TOP_ABOVE_PIN_PX &&
+    y <= centerY + BUBBLE_BELOW_PIN_PX;
+  let best: { x: number; y: number; clearance: number; edge: number } | null = null;
+  for (let y = EDGE_CLEARANCE_PX; y <= height - EDGE_CLEARANCE_PX; y += SCAN_STEP_PX) {
+    for (let x = EDGE_CLEARANCE_PX; x <= width - EDGE_CLEARANCE_PX; x += SCAN_STEP_PX) {
+      if (inLiveLabelBubbleBand(x, y)) continue;
+      let clearance = Infinity;
+      for (const pin of pins) {
+        clearance = Math.min(clearance, Math.hypot(x - pin.x, y - pin.y));
+      }
+      if (clearance < PIN_CLEARANCE_PX) continue;
+      const edge = Math.min(x, width - x, y, height - y);
+      if (
+        !best ||
+        clearance > best.clearance ||
+        (clearance === best.clearance && edge > best.edge)
+      ) {
+        best = { x, y, clearance, edge };
+      }
+    }
+  }
+  if (!best) {
+    throw new Error(
+      "no canvas point clears every rendered pin and the live label bubble by the required margins",
+    );
+  }
+  return { x: best.x, y: best.y };
+}
+
 test.describe("canvas click dismissal and drag pan on desktop", () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   test("clicking empty canvas with the detail open dismisses the selection, closes the detail, and erases the pin label without moving the camera", async ({
     page,
-    browserName,
   }) => {
-    // The click-off proof needs a pin-free canvas click to reach the map's
-    // hit-test with the runner's raster fidelity: on the CI WebKit leg a
-    // pin-free point verified across two canvas frames still never
-    // dismisses the selection there (the detail stays open on the focused
-    // unit), while the same flow passes on Chromium and Firefox and in
-    // Linux-container WebKit. Skip honestly instead of widening the click
-    // tolerance for every engine; remove when the WebKit runner's click
-    // fidelity is root-caused or the dismissal grows a raster-independent
-    // (DOM-observable) proof.
-    test.skip(
-      browserName === "webkit",
-      "pin-free click fidelity unverifiable on the CI WebKit rasterizer",
-    );
     await openApp(page);
     await expectResultsLoaded(page);
     const unit = await unitBehindFirstCard(page);
@@ -138,20 +212,28 @@ test.describe("canvas click dismissal and drag pan on desktop", () => {
     await expectCameraFocusedOn(page, unit);
     await expect(page.getByTestId("unit-detail")).toBeVisible();
     await settleMap(page);
-    const withLabel = await canvasShot(page);
+    const mapRegion = page.getByTestId("map-view");
     const centerWithSelection = await mapCenter(page);
+    const zoomWithSelection = await mapRegion.getAttribute("data-map-zoom");
+    await expect(
+      mapRegion,
+      "the open selection owns the live label, so erasure lands as an observable transition",
+    ).toHaveAttribute("data-label-unit", unit.id);
 
-    const point = await pinFreeCanvasPoint(page, { excludeLabelBubble: true });
+    const point = await maximallyClearCanvasPoint(page);
     const canvasBox = await (await mapCanvas(page)).boundingBox();
     await page.mouse.click(canvasBox!.x + point.x, canvasBox!.y + point.y);
     await settleMap(page);
 
     await expect(page.getByTestId("unit-detail")).toHaveCount(0);
+    await expect(mapRegion).toHaveAttribute("data-label-unit", "none");
+    expect(await mapCenter(page), "the click-off dismissal never moves the camera").toBe(
+      centerWithSelection,
+    );
     expect(
-      await mapCenter(page),
-      "the click-off dismissal never moves the camera, so both shots share one framing",
-    ).toBe(centerWithSelection);
-    expectLabelGeometry(await labelGeometry(page, withLabel, await canvasShot(page)));
+      await mapRegion.getAttribute("data-map-zoom"),
+      "the click-off dismissal never zooms the camera",
+    ).toBe(zoomWithSelection);
   });
 
   test("click-dragging the map pans the camera and keeps the selection, the detail, and the pin label open", async ({

@@ -56,6 +56,12 @@ import { PIN_EXACT } from "#lib/map/map-colors.ts";
  * suppresses the trailing `click` after a drag.
  */
 const h = vi.hoisted(() => ({
+  /**
+   * Mock projection scale: canvas px per degree of lng/lat offset from the
+   * camera readout. Shared by the MockMap `project` and the tests'
+   * expected-projection helper so the two can never drift apart.
+   */
+  projectionUnitsPerDegree: 100,
   instances: [] as Array<{
     options: Record<string, unknown>;
     sources: Map<string, { data: unknown; setDataCount: number }>;
@@ -208,6 +214,19 @@ vi.mock("maplibre-gl", () => {
     }
     getZoom(): number {
       return this.currentZoom;
+    }
+    /**
+     * Projection stand-in derived from the test-settable camera readout:
+     * linear offsets from the current center (the real projection is a
+     * nonlinear Web-Mercator sweep; the component tests need only points
+     * that MOVE when the camera moves and DIFFER per unit — the magnitudes
+     * are test-local, scaled by the shared `projectionUnitsPerDegree`).
+     */
+    project(lnglat: [number, number]): { x: number; y: number } {
+      return {
+        x: (lnglat[0] - this.currentCenter.lng) * h.projectionUnitsPerDegree,
+        y: (this.currentCenter.lat - lnglat[1]) * h.projectionUnitsPerDegree,
+      };
     }
     isStyleLoaded(): boolean {
       return this.styleLoaded;
@@ -1154,6 +1173,177 @@ describe("card selection focuses the map", () => {
     await tick();
 
     expect(created.flyToLog).toEqual([]);
+  });
+});
+
+describe("pin-point and label-unit observability", () => {
+  /**
+   * Reads the map section's serialized pin-point attribute: `"<x>,<y>;…"`
+   * parses to canvas-local number pairs, and the empty string (nothing
+   * rendered) parses to `[]`.
+   */
+  function readPinPointsAttribute(): Array<[number, number]> {
+    const raw =
+      document.querySelector('[data-testid="map-view"]')?.getAttribute("data-pin-points") ?? "";
+    return raw
+      .split(";")
+      .filter((pair) => pair !== "")
+      .map((pair) => {
+        const [x, y] = pair.split(",").map(Number);
+        return [x ?? Number.NaN, y ?? Number.NaN] as [number, number];
+      });
+  }
+
+  /** Reads the live address-label unit id from the observability attribute. */
+  function readLabelUnitAttribute(): string | null {
+    return (
+      document.querySelector('[data-testid="map-view"]')?.getAttribute("data-label-unit") ?? null
+    );
+  }
+
+  /**
+   * The mock projection's expected canvas-local point for a lnglat under the
+   * map instance's CURRENT camera readout — the same arithmetic the MockMap
+   * `project` performs, through the shared scale constant.
+   */
+  function expectedProjection(
+    created: { currentCenter: { lng: number; lat: number } },
+    lnglat: [number, number],
+  ): [number, number] {
+    return [
+      (lnglat[0] - created.currentCenter.lng) * h.projectionUnitsPerDegree,
+      (created.currentCenter.lat - lnglat[1]) * h.projectionUnitsPerDegree,
+    ];
+  }
+
+  /** Both coordinates of one parsed pin point sit on its expected values. */
+  function expectPointClose(
+    actual: [number, number] | undefined,
+    expected: [number, number],
+  ): void {
+    expect(actual).toBeDefined();
+    expect(actual![0]).toBeCloseTo(expected[0]);
+    expect(actual![1]).toBeCloseTo(expected[1]);
+  }
+
+  test("before the map fires load the pin points attribute reads honestly empty", async () => {
+    store = freshStore([unitInWard7, unitInWard3]);
+    await store.initialize();
+    render(MapView, { props: { store } });
+    await tick();
+
+    // The pin source attaches on `load`; until then nothing renders, so the
+    // attribute must be the empty string rather than projections of pins
+    // that do not exist yet.
+    expect(
+      document.querySelector('[data-testid="map-view"]')?.getAttribute("data-pin-points"),
+    ).toBe("");
+  });
+
+  test("the section reports every rendered pin's projected canvas center, re-projected when the camera settles from a move", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    // Arrange a known settled camera: the locale default view.
+    created.currentCenter = { lng: LOCALE_MAP_CENTER.lng, lat: LOCALE_MAP_CENTER.lat };
+    created.fireMoveEnd();
+    await tick();
+
+    const points = readPinPointsAttribute();
+    expect(points).toHaveLength(2);
+    expectPointClose(points.at(0), expectedProjection(created, pinCoordinatesFor(unitInWard7)));
+    expectPointClose(points.at(1), expectedProjection(created, pinCoordinatesFor(unitInWard3)));
+
+    // The camera moves (as after a flyTo animation) and settles on the
+    // ward-7 pin: every reported point re-projects under the new camera, the
+    // centered pin landing at the canvas origin.
+    created.currentCenter = {
+      lng: unitInWard7.coordinates.longitude,
+      lat: unitInWard7.coordinates.latitude,
+    };
+    created.fireMoveEnd();
+    await tick();
+
+    const moved = readPinPointsAttribute();
+    expect(moved).toHaveLength(2);
+    expectPointClose(moved.at(0), [0, 0]);
+    expectPointClose(moved.at(1), expectedProjection(created, pinCoordinatesFor(unitInWard3)));
+  });
+
+  test("swapping the result set re-projects the reported pin points to exactly the new rendered set", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7]);
+    expect(readPinPointsAttribute()).toHaveLength(1);
+
+    // A filter change swaps the result set: the update path re-renders pins…
+    store.units = [unitInWard7, unitInWard3];
+    await tick();
+
+    // …and the reported points track exactly the new set, under the
+    // unchanged camera readout.
+    const points = readPinPointsAttribute();
+    expect(points).toHaveLength(2);
+    expectPointClose(points.at(0), expectedProjection(created, pinCoordinatesFor(unitInWard7)));
+    expectPointClose(points.at(1), expectedProjection(created, pinCoordinatesFor(unitInWard3)));
+  });
+
+  test("an emptied result set leaves the pin points attribute honestly empty", async () => {
+    await mountedMapWithResolvedUnits([unitInWard7]);
+    expect(readPinPointsAttribute()).toHaveLength(1);
+
+    store.units = [];
+    await tick();
+
+    expect(readPinPointsAttribute()).toEqual([]);
+  });
+
+  test("with no hover and no selection the label-unit attribute reads none", async () => {
+    await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    expect(readLabelUnitAttribute()).toBe("none");
+  });
+
+  test("a selection pre-existing at mount reports the selected unit as the live label owner", async () => {
+    store = freshStore([unitInWard7]);
+    await store.initialize();
+    uiState.selectedUnitId = unitInWard7.id;
+    render(MapView, { props: { store } });
+    await tick();
+
+    expect(readLabelUnitAttribute()).toBe("unit-exact");
+  });
+
+  test("resting the pointer on a canvas pin past the intent delay moves the label-unit attribute to that pin's unit, and leaving with no selection returns it to none", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+    expect(readLabelUnitAttribute()).toBe("none");
+
+    vi.useFakeTimers();
+    try {
+      created.firePinHover("unit-ward3");
+      vi.advanceTimersByTime(PIN_HOVER_INTENT_DELAY_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+    expect(readLabelUnitAttribute()).toBe("unit-ward3");
+
+    created.firePinLeave();
+    await tick();
+    expect(readLabelUnitAttribute()).toBe("none");
+  });
+
+  test("the label-unit attribute reports the resolved owner: a card hover over an open selection moves it to the hovered unit, and clearing the hover restores the selection", async () => {
+    const created = await mountedMapWithResolvedUnits([unitInWard7, unitInWard3]);
+
+    created.clickPin("unit-exact");
+    await tick();
+    expect(readLabelUnitAttribute()).toBe("unit-exact");
+
+    uiState.hoveredCardUnitId = "unit-ward3";
+    await tick();
+    expect(readLabelUnitAttribute()).toBe("unit-ward3");
+
+    uiState.hoveredCardUnitId = null;
+    await tick();
+    expect(readLabelUnitAttribute()).toBe("unit-exact");
   });
 });
 
