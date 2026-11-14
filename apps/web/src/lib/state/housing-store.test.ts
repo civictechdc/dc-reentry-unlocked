@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 import { UNIT_FILTERS, type FilterDefinition, type UnitCard } from "@dc-reentry/shared";
 import { aUnitCard } from "@dc-reentry/shared/testing";
 import { HousingStore, SUPPORTED_CONTROLS, type LoadFailure } from "./housing-store.svelte";
@@ -25,11 +25,49 @@ class RecordingTransport implements HousingTransport {
   }
 }
 
+/** One in-flight response the test holds and releases by hand. */
+type DeferredUnitResponse = {
+  promise: Promise<UnitCard[]>;
+  resolve: (cards: UnitCard[]) => void;
+};
+
+/**
+ * Recording transport whose next armed unit request stays pending until the
+ * test releases it — real promises, no timers, so the test controls exactly
+ * when a response lands. Unarmed requests answer immediately.
+ */
+class DeferredRecordingTransport extends RecordingTransport {
+  #armed: DeferredUnitResponse[] = [];
+
+  /** Hold the next unit request: it stays pending until the handle resolves it. */
+  holdNextResponse(): DeferredUnitResponse {
+    let resolve!: (cards: UnitCard[]) => void;
+    const promise = new Promise<UnitCard[]>((resolvePromise) => {
+      resolve = resolvePromise;
+    });
+    const deferred = { promise, resolve };
+    this.#armed.push(deferred);
+    return deferred;
+  }
+
+  override async units(path: string): Promise<UnitCard[]> {
+    this.lastPath = path;
+    const deferred = this.#armed.shift();
+    if (deferred) return deferred.promise;
+    return this.cards;
+  }
+}
+
 function newStore(transport: RecordingTransport = new RecordingTransport()): {
   store: HousingStore;
   transport: RecordingTransport;
 } {
   return { store: new HousingStore(transport), transport };
+}
+
+/** One macrotask: every queued microtask (response delivery, drain loop) settles first — no fake timers. */
+function afterTransportSettles(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe("housing store", () => {
@@ -122,23 +160,47 @@ describe("housing store", () => {
     expect(store.phase).toBe("ready");
   });
 
-  test("rapid selection changes do not interleave stale responses", async () => {
-    const { store, transport } = newStore();
+  test("a selection made while a response is in flight renders the latest selection's results, never the stale first response", async () => {
+    const transport = new DeferredRecordingTransport();
+    const store = new HousingStore(transport);
     await store.initialize();
 
-    let refetchCount = 0;
-    vi.spyOn(transport, "units").mockImplementation(async (path) => {
-      refetchCount += 1;
-      transport.lastPath = path;
-      return [];
+    const wardOneCards = [
+      aUnitCard().withId("ward-1-first").inWard(1).build(),
+      aUnitCard().withId("ward-1-second").inWard(1).build(),
+    ];
+    const wardTwoCards = [aUnitCard().withId("ward-2-only").inWard(2).build()];
+
+    // The ward-1 response waits in flight until the test releases it.
+    const inFlightWardOne = transport.holdNextResponse();
+    store.apply({ kind: "apply", filterId: "ward", control: "multi-select", values: ["1"] });
+    // The request for ward 1 is pending: the interface is mid-load.
+    expect(store.phase).toBe("loading");
+
+    // Ward 2 arrives mid-flight — the running cycle must drain it, not interleave it.
+    // The apply's internal refresh coalesces onto the running cycle, so awaiting
+    // the apply below waits for the drain to finish with no extra request.
+    const wardTwoApplied = store.apply({
+      kind: "apply",
+      filterId: "ward",
+      control: "multi-select",
+      values: ["2"],
     });
 
-    await Promise.all([
-      store.apply({ kind: "apply", filterId: "ward", control: "multi-select", values: ["1"] }),
-      store.apply({ kind: "apply", filterId: "ward", control: "multi-select", values: ["2"] }),
-    ]);
-    // The dispatch gate collapses concurrent refreshes instead of out-of-order results.
-    expect(refetchCount).toBeGreaterThanOrEqual(1);
+    inFlightWardOne.resolve(structuredClone(wardOneCards));
+    // The follow-up request fires only once the drain resumes: arm it before yielding.
+    const inFlightWardTwo = transport.holdNextResponse();
+    await afterTransportSettles();
+
+    // Between the two responses the ward-1 cards render — the drain's intermediate write.
+    expect(store.units).toEqual(wardOneCards);
+
+    inFlightWardTwo.resolve(structuredClone(wardTwoCards));
+    await wardTwoApplied;
+
+    // The latest selection's payload lands last: a stale-first gate commits ward 1 here.
+    expect(store.units).toEqual(wardTwoCards);
+    expect(store.phase).toBe("ready");
     expect(transport.lastPath).toBe("/units?ward=1&ward=2");
   });
 });

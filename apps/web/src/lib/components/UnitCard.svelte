@@ -42,6 +42,7 @@
   class:selected={selected || isOpen}
   class:highlighted={isHighlighted}
   aria-labelledby={`card-title-${card.id}`}
+  data-unit-id={card.id}
 >
   <button
     type="button"

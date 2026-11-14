@@ -8,16 +8,32 @@
  * The store applies synchronously up to the transport call (the fetch is
  * awaited afterwards), so a recording transport's `lastPath` is observable
  * synchronously — the sync model run can drive and verify the store.
+ *
+ * The oracle reaches the final state, not just the path history: the
+ * transport answers every path with a deterministic payload (one card
+ * whose id encodes the path), so after the run the test awaits
+ * `refresh()` — joining the in-flight cycle (or flushing one no-op
+ * request, since the selection is unchanged) — then asserts `lastPath`
+ * equals the model's final expected path exactly and the rendered `units`
+ * equal the payload that path determines. The `verify` command keeps the
+ * per-step interim invariants (selection mirror, path history membership).
  */
 import fc from "fast-check";
-import { UNIT_FILTERS, type FilterDefinition } from "@dc-reentry/shared";
+import { UNIT_FILTERS, type FilterDefinition, type UnitCard } from "@dc-reentry/shared";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 import { describe, expect, it } from "vitest";
 import { HousingStore } from "./housing-store.svelte";
 import { optionValues } from "#lib/api/selection.ts";
 import type { SelectionAction } from "#lib/api/selection.ts";
+import type { HousingTransport } from "#lib/api/client.ts";
+
+/** Deterministic payload per path: one card whose id encodes the requested path. */
+function cardsForPath(path: string): UnitCard[] {
+  return [aUnitCard().withId(`unit-for-${path}`).build()];
+}
 
 /** Recording transport (no network): `lastPath` is set synchronously at call time. */
-class RecordingTransport {
+class RecordingTransport implements HousingTransport {
   schema: FilterDefinition[] = UNIT_FILTERS;
   lastPath: string | null = null;
 
@@ -25,9 +41,9 @@ class RecordingTransport {
     return this.schema;
   }
 
-  async units(path: string): Promise<never[]> {
+  async units(path: string): Promise<UnitCard[]> {
     this.lastPath = path;
-    return [];
+    return cardsForPath(path);
   }
 }
 
@@ -192,24 +208,40 @@ const commands = [
 ];
 
 describe("filter-selection state machine (fc.commands + fc.modelRun)", () => {
-  it("keeps an independent model and the store in lockstep with identical request paths", () => {
-    fc.assert(
-      fc.property(fc.commands(commands, { size: "small" }), (cmds) => {
-        fc.modelRun(() => {
+  it(
+    "keeps an independent model and the store in lockstep with identical request paths and rendered results",
+    { timeout: 30_000 },
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(fc.commands(commands, { size: "small" }), async (cmds) => {
           const transport = new RecordingTransport();
-          const store = new HousingStore(transport as never);
+          const store = new HousingStore(transport);
           // The model run drives the renderable machine: install the schema
           // (initialize() would await a network-fake; the schema is a plain
           // reactive field — assignment is the synchronous shortcut the
           // retry path uses).
           store.filtersSchema = renderableSchema;
-          return {
-            model: { selection: {}, expectedPath: null, history: [] },
-            real: { store, transport },
-          };
-        }, cmds);
-      }),
-      { timeout: 120_000 },
-    );
-  });
+          const model: Model = { selection: {}, expectedPath: null, history: [] };
+          // The commands stay synchronous (fast-check `run` is sync); the
+          // model state is held out so the final oracle can read it.
+          fc.modelRun(() => ({ model, real: { store, transport } }), cmds);
+
+          const finalPath = model.expectedPath;
+          if (finalPath === null) {
+            // Nothing was ever applied: no request may have been issued, nothing rendered.
+            expect(transport.lastPath).toBeNull();
+            expect(store.units).toBeNull();
+            return;
+          }
+          // Quiescence: join the in-flight cycle (or flush one no-op request) —
+          // the selection is unchanged, so the request path repeats exactly.
+          await store.refresh();
+          // Final oracle: the exact last request path and the exact rendered payload it determines.
+          expect(transport.lastPath).toBe(finalPath);
+          expect(store.units).toEqual(cardsForPath(finalPath));
+        }),
+        { timeout: 10_000 },
+      );
+    },
+  );
 });
