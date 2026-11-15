@@ -1,10 +1,10 @@
 import {
   ErrorEnvelopeSchema,
-  UnitsResponseSchema,
+  UnitsResponseIntakeSchema,
   Value,
   type ErrorCode,
   type FilterDefinition,
-  type UnitCard,
+  type UnitCardIntake,
 } from "@dc-reentry/shared";
 import { parseFilterSchemaPayload } from "#lib/api/filters-response.ts";
 
@@ -85,7 +85,7 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
 
 export interface HousingTransport {
   filters(): Promise<FilterDefinition[]>;
-  units(path: string): Promise<UnitCard[]>;
+  units(path: string): Promise<UnitCardIntake[]>;
 }
 
 /**
@@ -93,7 +93,10 @@ export interface HousingTransport {
  * - `GET /filters` — the published filter schema (drives the whole filter UI).
  * - `GET /units?…` — currently-available unit cards, filtered through the
  *   published schema (repeated parameters mean "any of" within one filter;
- *   different filters narrow conjunctively).
+ *   different filters narrow conjunctively). Validated with the tolerant
+ *   consumer-intake envelope: a taxonomy value newer than this build's
+ *   vocabulary passes intake and renders, while the envelope invariants
+ *   (schemaVersion, synthetic markers, disclosure) stay strict.
  */
 export const housingApi: HousingTransport = {
   filters: async () => {
@@ -102,7 +105,7 @@ export const housingApi: HousingTransport = {
   },
   units: async (path) => {
     const payload = await requestJson(path);
-    if (!Value.Check(UnitsResponseSchema, payload)) {
+    if (!Value.Check(UnitsResponseIntakeSchema, payload)) {
       throw new ClientError("unexpected /units envelope");
     }
     return payload.units;

@@ -4,7 +4,6 @@ import { aUnitCard } from "@dc-reentry/shared/testing";
 import { afterEach, describe, expect, test } from "vitest";
 import { m } from "#lib/paraglide/messages.js";
 import UnitCard from "./UnitCard.svelte";
-
 afterEach(() => cleanup());
 
 describe("card housing-type presentation", () => {
@@ -38,6 +37,29 @@ describe("card housing-type presentation", () => {
     expect(
       within(cardRow as HTMLElement).queryByText(
         m.card_housing_type({ type: m.taxonomy_housing_transitional() }),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  test("a housing type newer than the vocabulary renders its derived presentation, never the honest unknown", () => {
+    // Arrange: the producer has evolved a housing type this build never
+    // compiled (test-local widening: no type for the future value exists here)
+    const card = aUnitCard()
+      .withProgram({ housingType: "rapid-rehousing" } as never)
+      .build();
+
+    // Act: render the card on its own
+    render(UnitCard, { props: { card } });
+
+    // Assert: the humanized published value — the honest unknown is reserved
+    // for facts the source did not publish, and this value WAS published
+    const cardRow = screen.getByRole("article");
+    expect(
+      within(cardRow as HTMLElement).getByText(m.card_housing_type({ type: "Rapid rehousing" })),
+    ).toBeInTheDocument();
+    expect(
+      within(cardRow as HTMLElement).queryByText(
+        m.card_housing_type({ type: m.detail_value_unknown() }),
       ),
     ).not.toBeInTheDocument();
   });

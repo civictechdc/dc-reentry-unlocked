@@ -1,4 +1,4 @@
-import type { FilterDefinition, UnitCard } from "@dc-reentry/shared";
+import type { FilterDefinition, UnitCardIntake } from "@dc-reentry/shared";
 import { ApiError, ClientError, housingApi, type HousingTransport } from "#lib/api/client.js";
 import { buildUnitsQueryPath } from "#lib/api/query.js";
 import {
@@ -34,7 +34,7 @@ export interface ActiveChip {
 }
 
 class HousingStore {
-  units: UnitCard[] | null = $state.raw(null);
+  units: UnitCardIntake[] | null = $state.raw(null);
   phase: LoadPhase = $state.raw("idle");
   failure: LoadFailure | null = $state.raw(null);
   filtersSchema: FilterDefinition[] = $state.raw([]);

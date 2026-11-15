@@ -7,7 +7,13 @@ import {
   type HousingTransport,
 } from "#lib/api/client.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
-import type { FilterDefinition, UnitCard } from "@dc-reentry/shared";
+import {
+  SCHEMA_VERSION,
+  SYNTHETIC_DISCLOSURE,
+  type FilterDefinition,
+  type UnitCard,
+} from "@dc-reentry/shared";
+import { aUnitCard } from "@dc-reentry/shared/testing";
 
 describe("housing API client", () => {
   afterEach(() => {
@@ -39,6 +45,34 @@ describe("housing API client", () => {
   test("an ApiError failure is distinguished from a transport failure for the failure banner", async () => {
     expect(new ApiError(404, "not-found", "No such thing").status).toBe(404);
     expect(new ClientError("unreachable").name).toBe("ClientError");
+  });
+
+  test("an envelope carrying a taxonomy value newer than this build's vocabulary is accepted, not discarded", async () => {
+    // Arrange: the producer has evolved a housing type this client never compiled
+    const futureCard = aUnitCard()
+      .withProgram({ housingType: "rapid-rehousing" } as never)
+      .build();
+    const envelope = {
+      schemaVersion: SCHEMA_VERSION,
+      synthetic: true,
+      disclosure: SYNTHETIC_DISCLOSURE,
+      units: [futureCard],
+    };
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(JSON.stringify(envelope), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    // Act: fetch the units listing through the real transport
+    const units = await housingApi.units("/units?ward=1");
+
+    // Assert: tolerant intake passes the payload through (no ClientError)
+    expect(units).toHaveLength(1);
+    expect(units[0]?.program.housingType).toBe("rapid-rehousing");
   });
 });
 
