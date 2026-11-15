@@ -157,3 +157,36 @@ import { aProvider, aProgram, aUnitCard } from "@dc-reentry/shared/testing";
 
 const unit = aUnitCard().inWard(5).withUnknownSobrietyPolicy().build();
 ```
+
+## Example 9 — Strict contract vs tolerant consumer intake
+
+The canonical schemas are the producer truth: the API validates every served
+payload against them, the OpenAPI document and the generated
+[data-model reference](data-model.md) are generated from them, and nothing
+relaxes them. Consumers read through a deliberately tolerant intake variant
+for the `/units` fetch: `UnitsResponseIntakeSchema` keeps the whole envelope
+shape (the `schemaVersion` literal, the `synthetic: true` marker, the
+non-empty disclosure sentence, the units array) but widens the four program
+taxonomy fields — `housingType`, `lengthOfStay`, `population`, `gender` —
+from `taxonomy | "unknown"` to any non-empty string. Tolerance is strictly a
+consumer-intake concern: producer-side validation, the served contract, and
+its documentation never loosen.
+
+The two-unknown rule (product decision 2026-11-06): a taxonomy value newer
+than a consumer's compiled vocabulary and a fact the source did not publish
+are different unknowns and must never conflate. A newer value is truthful,
+published data — the consumer renders a presentation derived from it
+(`rapid-rehousing` → "Rapid rehousing", structurally humanized, no
+message-catalog entry). The honest "Unknown" stays reserved for the
+`"unknown"` literal — a fact the source did not state.
+
+```ts
+import { UnitsResponseIntakeSchema, UnitsResponseSchema, Value } from "@dc-reentry/shared";
+
+// a fetched /units response carrying a taxonomy value added after this
+// build, e.g. "rapid-rehousing":
+const payload = fetchedFromApi();
+
+Value.Check(UnitsResponseSchema, payload); // false — the strict contract rejects it
+Value.Check(UnitsResponseIntakeSchema, payload); // true — consumer intake accepts it
+```
