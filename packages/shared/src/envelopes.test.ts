@@ -7,8 +7,10 @@ import {
   FilterSchemaResponseSchema,
   SCHEMA_VERSION,
   SYNTHETIC_DISCLOSURE,
+  UnitsResponseIntakeSchema,
   UnitsResponseSchema,
   UNIT_FILTERS,
+  type UnitCard,
 } from "./index";
 import { aUnitCard } from "./testing";
 
@@ -134,4 +136,52 @@ test("envelope consumers tolerate future fields", () => {
       ...evolved,
     }),
   ).toBe(true);
+});
+
+const intakeEnvelopeWith = (card: UnitCard) => ({
+  schemaVersion: SCHEMA_VERSION,
+  synthetic: true as const,
+  disclosure: SYNTHETIC_DISCLOSURE,
+  units: [card],
+});
+
+test("a taxonomy value newer than the vocabulary passes the tolerant intake envelope and fails the strict contract", () => {
+  // the producer has evolved a housing type this consumer never compiled
+  // (test-local widening: the future value has no type in this build)
+  const futureCard = aUnitCard()
+    .withProgram({ housingType: "rapid-rehousing" } as never)
+    .build();
+
+  expect(Value.Check(UnitsResponseIntakeSchema, intakeEnvelopeWith(futureCard))).toBe(true);
+  expect(Value.Check(UnitsResponseSchema, intakeEnvelopeWith(futureCard))).toBe(false);
+});
+
+test("a known taxonomy value passes both the strict contract and the tolerant intake envelope", () => {
+  const knownCard = aUnitCard().withHousingType("transitional").build();
+
+  expect(Value.Check(UnitsResponseIntakeSchema, intakeEnvelopeWith(knownCard))).toBe(true);
+  expect(Value.Check(UnitsResponseSchema, intakeEnvelopeWith(knownCard))).toBe(true);
+});
+
+test("an empty taxonomy value still fails the tolerant intake envelope", () => {
+  // tolerance widens the vocabulary, it does not accept a degenerate blank
+  const blankCard = aUnitCard()
+    .withProgram({ housingType: "" } as never)
+    .build();
+
+  expect(Value.Check(UnitsResponseIntakeSchema, intakeEnvelopeWith(blankCard))).toBe(false);
+});
+
+test("the tolerant intake envelope still rejects an unmarked payload and a false synthetic marker", () => {
+  const futureCard = aUnitCard()
+    .withProgram({ housingType: "rapid-rehousing" } as never)
+    .build();
+  const unmarked = {
+    schemaVersion: SCHEMA_VERSION,
+    units: [futureCard],
+  };
+  const falseClaim = { ...intakeEnvelopeWith(futureCard), synthetic: false };
+
+  expect(Value.Check(UnitsResponseIntakeSchema, unmarked)).toBe(false);
+  expect(Value.Check(UnitsResponseIntakeSchema, falseClaim)).toBe(false);
 });
