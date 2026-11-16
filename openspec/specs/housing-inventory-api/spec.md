@@ -49,6 +49,10 @@ The API contract SHALL remain stable across data model evolution: additive chang
 - **WHEN** the backend adds a new enum value or a new schema-driven filter
 - **THEN** a frontend consumer built before the change renders correctly without redeploy
 
+#### Scenario: Future taxonomy value served verbatim
+- **WHEN** a unit card's program carries a taxonomy value that postdates a consumer's compiled vocabulary
+- **THEN** the API serves the value verbatim in the payload — it does not rewrite it to "unknown" — leaving tolerance to the consumer
+
 ### Requirement: OpenAPI document
 
 The API SHALL publish a machine-readable OpenAPI document generated from the route schemas (the shared TypeBox contracts), at a documented JSON endpoint. The document SHALL be generated from the same schemas that validate and serialize requests and responses, so it stays consistent with the implemented API by construction rather than by manual maintenance. The document SHALL cover the units, filters, and health endpoints, including error-envelope response shapes.
