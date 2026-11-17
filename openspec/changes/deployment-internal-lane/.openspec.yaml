@@ -1,0 +1,10 @@
+schema: spec-driven
+created: 2026-11-16
+goal: "Implement the internal deployment lane from the committed deployment plan
+  (docs/deployment.md): Lightsail VM bootstrap with a Caddy front door
+  (individual-account basic auth, X-Robots-Tag noindex/nofollow on every
+  response, same-origin /api routing, loopback-only upstreams), GHCR publishing
+  with digest identity, weekly Monday plus manual-dispatch release workflow with
+  skip-if-unchanged, authenticated browser smoke gates, rollback manifests, and
+  the ad-hoc quick-tunnel test-build recipe. Production lane deferred."
+skip_specs: true
