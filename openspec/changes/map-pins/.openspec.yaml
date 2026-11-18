@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-18
+goal: "Pin label gains the housing title above the address (W3), live-label text becomes selectable (W4), and pin selection scrolls the unit list to its card (W5) — walkthrough 2026-11-07, quotes 3, 10, 11"
+skip_specs: true

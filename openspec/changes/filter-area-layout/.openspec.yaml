@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-18
+goal: "Filter area stays layout-stable across apply/remove (W6); mobile applied-selection summary is legible with visible overflow disclosure (W7 — corrected mechanism, verified 2026-11-18); clear-all near the top line and reachable on mobile with the sheet closed (W8; conditional visibility already landed) — walkthrough 2026-11-07 quotes 1, 8, 12"
+skip_specs: true

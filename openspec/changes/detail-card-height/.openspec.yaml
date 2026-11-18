@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-18
+goal: "Cap the detail slide-over's height on large screens (W10), with previewable candidate height options the user chooses from — walkthrough 2026-11-07, quotes 14, 15"
+skip_specs: true
