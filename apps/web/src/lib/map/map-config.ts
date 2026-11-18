@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap, StyleSpecification } from "maplibre-gl";
-import type { UnitCard } from "@dc-reentry/shared";
+import type { UnitCardIntake } from "@dc-reentry/shared";
 import {
   PIN_EXACT,
   PIN_HIGHLIGHT,
@@ -127,7 +127,7 @@ export function pinLabelText(address: string): string {
  * the order MapLibre expects. Pin features and camera focus both derive
  * from it, so a pin and the camera that flies to it can never disagree.
  */
-export function pinCoordinatesFor(unit: UnitCard): [number, number] {
+export function pinCoordinatesFor(unit: UnitCardIntake): [number, number] {
   return [unit.coordinates.longitude, unit.coordinates.latitude];
 }
 
@@ -136,7 +136,7 @@ export function pinCoordinatesFor(unit: UnitCard): [number, number] {
  * own exact coordinates.
  */
 export function unitsToFeatureCollection(
-  units: readonly UnitCard[],
+  units: readonly UnitCardIntake[],
   selectedUnitId: string | null = null,
 ): {
   type: "FeatureCollection";

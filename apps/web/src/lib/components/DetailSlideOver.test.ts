@@ -274,4 +274,26 @@ describe("unit detail slide-over", () => {
     expect(detailValueLabel("families")).toBe(m.taxonomy_population_families());
     expect(detailValueLabel("permanent-open-ended" as never)).toBe(m.taxonomy_length_permanent());
   });
+
+  test("a housing type newer than the vocabulary renders its humanized value in the detail policy rows, never the honest unknown", () => {
+    // Arrange: a card carrying a taxonomy value this build never compiled
+    // (test-local widening: no type for the future value exists here)
+    const card = aUnitCard()
+      .withId("future-type")
+      .withProgram({ housingType: "rapid-rehousing" } as never)
+      .build();
+    store.units = [card];
+    uiState.selectedUnitId = "future-type";
+    render(DetailSlideOver, { props: { store } });
+
+    // Act: open the housing-type detail row
+    const detail = screen.getByTestId("unit-detail");
+    const housingTypeRow = within(detail).getByText(m.detail_policy_housing_type()).closest(".row");
+
+    // Assert: the humanized published value, never the unknown marker
+    expect(within(housingTypeRow as HTMLElement).getByText("Rapid rehousing")).toBeInTheDocument();
+    expect(
+      within(housingTypeRow as HTMLElement).queryByText(m.detail_value_unknown()),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -296,6 +296,21 @@ Decision log (per-entry provenance dates below):
   transitive MCP SDK carries HTTP/OAuth advisories that are unreachable
   over local stdio).
 
+- **OpenPencil MCP (local stdio, open-pencil org) — ADOPTED** (user
+  request 2026-11-15): design-editor bridge for walkthrough-UI preview
+  work (W9/W10/W12 variant mockups). Pinned `@open-pencil/mcp@0.16.0`
+  (npm-verified + initialize-handshake-verified 2026-11-15; bumps are
+  deliberate, reviewed changes). The stdio server drives the RUNNING
+  desktop app via its owner-only Unix socket — open the app with a
+  document before use; initialize succeeds without it, document
+  availability is checked per tool call. File operations are jailed to
+  the MCP root (repo root via `OPENPENCIL_MCP_ROOT="."`; symlink escapes
+  rejected). stdio exposes `eval` (full Figma Plugin API over design
+  documents, not the OS) — treat its output as untrusted input. Wired via
+  `.mcp.json`, `.codex/config.toml`, and `opencode.jsonc` (`mcp.servers`).
+  DESIGN.md stays the design-token source of truth; OpenPencil is a
+  preview/mockup surface, never a token source.
+
 - **Docs-lookup MCP (Context7-style) — ADOPTED.** Library facts (Fastify,
   Svelte 5 runes, MapLibre, TypeBox) drift; fetching current docs beats
   training-memory claims during product blocks. Zero repo config.

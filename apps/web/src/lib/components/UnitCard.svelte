@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UnitCard } from "@dc-reentry/shared";
+  import type { UnitCardIntake } from "@dc-reentry/shared";
   import { m } from "#lib/paraglide/messages.js";
   import { cardBedroomsValue, detailValueLabel } from "./detail-values.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -8,7 +8,7 @@
     card,
     selected = false,
   }: {
-    card: UnitCard;
+    card: UnitCardIntake;
     selected?: boolean;
   } = $props();
 

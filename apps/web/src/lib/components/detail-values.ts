@@ -1,17 +1,14 @@
-import type {
-  Gender,
-  HousingType,
-  LengthOfStay,
-  PolicyState,
-  Population,
-} from "@dc-reentry/shared";
+import type { PolicyState } from "@dc-reentry/shared";
 import { m } from "#lib/paraglide/messages.js";
 
 /**
  * Flexible value labels for program taxonomy fields, shared by the unit
- * card rows and the detail panel: unknown renders the honest "Unknown"
- * message, the other taxonomy values resolve through their own message
- * keys. No display string is hardcoded here.
+ * card rows and the detail panel: "unknown" renders the honest "Unknown"
+ * message, "yes"/"no" render their tri-state labels, known taxonomy values
+ * resolve through their own message keys, and a taxonomy value newer than
+ * this build's vocabulary renders a humanized form of the published value.
+ * No display string is hardcoded here — the humanized form is derived
+ * structurally from the payload value, never a message-catalog entry.
  */
 const taxonomyMessages: Record<string, string> = {
   "emergency-shelter": m.taxonomy_housing_emergency_shelter(),
@@ -70,13 +67,36 @@ export function detailBedroomsValue(bedrooms: number, roomType: string): string 
   return m.detail_bedrooms_value({ bedrooms });
 }
 
-export function detailValueLabel(
-  value: PolicyState | HousingType | LengthOfStay | Population | Gender,
-): string {
+/**
+ * Structural humanization of a taxonomy slug this build's vocabulary does
+ * not list: hyphens become spaces and only the phrase's FIRST letter
+ * capitalizes (`rapid-rehousing` → "Rapid rehousing"). The published value
+ * is truthful, self-describing information — the rendering is derived from
+ * it, never invented per value (a future value cannot have a catalogue
+ * entry or a translation by definition).
+ */
+function humanizeTaxonomyValue(value: string): string {
+  const words = value.replaceAll("-", " ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+/**
+ * Label for a program policy or taxonomy value as the payload publishes it.
+ * "unknown" stays the honest "Unknown" — reserved for facts the source did
+ * not state; "yes"/"no" keep their tri-state labels; known taxonomy values
+ * keep their catalogue labels; anything newer renders humanized, never the
+ * unknown marker (a published-but-newer value and an unpublished fact are
+ * different unknowns that must never conflate). The catalogue lookup is
+ * own-property only: an inherited name like "constructor" is just a future
+ * value to humanize, never a prototype member.
+ */
+export function detailValueLabel(value: PolicyState | (string & {})): string {
   if (value === "unknown") return m.detail_value_unknown();
   if (value === "yes") return m.detail_value_yes();
   if (value === "no") return m.detail_value_no();
-  return taxonomyMessages[value] ?? m.detail_value_unknown();
+  return Object.hasOwn(taxonomyMessages, value)
+    ? taxonomyMessages[value]! // hasOwn proves the key exists on the catalogue itself
+    : humanizeTaxonomyValue(value);
 }
 
 /**

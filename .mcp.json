@@ -46,6 +46,14 @@
         "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "0",
         "NODE_ENV": "production"
       }
+    },
+    "open-pencil": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "-p", "@open-pencil/mcp@0.16.0", "openpencil-mcp"],
+      "env": {
+        "OPENPENCIL_MCP_ROOT": "."
+      }
     }
   }
 }

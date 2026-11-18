@@ -144,6 +144,32 @@ describe("card housing-type presentation through the list", () => {
       ),
     ).not.toBeInTheDocument();
   });
+
+  test("a housing type newer than the vocabulary renders its humanized value on the card row, never the honest unknown", () => {
+    // Arrange: a card carrying a taxonomy value this build never compiled
+    // (test-local widening: no type for the future value exists here)
+    store.units = [
+      aUnitCard()
+        .withId("future-type")
+        .withProgram({ housingType: "rapid-rehousing" } as never)
+        .build(),
+    ];
+    store.phase = "ready";
+    render(UnitCardList, { props: { store } });
+
+    // Act: find the card row in the rendered list
+    const card = screen.getByRole("article", { name: /Fresh Start Transitional/ });
+
+    // Assert: the humanized published value, never the unknown marker
+    expect(
+      within(card as HTMLElement).getByText(m.card_housing_type({ type: "Rapid rehousing" })),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(
+        m.card_housing_type({ type: m.detail_value_unknown() }),
+      ),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("unit card list states", () => {

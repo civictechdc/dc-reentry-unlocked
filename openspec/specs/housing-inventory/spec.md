@@ -45,6 +45,10 @@ The unit data model SHALL be versioned and SHALL keep jurisdiction-specific fiel
 - **WHEN** the data model adds a field or enum value in a new revision
 - **THEN** consumers built against the previous revision continue to function without code changes (new fields/enum values are ignorable)
 
+#### Scenario: Future taxonomy value is not the honest unknown
+- **WHEN** a model revision adds a taxonomy value and a consumer built against the previous revision receives a payload carrying it
+- **THEN** the value stays the published value — it is not rewritten to "unknown", which remains reserved for facts the source did not publish
+
 ### Requirement: Synthetic prototype data
 
 The prototype SHALL generate synthetic inventory on real Washington DC geography, with fictional providers and generated building numbers whose coordinates fall within their correct ward. Generation provenance guarantees no real listings: building numbers are randomly sampled from plausible per-street ranges, coordinates derived from real street geometry — never copied from any real listing or address source — and no real DC provider organization or contact number appears anywhere.

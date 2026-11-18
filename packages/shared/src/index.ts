@@ -54,9 +54,17 @@ export type { FilterControl, FilterOption, FilterTarget, FilterDefinition } from
 export {
   SYNTHETIC_DISCLOSURE,
   UnitsResponseSchema,
+  UnitsResponseIntakeSchema,
   FilterSchemaResponseSchema,
   ERROR_CODES,
   ErrorCodeSchema,
   ErrorEnvelopeSchema,
 } from "./envelopes";
-export type { UnitsResponse, FilterSchemaResponse, ErrorCode, ErrorEnvelope } from "./envelopes";
+export type {
+  UnitsResponse,
+  UnitsResponseIntake,
+  UnitCardIntake,
+  FilterSchemaResponse,
+  ErrorCode,
+  ErrorEnvelope,
+} from "./envelopes";

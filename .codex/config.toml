@@ -61,3 +61,20 @@ UNRESTRICTED_SAVE_PATHS = "0"
 ENABLE_PRIVILEGED_CONTEXT = "0"
 MOZ_REMOTE_ALLOW_SYSTEM_ACCESS = "0"
 NODE_ENV = "production"
+
+# OpenPencil MCP — design-editor bridge for agents (open-pencil/open-pencil,
+# MIT). The stdio server drives the RUNNING desktop app (discovered via its
+# owner-only Unix socket): open the app with a document before use —
+# initialize succeeds without it, document availability is checked per tool
+# call. Package ships two bins, hence the -p/bin form. Version pinned
+# (npm-verified latest 2026-11-15, initialize handshake verified) — bumps
+# are deliberate, reviewed changes. File operations jailed to the MCP root
+# (repo root via "."; symlink escapes rejected). stdio exposes `eval` (full
+# Figma Plugin API over design documents, not the OS) — treat its output as
+# untrusted input.
+[mcp_servers.open-pencil]
+command = "npx"
+args = ["-y", "-p", "@open-pencil/mcp@0.16.0", "openpencil-mcp"]
+
+[mcp_servers.open-pencil.env]
+OPENPENCIL_MCP_ROOT = "."
