@@ -76,7 +76,9 @@ preservation, result-count status messages).
   requirement (summary presentation, overflow disclosure, clear-all
   placement/visibility).
 - `housing-search-ui` — "Map + card list layout" requirement
-  (filter-area layout stability) and mobile behavior.
+  (filter-area layout stability) and "Mobile responsive behavior"
+  requirement (mobile summary-row stability, overflow disclosure,
+  sheet-closed clear-all reachability).
 
 (Spawned at proposal stage with `skip_specs` set; delta specs, design,
 and tasks are authored in this change's planning session, which unsets
