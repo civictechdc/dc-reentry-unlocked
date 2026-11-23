@@ -8,11 +8,12 @@
 # copied to the repository-root-relative `data/` location the data source
 # module resolves.
 #
-# Base images are pinned at tag level (`node:22-slim`, `ghcr.io/pnpm/pnpm:12`)
-# rather than by digest here — digest pinning is a deliberate follow-up while
-# the prototype calibrates its dependency surface.
+# Node stays pinned at tag level (`node:22-slim`); pnpm is pinned to the exact
+# image `ghcr.io/pnpm/pnpm:12.22.0` — 12.23.0 regressed offline lockfile
+# supply-chain verification. Version bumps and digest pinning remain
+# deliberate, reviewed changes.
 FROM node:22-slim AS base
-COPY --from=ghcr.io/pnpm/pnpm:12 /opt/pnpm /opt/pnpm
+COPY --from=ghcr.io/pnpm/pnpm:12.22.0 /opt/pnpm /opt/pnpm
 RUN for bin in pnpm pn pnpx pnx; do ln -s "/opt/pnpm/$bin" "/usr/local/bin/$bin"; done
 
 FROM base AS build

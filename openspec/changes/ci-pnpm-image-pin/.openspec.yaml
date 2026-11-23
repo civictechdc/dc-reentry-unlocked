@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-23
+goal: "Pin the pnpm Docker image to exact 12.22.0 in both Dockerfiles — pnpm 12.23.0 (delivered by the floating :12 tag on 2026-11-22) regressed offline lockfile supply-chain verification and breaks every PR's compose e2e image build"
+skip_specs: true
