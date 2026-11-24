@@ -13,8 +13,10 @@ import { expect, test, type Page } from "@playwright/test";
  * list's unscrolled window shows at least three units — the precise
  * count is font-dependent (macOS shows 5/4, CI Linux showed 4 — control
  * wrap and card heights follow the platform font), so only the floor is
- * pinned; and no selection changes any measured rect or scrolls the
- * whole page. At the short 1440×660 desktop the map pane clamps inside
+ * pinned; and no selection changes any layout rect or scrolls the whole
+ * page (the fully-visible card count is content — which cards are shown
+ * — not layout geometry, so it is compared per state, never across
+ * states). At the short 1440×660 desktop the map pane clamps inside
  * its grid row instead of overflowing the page.
  */
 
@@ -142,11 +144,17 @@ for (const [viewport, size] of Object.entries(VIEWPORTS) as [
       // No whole-page scroll.
       expect(unfiltered.pageScrolls).toBe(false);
 
-      // With a selection applied: every measured rect is exactly identical
-      // — the reserved band absorbs selection changes alone.
+      // With a selection applied: the LAYOUT is exactly identical — the
+      // reserved band absorbs selection changes alone. cardsFullyVisible
+      // is normalized away before comparing: it depends on WHICH cards
+      // the selection shows (a badge or line wraps on some cards under
+      // the platform font), which is content, not layout geometry — each
+      // state asserts its own cross-platform floor instead.
       await applyWardSelection(page, unfilteredCountLine);
       const filtered = await measureProportions(page);
-      expect(filtered).toEqual(unfiltered);
+      const layoutOnly = (state: Proportions) => ({ ...state, cardsFullyVisible: 0 });
+      expect(layoutOnly(filtered)).toEqual(layoutOnly(unfiltered));
+      expect(filtered.cardsFullyVisible).toBeGreaterThanOrEqual(3);
     });
   });
 }

@@ -203,23 +203,28 @@ test.describe("band clear-all focus with the units response held", () => {
     // refresh (no ward filter in its query) may be held — a ward request
     // still in flight when the hold arms must pass through, or the clear
     // would join that cycle and no unfiltered request would ever be issued.
+    // The route is installed AFTER the app has booted: no request is
+    // intercepted during boot. Held requests are DEFERRED, never re-served.
+    // Re-serving with route.fetch() + route.fulfill() left Firefox with the
+    // app's unreachable-service alert at boot in CI on this cross-origin
+    // API, so the held route simply continues when released and the browser
+    // performs the request itself, with its own CORS handling, in every
+    // engine.
     let holdNext = false;
     const held: Array<{ url: string; release: () => void }> = [];
-    await page.route("**/units**", async (route) => {
-      const response = await route.fetch();
-      if (!holdNext || route.request().url().includes("ward=")) {
-        return route.fulfill({ response });
-      }
-      return new Promise((resolve) => {
-        held.push({
-          url: route.request().url(),
-          release: () => resolve(route.fulfill({ response })),
-        });
-      });
-    });
 
     await openApp(page);
     await expectResultsLoaded(page);
+
+    await page.route("**/units**", (route) => {
+      if (!holdNext || route.request().url().includes("ward=")) {
+        return route.continue();
+      }
+      held.push({
+        url: route.request().url(),
+        release: () => void route.continue(),
+      });
+    });
 
     // Select a ward first so the clear-all is visible, then hold + clear.
     const bar = page.locator(".filter-bar");
