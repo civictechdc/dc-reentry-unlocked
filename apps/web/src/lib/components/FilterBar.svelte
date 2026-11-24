@@ -4,12 +4,19 @@
   import { housingStore, SUPPORTED_CONTROLS } from "#lib/state/housing-store.svelte.ts";
   import ActiveChips from "./ActiveChips.svelte";
 
-  let { store = housingStore }: { store?: typeof housingStore } = $props();
+  let {
+    store = housingStore,
+    summaryBand = false,
+  }: { store?: typeof housingStore; summaryBand?: boolean } = $props();
 
   /**
    * Schema-rendered filter bar: every control is a generic renderer over the
    * published filter schema — no filter is hardcoded. Unsupported control
    * types are hidden (graceful degradation), never a crash.
+   *
+   * The reserved summary band (heading + bounded one-row chips + the single
+   * clear-all) is the desktop presentation; without it the bar keeps the
+   * footer clear-all and freely wrapping chips for the filter-sheet context.
    */
   const renderable = $derived(
     store.filtersSchema.filter((definition) =>
@@ -56,9 +63,22 @@
   }
 
   const hasAnySelection = $derived(Object.keys(store.selection).length > 0);
+
+  /** Applied values counted across every filter — the summary heading's N. */
+  const selectedCount = $derived(
+    Object.values(store.selection).reduce((total, values) => total + values.length, 0),
+  );
+
+  let headingEl: HTMLHeadingElement | undefined = $state();
+  let barEl: HTMLElement | undefined = $state();
+
+  /** Footer-path empty: focus the bar itself (sheet interior) as the standing point. */
+  function focusBar(): void {
+    barEl?.focus();
+  }
 </script>
 
-<section class="filter-bar" aria-label={m.filter_region_label()}>
+<section class="filter-bar" bind:this={barEl} tabindex="-1" aria-label={m.filter_region_label()}>
   <div class="filter-controls">
     {#each renderable as definition (definition.id)}
       {#if definition.control === "boolean"}
@@ -117,17 +137,66 @@
       {/if}
     {/each}
   </div>
-  <div class="filter-footer">
+  {#if summaryBand}
     {#if unsupportedCount > 0}
       <p class="unsupported-notice">{m.filter_unsupported_notice()}</p>
     {/if}
-    {#if hasAnySelection}
-      <button type="button" class="clear-all" onclick={() => store.clearAll()}>
-        {m.filter_clear_all()}
-      </button>
-    {/if}
-  </div>
-  <ActiveChips {store} />
+    <div class="summary-band">
+      <div class="summary-heading-row">
+        <h2 class="summary-heading" bind:this={headingEl} tabindex="-1">
+          {m.filter_selected_heading({ count: selectedCount })}
+        </h2>
+        {#if selectedCount > 0}
+          <button
+            type="button"
+            class="clear-all"
+            onclick={async () => {
+              // Focus the persistent heading synchronously: the unmounting
+              // button never drops focus to the page body during the refresh.
+              headingEl?.focus();
+              await store.clearAll();
+              // Only recover focus the user's action lost (not a focus the
+              // user moved elsewhere while the refresh was pending).
+              if (document.activeElement === document.body) headingEl?.focus();
+            }}
+          >
+            {m.filter_clear_all()}
+          </button>
+        {/if}
+      </div>
+      <div class="summary-chips">
+        <ActiveChips
+          {store}
+          clearAll={false}
+          singleRow
+          onEmptied={() => headingEl?.focus()}
+          onFallbackFocus={() => headingEl?.focus()}
+        />
+      </div>
+    </div>
+  {:else}
+    <div class="filter-footer">
+      {#if unsupportedCount > 0}
+        <p class="unsupported-notice">{m.filter_unsupported_notice()}</p>
+      {/if}
+      {#if hasAnySelection}
+        <button
+          type="button"
+          class="clear-all"
+          onclick={async () => {
+            // Focus the bar synchronously: the unmounting button never drops
+            // focus to the page body during the refresh.
+            focusBar();
+            await store.clearAll();
+            if (document.activeElement === document.body) focusBar();
+          }}
+        >
+          {m.filter_clear_all()}
+        </button>
+      {/if}
+    </div>
+    <ActiveChips {store} onEmptied={focusBar} onFallbackFocus={focusBar} />
+  {/if}
 </section>
 
 <style>
@@ -210,5 +279,35 @@
     border-radius: var(--rounded-control);
     background: var(--color-surface-raised);
     color: var(--color-ink);
+  }
+  /* Reserved summary band: the two rows are height-fixed so the band holds
+     one exact height whether the selection is empty (heading only), active
+     (chips + clear-all appear inside the reserved rows), or cleared again.
+     Row budget: heading row 28px + gap 8px + chips row 32px + 8px padding
+     ≈ 76px total. */
+  .summary-band {
+    display: grid;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+  }
+  .summary-heading-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    height: 1.75rem;
+  }
+  .summary-heading {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  .summary-chips {
+    display: flex;
+    align-items: center;
+    height: 2rem;
+    /* The chips row clips itself (overflow disclosure lives with it); this
+       wrapper must not clip, so the overflow popover can escape the band. */
   }
 </style>

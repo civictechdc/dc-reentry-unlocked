@@ -24,6 +24,10 @@ services:
       # The SPA served on the host at localhost:5173 must be allowed
       # cross-origin (read-only API; exact origins, never a wildcard).
       API_CORS_ORIGINS: http://localhost:5173
+      # Per-client rate limit; apps/api defaults to 100 req/min. The env
+      # default below keeps that, while the e2e matrix raises it — once the
+      # budget is spent, the web app surfaces its unreachable-service alert.
+      API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-100}
     # Modest ceilings for a read-only prototype API. The frozen dataset is
     # loaded into memory at boot (~1.2MB of JSON); 512m leaves ample headroom.
     mem_limit: 512m

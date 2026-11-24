@@ -415,7 +415,7 @@ describe("the planned allowlist", () => {
   test("every planned path gives a lifecycle reason free of tracking references", () => {
     expect(Object.keys(PLANNED).sort()).toEqual([
       "apps/web/e2e/walkthrough.capture.ts",
-      "docs/documentation-review.md",
+      "docs/documentation-review.md", // tracking-ref-allow
       "docs/feedback/",
     ]);
     for (const reason of Object.values(PLANNED)) {

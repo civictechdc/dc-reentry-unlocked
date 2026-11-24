@@ -86,7 +86,12 @@ investigated from a green tree (2026-11-10):
 - **Late e2e tests start failing after back-to-back full-suite runs**
   against one long-lived API: the per-client rate limit (100 requests per
   minute, one shared budget across all requests) saturates and the client
-  surfaces the same unreachable alert.
+  surfaces the same unreachable alert. The e2e config boots its own API
+  with `API_RATE_LIMIT_MAX=100000`, so this applies to an API booted by
+  hand that the suite then reuses. The Compose-booted API reads
+  `API_RATE_LIMIT_MAX` the same way (default 100; the CI Compose matrix
+  exports 100000), so a local reproduction of that matrix should export
+  it too.
 
 Diagnosis one-liner — a correctly booted e2e API answers with an
 `access-control-allow-origin` header for the prod origin; an orphan does

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { m } from "#lib/paraglide/messages.js";
   import { housingStore, type HousingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -15,6 +16,77 @@
   function retry(): void {
     void store.reloadSchema();
   }
+
+  /** Persistent standing point for zero-panel removals on failed refreshes. */
+  function focusZeroPanel(): void {
+    zeroPanelEl?.focus();
+  }
+
+  /**
+   * When the zero panel's chips empty the selection — or a removal recovers
+   * results while selections remain — this list swaps to the counted branch
+   * and keyboard focus lands on the count line instead of dropping to the
+   * page body. The count line mounts a flush or two after the store's
+   * async refresh settles, so poll briefly.
+   */
+  function focusCountLine(): void {
+    void (async () => {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await tick();
+        if (countEl && document.activeElement !== countEl) countEl.focus();
+        if (document.activeElement === countEl) return;
+      }
+    })();
+  }
+
+  let countEl: HTMLParagraphElement | undefined = $state();
+  let zeroPanelEl: HTMLDivElement | undefined = $state();
+
+  /**
+   * Zero→results render transition: when the panel unmounts while its own
+   * controls held focus (a removal whose chip left the DOM mid-await), the
+   * count line — not the page body — takes focus, independent of any
+   * request. A user who moved focus somewhere real is left alone.
+   */
+  const showZeroPanel = $derived(store.units !== null && store.units.length === 0);
+  let zeroPanelHadFocus = false;
+  let zeroPanelWasShown = false;
+
+  function onZeroPanelFocusout(event: FocusEvent): void {
+    const next = event.relatedTarget;
+    // A targetless (or already-detached) relatedTarget means the focused
+    // control just left the DOM — keep the flag; only a real move somewhere
+    // outside the panel clears it.
+    if (next instanceof Node && next.isConnected && !zeroPanelEl?.contains(next)) {
+      zeroPanelHadFocus = false;
+    }
+  }
+
+  $effect(() => {
+    const showing = showZeroPanel;
+    if (showing) {
+      zeroPanelWasShown = true;
+      return;
+    }
+    if (!zeroPanelWasShown) return;
+    zeroPanelWasShown = false;
+    if (!zeroPanelHadFocus) return;
+    void (async () => {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await tick();
+        if (document.activeElement !== document.body) {
+          zeroPanelHadFocus = false;
+          return;
+        }
+        if (!countEl) continue;
+        countEl.focus();
+        if (document.activeElement === countEl) {
+          zeroPanelHadFocus = false;
+          return;
+        }
+      }
+    })();
+  });
 </script>
 
 <section class="unit-list" aria-label={m.app_heading()}>
@@ -34,7 +106,13 @@
       <button type="button" onclick={retry}>{m.results_retry()}</button>
     </div>
   {:else if store.units !== null && store.units.length === 0}
-    <div class="panel zero-panel">
+    <div
+      class="panel zero-panel"
+      bind:this={zeroPanelEl}
+      tabindex="-1"
+      onfocusin={() => (zeroPanelHadFocus = true)}
+      onfocusout={onZeroPanelFocusout}
+    >
       {#if store.failure}
         <h3 role="alert">{m.results_zero_headline()}</h3>
         <p role="alert">{m.results_error_headline()}</p>
@@ -43,7 +121,7 @@
         <h3>{m.results_zero_headline()}</h3>
         <p>{m.results_zero_body()}</p>
       {/if}
-      <ActiveChips {store} />
+      <ActiveChips {store} onEmptied={focusCountLine} onFallbackFocus={focusZeroPanel} />
       {#if store.failure}
         <button type="button" onclick={retry}>{m.results_retry()}</button>
       {/if}
@@ -58,7 +136,8 @@
         <button type="button" onclick={retry}>{m.results_retry()}</button>
       </div>
     {/if}
-    <p class="result-count" role="status">
+    <!-- Plain text: the shell carries the single announced status region. -->
+    <p class="result-count" bind:this={countEl} tabindex="-1">
       {m.results_count({ count: store.units.length })}
     </p>
     <ul class="cards">

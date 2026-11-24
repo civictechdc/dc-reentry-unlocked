@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { m } from "#lib/paraglide/messages.js";
   import { housingStore } from "#lib/state/housing-store.svelte.ts";
   import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -10,6 +11,87 @@
   import MobileFilterSheet from "#lib/components/MobileFilterSheet.svelte";
 
   let { store = housingStore }: { store?: typeof housingStore } = $props();
+
+  // Announced text of the result-feedback region (see the markup below).
+  // Driven by committed results only: the effect tracks store.units, and the
+  // pending selection signature is sampled untracked at the moment results
+  // land — a mid-refresh selection write never announces a stale count.
+  let statusText = $state("");
+  let lastAnnouncedText = "";
+  let lastAnnouncedSignature = "";
+  let restoreScheduled = false;
+  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function clearPendingRestore(): void {
+    if (restoreTimer !== undefined) clearTimeout(restoreTimer);
+    restoreTimer = undefined;
+    restoreScheduled = false;
+  }
+
+  $effect(() => {
+    const units = store.units;
+    if (units === null) {
+      clearPendingRestore();
+      statusText = "";
+      lastAnnouncedText = "";
+      lastAnnouncedSignature = "";
+      return;
+    }
+    const text = m.results_count({ count: units.length });
+    // The pending selection signature is sampled untracked: a mid-refresh
+    // selection write must never re-run this effect (it would announce a
+    // stale count — the previous units are still committed).
+    const signature = untrack(() => JSON.stringify(store.selection));
+    const restoreNow = () => {
+      restoreTimer = undefined;
+      restoreScheduled = false;
+      statusText = text;
+      lastAnnouncedText = text;
+      lastAnnouncedSignature = signature;
+    };
+    if (restoreScheduled) {
+      // A blank+restore is pending from an identical-count commit. If a
+      // newer count-changing result lands meanwhile, supersede the restore
+      // (no replay of the older text) and announce the new count directly.
+      // If another identical-count commit lands instead, reschedule with the
+      // NEWEST text/signature — otherwise the recorded signature stays the
+      // older one and a later unrelated refresh re-announces.
+      if (text !== lastAnnouncedText) {
+        clearPendingRestore();
+        restoreNow();
+        return;
+      }
+      if (signature === lastAnnouncedSignature) {
+        // The selection returned to the one recorded as announced: cancel
+        // the pending restore (it would record the other signature) and set
+        // the text directly — one announcement, and the announced selection
+        // stays recorded, so a later unrelated refresh stays silent.
+        clearPendingRestore();
+        statusText = text;
+        return;
+      }
+      if (signature !== lastAnnouncedSignature) {
+        clearPendingRestore();
+        restoreScheduled = true;
+        statusText = "";
+        restoreTimer = setTimeout(restoreNow);
+      }
+      return;
+    }
+    if (text === lastAnnouncedText && signature === lastAnnouncedSignature) return;
+    if (text === lastAnnouncedText) {
+      // A committed result with an unchanged count but a changed selection
+      // still announces: blank the region and restore on a macrotask (a
+      // same-task mutation would be coalesced and never announce).
+      restoreScheduled = true;
+      statusText = "";
+      restoreTimer = setTimeout(restoreNow);
+      return;
+    }
+    restoreNow();
+  });
+  // Effect teardown: a pending restore must not fire after unmount.
+  $effect(() => () => clearPendingRestore());
 
   const isPhone = $derived(viewportState.isPhone);
 
@@ -90,7 +172,7 @@
     <!-- Desktop: filter bar above BOTH panes; interactive map LEFT, card list RIGHT (spec-pinned). -->
     <div class="desktop-layout">
       <div class="filter-pane">
-        <FilterBar {store} />
+        <FilterBar {store} summaryBand />
       </div>
       <div class="map-pane">
         <MapView {store} />
@@ -102,6 +184,22 @@
     </div>
   {/if}
 </div>
+{#if store.units !== null}
+  <!-- Result feedback: one always-mounted polite status region carrying the
+       matching-unit count, so apply/change/remove/clear announce on every
+       surface (desktop, phone map tab, phone list tab, zero results) — the
+       card list unmounts on the phone map tab, so the region lives in the
+       shell. It mounts only once results have loaded (never announces the
+       first-boot loading or error phase) and never moves focus. The card
+       list's visible count line is plain text, keeping exactly one live
+       region on the page. A selection change that leaves the count
+       identical blanks the text and restores it on a macrotask, so the
+       change still announces; unrelated re-renders stay silent. The
+       blank+restore pair is separated by that macrotask so assistive tech
+       observes both mutations, and a pending restore is superseded (timer
+       cleared) when a newer count-changing result lands. -->
+  <p class="results-status" role="status">{statusText}</p>
+{/if}
 
 <style>
   .desktop-layout {
@@ -256,5 +354,15 @@
      bar bottom ≈ 179–199px, legend starts far lower). */
   :global(.phone.map-active) :global(.sr-pins button:focus-visible) {
     top: 15rem;
+  }
+  /* Announced, never shown: the visible count lives in the card list. */
+  .results-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 </style>

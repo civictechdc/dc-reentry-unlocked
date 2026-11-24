@@ -1,9 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/svelte";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { UNIT_FILTERS } from "@dc-reentry/shared";
 import { aUnitCard } from "@dc-reentry/shared/testing";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { tick } from "svelte";
 import { m } from "#lib/paraglide/messages.js";
 import { HousingStore } from "#lib/state/housing-store.svelte.ts";
 import { uiState } from "#lib/state/ui-state.svelte.ts";
@@ -40,6 +41,116 @@ beforeEach(async () => {
 });
 
 afterEach(() => cleanup());
+
+describe("zero-panel focus continuity (rejecting transport)", () => {
+  test("removing the zero panel's lone chip holds focus on the panel immediately and after a failed refresh settles", async () => {
+    // Boot with an EMPTY result set (zero panel) on a healthy transport,
+    // then make every subsequent units request REJECT — the removal's
+    // refresh fails, the zero result stays, and the panel must hold focus
+    // (the count line it would hand off to never mounts).
+    let rejectUnits = false;
+    const flakyTransport = {
+      filters: async () => UNIT_FILTERS,
+      units: async () => {
+        if (rejectUnits) throw new TypeError("fetch failed");
+        return [];
+      },
+    };
+    const failingStore = new HousingStore(flakyTransport as never);
+    await failingStore.initialize();
+    await failingStore.apply({
+      kind: "apply",
+      filterId: "ward",
+      control: "multi-select",
+      values: ["8"],
+    });
+    render(UnitCardList, { props: { store: failingStore } });
+
+    const zeroPanel = document.querySelector(".zero-panel") as HTMLElement;
+    const removeChip8 = screen.getByRole("button", {
+      name: m.chip_remove({ filter: "Ward", value: "Ward 8" }),
+    });
+
+    // From here on every units request rejects: the removal's refresh fails,
+    // the zero result stays, and the count line never mounts.
+    rejectUnits = true;
+
+    // Native, un-awaited click: the handler suspends in the pending apply —
+    // the panel already holds focus synchronously.
+    removeChip8.click();
+    expect(document.activeElement).toBe(zeroPanel);
+
+    // The refresh rejects (zero result stays): after the dust settles the
+    // panel STILL holds focus — never the page body.
+    await tick();
+    await tick();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.activeElement).toBe(zeroPanel);
+    expect(document.querySelector(".zero-panel")).not.toBeNull();
+    expect(document.querySelector(".result-count")).toBeNull();
+  });
+});
+
+describe("zero-panel render-transition focus handoff", () => {
+  test("a second removal queued behind the first strands no body focus when the first response recovers results", async () => {
+    // Every units request parks in a queue; responses are released by hand.
+    // The store coalesces an in-flight refresh, so the SECOND removal's
+    // handler awaits the same cycle as the first — only the render
+    // transition can restore focus before the second fetch lands.
+    const pending: Array<(units: ReturnType<typeof makeCard>[]) => void> = [];
+    const transport = {
+      filters: async () => UNIT_FILTERS,
+      units: async () =>
+        new Promise<ReturnType<typeof makeCard>[]>((resolve) => {
+          pending.push(resolve);
+        }),
+    };
+    const gatedStore = new HousingStore(transport as never);
+    void gatedStore.initialize();
+    await waitFor(() => expect(pending.length).toBe(1));
+    pending.shift()!([]);
+    render(UnitCardList, { props: { store: gatedStore } });
+    await waitFor(() => expect(document.querySelector(".zero-panel")).not.toBeNull());
+
+    // Two chips; the apply's own refresh settles on the zero result too.
+    void gatedStore.apply({
+      kind: "apply",
+      filterId: "ward",
+      control: "multi-select",
+      values: ["8", "6"],
+    });
+    await waitFor(() => expect(pending.length).toBe(1));
+    pending.shift()!([]);
+
+    // TWO quick native removals: the second is coalesced into the first's
+    // refresh cycle, so its handler stays suspended until both fetches land.
+    screen
+      .getByRole("button", { name: m.chip_remove({ filter: "Ward", value: "Ward 8" }) })
+      .click();
+    await waitFor(() => expect(pending.length).toBe(1));
+    screen
+      .getByRole("button", { name: m.chip_remove({ filter: "Ward", value: "Ward 6" }) })
+      .click();
+    await waitFor(() => expect(pending.length).toBe(1));
+
+    // Release ONLY the first removal's response: results recover, the panel
+    // unmounts, and the focused chip goes with it.
+    pending.shift()!([makeCard({ id: "unit-1" }), makeCard({ id: "unit-2" })]);
+    await waitFor(() => expect(document.querySelector(".zero-panel")).toBeNull());
+    // The second fetch is still pending here — no continuation has run yet.
+    expect(pending.length).toBe(1);
+
+    // The render transition already handed focus to the count line.
+    const countLine = document.querySelector(".result-count") as HTMLElement;
+    expect(document.activeElement).toBe(countLine);
+
+    // The second response settles: focus is not yanked.
+    pending.shift()!([makeCard({ id: "unit-1" }), makeCard({ id: "unit-2" })]);
+    await waitFor(() => expect(gatedStore.phase).toBe("ready"));
+    await tick();
+    expect(document.activeElement).toBe(countLine);
+  });
+});
 
 describe("zero-bedroom presentation vocabulary", () => {
   test("presents a zero-bedroom efficiency as Studio on the card", () => {
@@ -276,5 +387,43 @@ describe("unit card list states", () => {
 
     expect(screen.getByText(m.results_count({ count: 1 }))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: m.results_retry() })).toBeInTheDocument();
+  });
+});
+
+describe("zero-panel focus continuity", () => {
+  test("removing the zero panel's last chip lands focus on the recovered count line", async () => {
+    const transport = new FakeTransport();
+    transport.cards = [];
+    store = new HousingStore(transport as never);
+    await store.initialize();
+    await store.apply({ kind: "apply", filterId: "ward", control: "multi-select", values: ["8"] });
+    render(UnitCardList, { props: { store } });
+
+    const removeChip8 = screen.getByRole("button", {
+      name: m.chip_remove({ filter: "Ward", value: "Ward 8" }),
+    });
+    transport.cards = [makeCard({ id: "recovered", ward: 1 })];
+    await userEvent.click(removeChip8);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByText(m.results_count({ count: 1 })));
+    });
+  });
+
+  test("the zero panel's clear-all lands focus on the recovered count line", async () => {
+    const transport = new FakeTransport();
+    transport.cards = [];
+    store = new HousingStore(transport as never);
+    await store.initialize();
+    await store.apply({ kind: "apply", filterId: "ward", control: "multi-select", values: ["8"] });
+    render(UnitCardList, { props: { store } });
+
+    const clearAll = screen.getByRole("button", { name: m.chip_clear_all() });
+    transport.cards = [makeCard({ id: "recovered", ward: 1 })];
+    await userEvent.click(clearAll);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByText(m.results_count({ count: 1 })));
+    });
   });
 });

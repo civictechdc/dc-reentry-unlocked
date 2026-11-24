@@ -48,8 +48,9 @@ Then(
       })
       .then((payload: { units: { id: string }[] }) => payload.units.map((unit) => unit.id))
       .then((ids) => ids.sort());
-    // The refresh lands when the result-status line re-renders: gate the
-    // synchronization assertions on it, not on a sleep.
+    // The refresh lands when the visible count line re-renders (the shell's
+    // status region carries the announcement): gate the synchronization
+    // assertions on it, not on a sleep.
     await expect(page.locator(".result-count")).toContainText(
       `${apiUnitIds.length} available unit`,
       {
