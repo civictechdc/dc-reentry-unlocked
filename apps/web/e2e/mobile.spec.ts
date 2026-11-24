@@ -38,9 +38,9 @@ test.describe("mobile behavior", () => {
     await sheet.getByRole("button", { name: "Ward 1" }).click();
     await sheet.getByRole("button", { name: "Apply filters" }).click();
 
-    // sheet closed, selection applied: chip visible in the summary row
+    // sheet closed, selection applied: count chip visible in the summary strip
     await expect(sheet).not.toBeVisible();
-    await expect(page.getByText("Ward: 1")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ward (1 selected)" })).toBeVisible();
   });
 
   test("detail opens as a full-screen bottom sheet while the tab layout holds", async ({

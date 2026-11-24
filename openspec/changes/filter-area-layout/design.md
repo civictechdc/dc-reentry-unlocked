@@ -116,10 +116,17 @@ renderer control types. Cross-reference obligation (user decision
 2026-11-18): each change's design cites the other; whichever archives
 second reconciles the shared requirement text in `dynamic-filtering`.
 
-**D8 — Band height figure.** The compact reserved band (~76 px) replaces
-the "~93 px dense two-row band" reference in the `housing-search-ui`
-desktop-density scenario; the delta updates that figure, and the map
-pane gains roughly 17 px of row height versus today's active band.
+**D8 — Band height figure.** The compact reserved band (~76 px) sits
+below the compacted filter controls and consolidates today's conditional
+active-selection area (chips row plus the two clear-all controls, ≈98 px
+measured) into a fixed 76 px. The `housing-search-ui` desktop-proportions
+scenario's example figures are updated to the measured reserved-band
+geometry: the map pane gains ≈22 px of row height versus today's filtered
+state and gives up ≈76 px versus the unfiltered state — the permanent cost
+accepted under Risks. (Corrected during implementation, 2026-11-23: an
+earlier draft read the band as replacing the scenario's "~93 px dense
+two-row band"; that figure described the whole compacted control bar, which
+stays.)
 
 ## Risks / Trade-offs
 
