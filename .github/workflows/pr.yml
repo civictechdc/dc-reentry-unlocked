@@ -150,6 +150,9 @@ jobs:
       # mesa software-GL fallthrough for Firefox/WebKit's MapLibre canvas;
       # Chromium carries its own SwiftShader launch args in the project config
       LIBGL_ALWAYS_SOFTWARE: "1"
+      # dense back-to-back suites exhaust the API's default 100 req/min
+      # budget; the Compose API takes the limit from the environment
+      API_RATE_LIMIT_MAX: "100000"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
