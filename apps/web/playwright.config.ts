@@ -32,6 +32,11 @@ export default defineConfig({
       env: {
         ...process.env,
         API_CORS_ORIGINS: "http://localhost:5173,http://localhost:4317",
+        // Dense back-to-back specs exhaust the API's default 100 req/min
+        // budget and fail at boot; the CI Compose matrix uses the separate
+        // playwright.ci*.config.ts and keeps the default. An explicit outer
+        // API_RATE_LIMIT_MAX still wins.
+        API_RATE_LIMIT_MAX: process.env.API_RATE_LIMIT_MAX ?? "100000",
       },
     },
     {
