@@ -83,7 +83,7 @@ export function sanitizeForDisplay(value, limit = MAX_TOKEN_DISPLAY_CHARS) {
  * never extended.
  */
 export const PLANNED = {
-  "docs/documentation-review.md": "planned review report, not yet landed",
+  "docs/documentation-review.md": "planned review report, not yet landed", // tracking-ref-allow
   "docs/feedback/": "planned feedback-record directory, not yet landed",
   "apps/web/e2e/walkthrough.capture.ts":
     "planned walkthrough capture script (not part of the CI suites), not yet landed",

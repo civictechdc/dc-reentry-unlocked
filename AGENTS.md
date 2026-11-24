@@ -55,24 +55,24 @@ first; e2e commands boot their own servers (stop stray servers first), and
 the `-C apps/web` matrix variants assume a running Compose boot ([runbook
 recipes](docs/runbook.md)).
 
-| Command                                  | Checks (use before claiming done)                                                             |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `pnpm lint`                              | oxlint (JS/TS/Svelte) + ESLint (JSON only)                                                    |
-| `pnpm format:check`                      | oxfmt formatting (run `pnpm format` to fix)                                                   |
-| `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)                       |
-| `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                              |
-| `pnpm arch:check`                        | dependency-cruiser architecture rules                                                         |
-| `pnpm design:check`                      | design.md lint + generated-artifact byte identity + hand-written/bridge drift                 |
-| `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)                  |
-| `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                                |
-| `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app)          |
-| `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)               |
-| `pnpm -C apps/web scan:flags`            | Flag elimination scan over the web production build output (build + scan)                     |
-| `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty               |
-| `pnpm docgen:model`                      | Regenerate the model reference — `git diff --exit-code -- docs/data-model.md` must stay empty |
-| `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                             |
-| `node scripts/run-mutation.mjs`          | Stryker mutation runs over shared/api/datagen (report-only; minutes-long)                     |
-| `openspec validate --all --strict`       | The OpenSpec gate: all changes + specs, strict mode                                           |
+| Command                                  | Checks (use before claiming done)                                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`                              | oxlint (JS/TS/Svelte) + ESLint (JSON only) + tracking-reference check (`node scripts/check-tracking-refs.mjs`) |
+| `pnpm format:check`                      | oxfmt formatting (run `pnpm format` to fix)                                                                    |
+| `pnpm test`                              | Vitest in every workspace + repo-tool suite (fast-check props included)                                        |
+| `pnpm typecheck`                         | tsc for shared/api/datagen + `tsc6` for apps/web                                                               |
+| `pnpm arch:check`                        | dependency-cruiser architecture rules                                                                          |
+| `pnpm design:check`                      | design.md lint + generated-artifact byte identity + hand-written/bridge drift                                  |
+| `pnpm -C apps/web e2e`                   | Spec e2e against the dev servers (self-boots them; stop other servers first)                                   |
+| `pnpm -C apps/web e2e:bdd`               | Generated-BDD golden paths against the self-booted dev servers                                                 |
+| `pnpm -C apps/web e2e:prod`              | Production-build probe (`vite build` + adapter-node server; also builds the web app)                           |
+| `pnpm -C apps/web e2e:ci` / `e2e:bdd:ci` | Spec/BDD matrix against the Compose boot (start: `docker compose up -d --wait`)                                |
+| `pnpm -C apps/web scan:flags`            | Flag elimination scan over the web production build output (build + scan)                                      |
+| `pnpm datagen`                           | Regenerate the frozen dataset — `git diff --exit-code -- data/` must stay empty                                |
+| `pnpm docgen:model`                      | Regenerate the model reference — `git diff --exit-code -- docs/data-model.md` must stay empty                  |
+| `node scripts/check-diagrams.mjs`        | Renderability of every committed mermaid diagram (docs/ + README)                                              |
+| `node scripts/run-mutation.mjs`          | Stryker mutation runs over shared/api/datagen (report-only; minutes-long)                                      |
+| `openspec validate --all --strict`       | The OpenSpec gate: all changes + specs, strict mode                                                            |
 
 Deterministic commands first — never assert code behavior you have not run.
 The task verification for your block's task must pass before you report done.
@@ -376,31 +376,26 @@ When reviewing changes (yours or others'):
 
 Committed code/config/docs must read self-contained: flag and require
 removal of any comment or doc text in committed files that references
-OpenSpec-internal tracking — task numbers (e.g. `6.1`, `task 4.3`), block
-numbers (e.g. `block 2`, `blocks 4–5`), design-doc decision IDs (e.g.
-`design D18`, `(D17)`), or the change name (`housing-units-prototype`) —
+OpenSpec-internal tracking — task numbers (e.g. `6.1`, `task 4.3`), block <!-- tracking-ref-allow -->
+numbers (e.g. `block 2`, `blocks 4–5`), design-doc decision IDs (e.g. <!-- tracking-ref-allow -->
+`design D18`, `(D17)`), or a change name that is not also a main-spec <!-- tracking-ref-allow -->
+(capability) name (`housing-units-prototype`) — <!-- tracking-ref-allow -->
 anywhere outside openspec folders. Such refs dangle for fresh clones and go
 stale on renumber. Date-based decision provenance (e.g. "user decision
 2026-10-29") is fine; only the internal tracking references go. Exemptions:
-git history/commit messages (immutable) and machine-local files
+git history/commit messages (immutable), the dated user-signed walkthrough
+records in `docs/feedback/`, pinned upstream skill content in
+`.agents/skills/`, and machine-local files
 (`AGENTS.local.md`, `.agents/local/`). Express future-landing marks
 honestly without numbers ("planned, not yet landed") and state reasons
 inline instead of pointing at decision IDs.
 
-Starter grep (judge false positives by eye — this rule's own text (including
-the grep example), comments about tasks.md workflow rules, the in-repo
-openspec folder and its internal paths (excluded by `--exclude-dir=openspec`),
-legitimate version numbers (Svelte 5.x, Git 2.54,
-pinned deps like @0.1.28), and bare `N.N` references like "lands 1.7" — which
-the pattern cannot see — are the named categories; bare `N.N` must be
-eyeballed manually):
-
-```sh
-grep -rIinE "(tasks?|lands?) [0-9]+\.[0-9]+|blocks? [0-9]|design D[0-9]+|\bD1[0-8]\b|housing-units-prototype" \
-  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=openspec \
-  --exclude-dir=data --exclude-dir=.superpowers --exclude=pnpm-lock.yaml . \
-  | grep -vE "AGENTS\.local\.md|\.agents/local/"
-```
-
-(`-i` catches `Task 8.4` at sentence start; the extended pattern also catches
-bare "lands 1.7" phrasing.)
+The deterministic check is `node scripts/check-tracking-refs.mjs` and runs
+as part of `pnpm lint`: scans tracked and untracked-not-ignored text files
+outside `openspec/`, matches task/block shapes case-insensitively and
+decision IDs in their uppercase convention, derives change names from the
+`openspec/changes/` directories unless the name is also a main-spec
+(capability) name under `openspec/specs/`, skips markdown fences, and
+drops any line carrying the marker `tracking-ref-allow`. What stays a
+manual category: a bare dotted number with no task/lands word around it
+("6.1", "1.7") does not match — eyeball those.

@@ -9,7 +9,7 @@
   ],
   "type": "module",
   "scripts": {
-    "lint": "pnpm exec oxlint . && pnpm exec eslint .",
+    "lint": "pnpm exec oxlint . && pnpm exec eslint . && node scripts/check-tracking-refs.mjs",
     "format": "pnpm exec oxfmt .",
     "format:check": "pnpm exec oxfmt --check .",
     "test": "pnpm -r run test && pnpm exec vitest run",
