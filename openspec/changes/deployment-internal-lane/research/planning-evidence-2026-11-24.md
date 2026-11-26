@@ -308,3 +308,57 @@ Sources:
   sit outside every default pool and outside the provider's VPC range.
 
 Source: <https://docs.docker.com/engine/network/>.
+
+## Added 2026-11-26
+
+### Behaviour-driven tooling (retrieved 2026-11-26)
+
+- `playwright-bdd` 9.2.1 (released 2026-09-06) "converts BDD scenarios into
+  native Playwright tests". It depends on Cucumber's component packages
+  (`@cucumber/gherkin`, `cucumber-expressions`, `messages`,
+  `tag-expressions`, the HTML and JUnit formatters) but not on
+  `@cucumber/cucumber` at runtime; that package is a dev dependency only. It
+  is Cucumber-style, not the CucumberJS runner.
+- In `playwright-bdd`, step definitions import `Given`/`When`/`Then` from
+  `createBdd()`. Hooks imported from `@cucumber/cucumber` are unsupported.
+- CucumberJS (`@cucumber/cucumber` 13.3.0, released 2026-10-05) is a test
+  runner. Its step definitions can drive Playwright's library API without
+  `@playwright/test`. As the runner it would not provide Playwright Test's
+  fixtures, projects, retry semantics, reporters, or trace on failure.
+- No incompatibility is documented for installing both. They are distinct
+  runners: shared feature files would execute twice, with no automatic
+  deduplication.
+
+Sources: <https://github.com/vitalets/playwright-bdd/blob/main/README.md>,
+<https://registry.npmjs.org/playwright-bdd/9.2.1>,
+<https://github.com/vitalets/playwright-bdd/blob/main/docs/writing-steps/cucumber-style.md>,
+<https://github.com/cucumber/cucumber-js/blob/main/README.md>,
+<https://www.npmjs.com/package/@cucumber/cucumber>,
+<https://playwright.dev/docs/test-fixtures>.
+
+### Why the existing framework, not a second runner (retrieved 2026-11-26)
+
+CucumberJS capabilities without a full equivalent in `playwright-bdd`
+9.2.1: publishing to the hosted Cucumber Reports service; native
+`--profile` bundles (Playwright projects serve instead); a retry filter
+by tag; a true once-per-run `BeforeAll`/`AfterAll` (hooks are per worker,
+with a documented workaround); and confirmed support in the official
+Cucumber editor extension. Everything else checked has an equivalent,
+including the four Cucumber report formats through `cucumberReporter()`.
+A capability is marked "partial" or "missing" here only where the
+documentation establishes the limit. The user chose to keep the existing
+framework (2026-11-26).
+
+Sources:
+<https://github.com/vitalets/playwright-bdd/blob/v9.2.1/docs/api.md>,
+<https://github.com/vitalets/playwright-bdd/blob/v9.2.1/docs/configuration/options.md>,
+<https://github.com/vitalets/playwright-bdd/blob/v9.2.1/docs/cli.md>,
+<https://github.com/cucumber/vscode>.
+
+### Front-door header pass-through, measured twice
+
+- An upstream's own `X-Robots-Tag` is not overwritten by the plain directive
+  (both values are sent) and `header_down -X-Robots-Tag` on the proxy leg
+  removes the upstream's copy, leaving one header. Re-measured on
+  2026-11-26 for this section; the contract in the spec is "exactly one
+  header".

@@ -39,10 +39,14 @@ Use `scripts/deploy/internal-host.sh` for host operations,
 `scripts/deploy/internal-inventory.sh` for CI inventory/scan, and
 `scripts/check-internal-routes.mjs` for API matcher parity. Keep the
 workflows in `.github/workflows/{release,health}-internal.yml`
-and runner logic with its owner: `apps/web/playwright.internal.config.ts`,
-`apps/web/e2e-internal/probe.ts`, `apps/web/e2e-internal/smoke.spec.ts`,
-and a shared axe helper at
-`apps/web/e2e/helpers/axe.ts`. Use `docs/internal-ops.md` for operations.
+and runner logic with its owner: `apps/web/playwright.internal.config.ts`
+uses `defineBddConfig` for
+`apps/web/e2e-internal/features/internal-deployment.feature` and
+`apps/web/e2e-internal/steps/**/*.ts`. Keep technical evidence collection
+in `apps/web/e2e-internal/probe.ts`. Share the existing axe scan mechanics
+via `apps/web/test-support/axe.ts`, outside either discovery tree.
+Generate into a dedicated, gitignored `apps/web/.features-gen-internal/`.
+Use `docs/internal-ops.md` for operations.
 Reject a shared implicit override or adding remote tests to `e2e/`: either
 would change discovery or boot for existing local and CI callers.
 
@@ -142,25 +146,34 @@ are exhaustive (`GITHUB_TOKEN` is implicit, not an environment secret).
 | `verify` | `deploy_inspect` eligible; verify both digests | `packages: read`, `attestations: read` | None |
 | `deploy_pre_observe` | Verified target and existing stack; capture sample start state | `{}` | `internal-deploy`: SSH key |
 | Pre-switch probe legs | `deploy_pre_observe`; record qualification only | `contents: read` | `internal-probe`: probe pairs |
-| `deploy_switch` | Verified target and applicable qualification finished; recheck state, switch, check readiness and sample start state | `{}` | `internal-deploy`: SSH key |
+| `deploy_switch` | Verified target and applicable pre-switch collection terminal; recheck state, switch, check readiness and sample start state | `{}` | `internal-deploy`: SSH key |
 | Candidate probe legs | `deploy_switch` ready; A then B | `contents: read` | `internal-probe`: probe pairs |
 | `deploy_candidate_observe` | Capture sample end state before other checks | `{}` | `internal-deploy`: SSH key |
-| `candidate_browser` | Candidate sampling finished; stable browser and access checks | `contents: read` | `internal-probe`: probe pair |
-| `deploy_settle` | Promote or restore; capture restore sampling start state | `{}` | `internal-deploy`: SSH key |
+| `candidate_browser` | Candidate evidence ready; scenario setup below; run browser and evidence scenarios | `contents: read` | `internal-probe`: pair A, test step only |
+| `deploy_settle` | Consume candidate scenario verdict; promote or restore and capture restore sampling start state | `{}` | `internal-deploy`: SSH key |
 | Restore probe legs | `deploy_settle` restored and ready; A then B | `contents: read` | `internal-probe`: probe pairs |
 | `deploy_restore_observe` | Capture restore sample end state before other checks | `{}` | `internal-deploy`: SSH key |
-| `restore_browser` | Restore sampling finished; stable browser and access checks | `contents: read` | `internal-probe`: probe pair |
-| `deploy_close` | Close and report recovery | `{}` | `internal-deploy`: SSH key |
+| `restore_browser` | Restore evidence ready; scenario setup below; run browser and evidence scenarios | `contents: read` | `internal-probe`: pair A, test step only |
+| `deploy_close` | Consume restore scenario verdict and close recovery | `{}` | `internal-deploy`: SSH key |
 | `record` | All earlier jobs terminal; record skip/success/failure | `contents: write` | None |
 | `alert` | Record attempted; notify on an unexpected failure | `issues: write` | None |
+| Health workflow `health` | Scenario setup below; run `@health` only | `contents: read` | `internal-probe`: pair A, test step only |
+| Health notification | Report failed/cancelled health job per D14 | `issues: write` | None |
 
 Only the deploy sequence (`deploy_*`) talks to the host. Probe legs run
 in the same workflow run on separate hosted VMs. Each job is a thin
 wrapper over `apps/web/e2e-internal/probe.ts` with phase and leg inputs;
-browser logic is shared with health. Pass sanitized probe results via
-job outputs, not artifacts. No job in either workflow has `actions: write`.
-Accept the
-extra jobs to preserve credential separation and avoid duplicating logic.
+browser logic is shared with health. Only the three scenario jobs run
+`bddgen` and the suite. In each, check out the pinned workflow SHA
+without persisting checkout credentials, set up the exact Node/pnpm
+pins, install the web workspace dev dependencies with the frozen
+lockfile, and install locked Playwright Chromium only. Candidate and
+restore also materialize the D13 evidence files before generation
+and testing. Map probe credentials only into the test step that
+uses them, never setup or generation. No suite process has an SSH
+key. A/B and deploy jobs do not run the suite; deploy settlement and
+close consume the scenario job's sanitized phase verdict. Neither
+workflow grants `actions: write`.
 
 `checks` requires a successful `plan` and a forward operation; `publish`
 requires successful `checks`. `deploy_inspect` uses `if: always() && …`
@@ -170,7 +183,11 @@ with `needs.plan.result == 'success'` and either forward plus
 is skipped for an unchanged release. Capture pre-switch start state in
 `deploy_pre_observe` and end state as the first observation in
 `deploy_switch`. `deploy_switch` requires successful verification and a
-terminal or not-applicable qualification, not a passing qualification.
+terminal pre-switch collection where applicable. Terminal means each
+collector leg has completed, failed, or been explicitly skipped; a
+failed leg is terminal without an evidence file and does not block the
+switch. It does not require a qualification verdict.
+`candidate_browser` evaluates qualification after the switch.
 Recheck incumbent state under the host lock. Candidate/restore B
 requires its corresponding A sample to be usable. End observations
 follow the probe legs directly, even if they failed or were skipped;
@@ -249,7 +266,7 @@ Reject combining rollback and force.
 Third, for a non-skipped operation, check target and previous template
 eligibility (D10); missing target version blocks forward deployment or
 rollback, never an unchanged skip. Only then verify the target digests,
-record any applicable qualification, and mutate. Check the expected
+finish any applicable pre-switch collection, and mutate. Check the expected
 host state again under lock before mutation. Accept the cost of
 building unchanged forward candidates before this sequence. A skip
 never starts containers, updates current, or creates a changelog entry.
@@ -484,9 +501,10 @@ checkout; prefer local images and use registry digest pull when needed.
 Reject mandatory manual intervention for normal smoke failures and
 blue/green duplication on one small VM.
 
-**D13 — One browser lane and two network-isolation legs.** Run
-`pnpm -C apps/web exec playwright test -c playwright.internal.config.ts`
-with no `webServer`, one Chromium worker (reuse CI software GL), no
+**D13 — One BDD gate and two network-isolation legs.** From `apps/web`,
+with workspace binaries on PATH, run
+`bddgen -c playwright.internal.config.ts && playwright test -c playwright.internal.config.ts`.
+No `webServer`; one Chromium worker (reuse CI software GL), no
 automatic retries, and a bounded timeout. Use origin-scoped
 `httpCredentials`; use separate credential-free
 contexts for denial tests and API request contexts for A/B rate probes.
@@ -497,7 +515,56 @@ traces/raw headers. Emit only sanitized assertion and axe data. The hard
 smoke gate asserts only the stable deployment contract so current tooling
 can gate older releases: disclosure, data roundtrip, robots header,
 denial, and origin/client isolation. No exact dataset counts, UI layout,
-or axe thresholds. Require:
+or axe thresholds. Define every behavior below as an executable scenario.
+Browser steps make observations directly; technical steps assert the
+phase-bound evidence files below. Both release browser jobs select
+`@release-browser` and `@release-evidence`; health selects only
+`@health`. A browser scenario can also carry `@health`. Fail closed
+on an empty mandatory selection. Settlement and recovery close read
+the corresponding scenario verdict, not the evidence as a second
+acceptance algorithm. A nonpassing mandatory scenario is non-green. Preserve the D12
+hard-failure versus inconclusive distinction with safe outcome codes.
+Incumbent evidence is evaluated separately and remains advisory.
+**Evidence boundary.** Collectors write strict, sanitized JSON files
+before the corresponding scenario job starts: A/B sample files from
+the runner legs and an origin/process observation file from the end
+observer. Use fixed relative paths under `internal-evidence/`.
+File locator outputs carry only the path and SHA-256 of the file bytes,
+never observations or inferred verdicts. Use pinned same-run artifact
+upload/download solely to move these files across isolated runners;
+download only predetermined names scoped to run, attempt, phase and
+producer. Recompute hashes before parsing. Use the shortest supported
+retention; only sanitized summaries enter durable history. For the host
+log join, each leg also writes a separate phase-bound correlation file
+containing only validated server-generated request IDs and their slots.
+Transfer it with the same path-and-digest contract to the observer,
+not to the suite. Never include those IDs in reports.
+
+Validate the same schema and bindings at write and read:
+
+- Every file has a schema version, allowed phase (`pre-switch`,
+  `candidate`, `restore`), current numeric run ID and positive attempt,
+  and candidate identity (full source SHA and exact API/web digest
+  pair for the stack being sampled). Bind these to the expected
+  release or incumbent from the workflow, not from the file itself.
+- A/B files identify the leg and contain its ordered sample slots
+  (three for A, one for B). Each slot records HTTP status, limit,
+  remaining, server date and reset. Permit numeric HTTP status
+  100–599, nonnegative integer counters/reset and a valid UTC
+  server date, or `null` when observation is unavailable. Include
+  transport lookup outcome (`not-run`, `unavailable`, `same`,
+  `different`); it is diagnostic, not a gate.
+- The observer file has origin-observed distinctness (`true`,
+  `false`, or `null` if unavailable/ambiguous), and before/after API
+  container identity, UTC start time and nonnegative restart count
+  (validated opaque container ID and timestamp, or explicit `null`
+  for unavailable fields). Never include addresses, credentials,
+  raw headers or log lines. Reject extra fields.
+
+Missing files, different run/attempt/phase/candidate, invalid schema
+or digest mismatch fail closed; an unavailable sample cannot prove
+acceptance. Collectors observe and record without applying acceptance
+thresholds. Expected observations are assertions of scenarios only:
 
 - Visible `role="note"` with “Prototype with synthetic data”; observe the
   application's actual same-origin `/units` GET, 200 with a nonempty
@@ -519,27 +586,24 @@ or axe thresholds. Require:
   Probe public TCP 3000 and 5173 on every advertised address without
   credentials. A successful connection fails; DNS or address lookup
   failure is inconclusive, not proof that either port is closed.
-- A on the first runner sends three authenticated requests and requires
-  `x-ratelimit-remaining` to read `limit−1 … limit−3` (limit 100). B
-  follows on the second runner, using a separate account, and sends
-  one authenticated request after a usable A result. Both legs report
-  `Date`, `x-ratelimit-reset`, and response `x-request-id`. B's sample
-  must precede the earliest reset instant implied by A's first sample
-  after accounting for rounding. Missing or expired timing is
-  inconclusive. Do not forge forwarding headers.
+- A records three authenticated samples; B follows with one, using a
+  separate account, once A's sample is usable. Usable means transport
+  and schema validity only: A's evidence file exists, matches its
+  digest, is bound to this run, attempt, phase and candidate, and
+  parses against the strict schema. It does not mean A's counters
+  were accepted. Only scenarios judge counters; neither collectors
+  nor gate preconditions do. The isolation scenario asserts successful samples,
+  limit 100, A remaining `limit−1 … limit−3`, B remaining `limit−1`,
+  and B before the earliest reset of A's window, allowing for rounding.
+  Missing or expired timing is inconclusive. Do not forge forwarding
+  headers in these samples.
 - In the host end-observation steps, join bounded API request logs
   to validated response IDs using `reqId`. The pinned Fastify request
   serializer logs resolved `request.ip` as `req.remoteAddress`. Compare
   the addresses for the sampled requests on the host, confirming A is
-  consistent across its three samples. Emit only a distinctness result,
-  never raw addresses or log lines. Decide:
-
-  | Origin observation | Isolation result |
-  | --- | --- |
-  | Two distinct addresses and B reads a fresh budget (`limit−1`) | Pass if timing, A counters, and process continuity also pass |
-  | One shared address across both legs | Non-green; wrong trust pin or shared egress |
-  | Missing, ambiguous, or inconsistent origin evidence | Inconclusive |
-  | Distinct addresses but B does not read a fresh budget | Non-green; inconclusive unless a contract violation is confirmed |
+  consistent across its three samples. The scenario asserts distinct
+  origin-observed addresses and a fresh B budget; one shared address
+  cannot pass. Missing or ambiguous evidence is inconclusive.
 
 - Public egress echo is optional diagnosis only: it can disagree with
   the API's view. For diagnostics, try a certificate-validated HTTPS
@@ -547,9 +611,10 @@ or axe thresholds. Require:
   Retain the answering provider and sanitized comparison, not raw
   addresses. Echo failure or equality never skips B or changes the
   gate result; the origin evidence is authoritative.
-- The deploy sequence reads the API container identity, start time, and
-  restart count immediately before and after each sampling phase. A
-  missing or changed value makes isolation inconclusive. The timing
+- The observer captures API container identity, start time and restart
+  count immediately before and after each phase. The continuity scenario
+  asserts all three are present and unchanged; otherwise evidence is
+  inconclusive. The timing
   guard excludes a normal window reset; the host check excludes an
   in-memory reset from container restart or replacement between legs.
   Verify in rehearsal that API process exits end the container, so the
@@ -557,14 +622,17 @@ or axe thresholds. Require:
   Browser work follows the end observation. Cap each invocation at 20
   API requests per account; allow the full window to expire before
   resampling a runtime that could retain a prior phase's counters.
-- With an incumbent, run the same proof before switch as advisory
-  qualification. `success` proves the probe path against the incumbent;
-  `hard-failure` means a confirmed incumbent contract violation;
-  `inconclusive` means evidence was insufficient. Record every outcome.
-  Proceed under all three if the mandatory preconditions pass, so a
-  broken incumbent does not prevent repair or manual rollback. Without
-  a prior success or running stack, record `not-applicable` and proceed.
-  After a switch or restore, only success qualifies as a green gate.
+- With an incumbent, collect advisory evidence before switch and
+  evaluate it in `candidate_browser` as an advisory-only selection,
+  using the same evidence-step assertions. Record its outcome
+  separately from the mandatory verdict without blocking switch or
+  promotion.
+  If no incumbent exists, record `not-applicable`. Whenever no browser
+  evaluation occurred — a collector failed or was skipped, or the
+  browser job did not run — the recorder emits `qualification not
+  evaluated` as advisory. It never blocks the switch or counts as
+  isolation evidence. After a switch or restore the corresponding
+  scenarios alone decide the smoke verdict.
 - Reuse the `e2e/a11y.spec.ts` page-ready and full-page axe scan logic
   with the existing dependency, but report counts and rule IDs by impact
   without assertions on findings in internal smoke. Runtime scan errors
@@ -572,9 +640,13 @@ or axe thresholds. Require:
 
 **D14 — Daily authenticated health and explicit issue alert.** Schedule
 `43 14 * * *` UTC, plus manual health dispatch, with the same `main`
-guard and concurrency group as release. On one runner reuse D13's
-authenticated browser/data, certificate-valid TLS, denial and robots
-checks. Do not run two-egress isolation or axe. Health uses `contents:
+guard and concurrency group as release. Generate from the same D13
+config and execute only `@health` scenarios with Playwright `--grep`
+matching the whole tag. Tag browser rendering/disclosure, same-origin
+data, certificate-valid TLS, denial and ordinary robots checks,
+including authenticated positive controls. Do not tag isolation,
+public-port bypass, the isolated upstream-error rehearsal or release
+accessibility. Health uses `contents:
 read` and `internal-probe` (pair A); no SSH or package access. Use
 `if: always() && …` for notification on `needs.health.result ==
 'failure'` or `'cancelled'`, with the `main` guard and `issues: write`
@@ -766,7 +838,7 @@ with verified cleanup evidence before real activation.
 | Repository rule and history scope | In the reviewed history writer context run a controlled real update attempt against `main` and a normal history write; perform the authorized maintainer update separately | Workflow-token update rejected by the rule, history write succeeds, maintainer update allowed |
 | Environment rejection | Use the reviewed disposable D5 ref described below | Both requests denied; review proves the ref cannot use credentials; ref deleted |
 | Registry-only verify, then live negative | Select marker-bound registry-only mode. For each fault use a known absent predicate for just one required check; keep other checks real | Verify then record `rehearsal only — no switch`, with no hold. Later repeat each negative with an incumbent: serving pair unchanged |
-| Candidate readiness and empty-host smoke | Dispatch the appropriate named fault. Return a failed readiness result after actual activation, or a failed candidate browser result after real readiness on an empty host | Readiness failure enters restore with a prior pair; first-candidate smoke failure stops both new instances with no restore claim; positive verify precedes either start |
+| Candidate readiness and empty-host smoke | Dispatch the same authorized fault. Fail readiness after activation at its own gate, or make the mandatory candidate disclosure scenario fail after real readiness on an empty host | Actual Gherkin failure stops both new instances with no restore claim; readiness failure enters restore with a prior pair; positive verify precedes either start |
 | Green last-good seed | Wipe rehearsal state and dispatch without a fault; reseed as needed between cases | Readiness, access and isolation pass before current advances; record names exact digests and template |
 | Candidate smoke with incumbent | At `before-candidate-browser`, rotate its rehearsal credential; resume `deploy_candidate_observe`, then browser. At `before-restore`, reinstate the credential; resume `deploy_settle` | Candidate fails; prior pair is restored and passes recheck |
 | Restore evidence unavailable or hard failure | At `before-restore-b`, rotate B's rehearsal credential; resume `deploy_hold_restore_b`, then B. At `before-restore-browser`, reinstate it for the inconclusive case or rotate the browser account for the hard case; resume `deploy_restore_observe`, then browser | Missing B origin evidence reports “restore unverified”; confirmed browser denial is a hard restore failure and alerts |
@@ -788,6 +860,78 @@ references both environments: no checkout, no secret mapped to any
 step, no publication, and no host action. Review proves those exact
 limits before dispatch; delete the ref afterward. It cannot request
 faults or change the normal `main` workflow.
+
+**D21 — Executed Gherkin is the behavior gate.** Use the existing pinned
+`playwright-bdd` 9.2.1 and `bddgen`; add no dependency. Mirror the house
+feature pattern: title and description cite `internal-deployment`,
+scenarios use behavior language, and internal `steps/bdd.ts` binds
+`Given`, `When` and `Then` through `createBdd`. Start with one feature
+file; split only for readability. No remote feature or step lives in
+`apps/web/e2e/`, and existing local and PR CI discovery stays unchanged.
+No parallel plain Playwright behavior specs. Step definitions own
+browser mechanics and assertions; collectors supply observations, not a
+substitute promotion gate. Isolation scenarios cover both legs, timing
+and counters, process identity and origin-observed distinctness.
+Feature text, generated test names and reports contain no runtime
+addresses, credentials, raw headers or log lines.
+
+Tag each scenario directly with at least one `@req:<slug>`. In
+`scripts/check-internal-bdd-coverage.mjs`, wired into `pnpm test`, use
+Node built-ins only. Resolve paths from the repository root: while
+`openspec/changes/deployment-internal-lane/` exists, read its
+`specs/internal-deployment/spec.md` delta and fail if it is missing.
+After archive, read `openspec/specs/internal-deployment/spec.md`.
+For each `### Requirement:` heading take the heading text, lowercase,
+replace each non-alphanumeric run (`[^a-z0-9]+`) with one hyphen, and
+trim hyphens. Reject slug collisions.
+
+Parse only the scenario's own contiguous tag lines immediately above
+`Scenario:` or `Scenario Outline:`. Ignore comments, prose and inherited
+feature tags. Every valid requirement tag on a multi-tag scenario counts;
+unknown requirement tags fail even outside the release selection.
+A tagged `Scenario Outline` with no executable examples earns no
+coverage and fails the check with a message naming the outline.
+Coverage counts only if the candidate or restore gate selects the
+scenario via `@release-browser` or `@release-evidence`; `@health` alone
+does not count. Each heading must be covered or explicitly excluded,
+never both or neither; reject stale exclusions and untagged scenarios.
+
+Gate-observable: Authenticated access, Crawler exclusion header,
+No upstream bypass, Same-origin route parity, Client-address rate
+limits, Bounded proxy trust, Last-good promotion gate, and Report-only
+accessibility results. Mixed requirements earn **partial** gate
+evidence only. Keep deterministic route parity, API peer tests,
+promotion ordering, and durable accessibility report checks for the
+parts not observed by the scenarios.
+
+Excluded from the browser gate; verified by the named host or
+workflow check:
+
+| Requirement | Verification |
+| --- | --- |
+| Default-branch release cadence | Trigger/ref guard and pinned-SHA checks rehearsal |
+| Immutable release identity | Publish tag/digest and rerun evidence |
+| Durable deployment traceability | Host/state and history cancellation/backfill rehearsal |
+| Verified attestations before image start | Registry verification and before-start ordering/negative rehearsals |
+| Signed inventory and coverage | Publish SBOM signature and missing-package coverage checks |
+| Nonblocking vulnerability reporting | Publish scanner failure fixture and durable findings inspection |
+| Changelog without default-branch writes | Record history/range check and repository ruleset rehearsal |
+| Skip unchanged candidates | Host inspect equality and force fixtures |
+| Automatic restore after a failed switch | Deployment settlement and restore rehearsals |
+| Manual digest rollback | Recorded-digest/template rollback rehearsal |
+| Scheduled health alerts | Health trigger, incident failure and recipient delivery checks |
+| Credential confinement | Environment policy, host account/forwarding and artifact redaction checks |
+
+D20 admission, fault induction and recovery are unchanged. The
+authorized first-candidate smoke fault drives the actual mandatory
+disclosure scenario red; the runner exports the real test outcome,
+never a synthetic or substituted job result. Readiness and attestation
+faults fail only at their own gates.
+
+Rejected: plain Playwright specs, which lack the readable feature and
+requirement traceability; `@cucumber/cucumber`, a second implementation
+against the pinned single-tool policy; documentation-only Gherkin,
+which cannot enforce release behavior.
 
 ## Risks / Trade-offs
 

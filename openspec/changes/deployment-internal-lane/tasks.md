@@ -113,7 +113,7 @@ selects a workspace. Never log credentials or raw probe addresses.
   `docs/deployment.md`. Verify locally:
   `actionlint .github/workflows/release-internal.yml`; fixtures enforce
   distinct predicates and reject wrong identity. Hosted proof runs
-  only in group 11; no registry access is required here.
+  only in group 13; no registry access is required here.
 
 ## 4. Validate host inputs and constrain deployment authority
 
@@ -153,56 +153,88 @@ selects a workspace. Never log credentials or raw probe addresses.
   outcomes never promote; changed restore eligibility refuses mutation;
   successful recovery uses old digests without rebuilding.
 
-## 6. Prove isolation and exercise browser acceptance
+## 6. Collect and validate phase evidence
 
 - [ ] 6.1 Implement same-run A/B sampling in
   `apps/web/e2e-internal/probe.ts` and bounded host observation in
-  `scripts/deploy/internal-host.sh`. Document peer diagnostics and
-  privacy limits in `docs/internal-ops.md`. Verify: fixtures prove a pass
-  requires origin-observed distinct addresses, fresh B budget, in-window
-  timing and stable container identity/start time/restart count. Wrong
-  pin, shared egress, restart and missing logs are non-green; optional
-  echo cannot override origin evidence. Outputs contain no raw addresses
-  or request logs.
-- [ ] 6.2 Implement `apps/web/playwright.internal.config.ts`,
-  `apps/web/e2e-internal/smoke.spec.ts`, and shared axe helper
-  `apps/web/e2e/helpers/axe.ts` used by `apps/web/e2e/a11y.spec.ts`.
-  Document access and report-only checks in `docs/internal-ops.md`.
-  Verify: `pnpm -C apps/web exec playwright test -c
-  playwright.internal.config.ts` against isolated fixtures covers
-  disclosure and real `/units`, all parity paths, one real asset,
-  unknown path, denied and valid-auth responses, front-door 502 and
-  bypass. Count raw robots header fields, not just their values.
-  Exercise a forged forwarding claim and same-address exhaustion
-  across two accounts on a fresh fixture window. Missing address lookup
-  is inconclusive; axe errors report unavailable and PR axe stays blocking.
+  `scripts/deploy/internal-host.sh`. Supply sanitized observations
+  in the D13 `internal-evidence/` JSON files, with path/digest-only job
+  outputs and pinned same-run file transfer. Document schema, bindings
+  and privacy in `docs/internal-ops.md`. Verify: fixtures accept valid
+  observations without deciding acceptance, and reject missing, stale,
+  malformed and digest-mismatched evidence. Files contain no raw
+  addresses, credentials, headers or logs.
 
-## 7. Wire the existing activation and settlement graph
+## 7. Define and execute browser and evidence scenarios
 
-- [ ] 7.1 Wire inspect, verify, switch, and pre-switch advisory
+- [ ] 7.1 Add `apps/web/playwright.internal.config.ts` using
+  `defineBddConfig`, the separate gitignored generated output, and
+  `apps/web/e2e-internal/features/internal-deployment.feature` with
+  requirement, stage and health tags. Bind `createBdd` and browser
+  mechanics under `apps/web/e2e-internal/steps/`. Share axe mechanics
+  via `apps/web/test-support/axe.ts` without changing the existing
+  blocking PR behavior or adding tests under `apps/web/e2e/`.
+  Document the acceptance command in `docs/internal-ops.md`. Verify
+  from `apps/web` with workspace binaries on PATH:
+  `bddgen -c playwright.internal.config.ts && playwright test -c playwright.internal.config.ts`
+  against isolated fixtures. Cover TLS, disclosure, real `/units`, all
+  parity paths, the real asset and unknown path, denied and authenticated
+  controls, isolated front-door 502, public-port bypass, and report-only
+  axe. Count raw robots header fields; missing address lookup is
+  inconclusive and axe errors report unavailable.
+- [ ] 7.2 Add technical scenarios to `internal-deployment.feature` and
+  steps under `apps/web/e2e-internal/steps/` that assert D13
+  `internal-evidence/` JSON
+  for A/B samples, timing, process identity and origin distinctness.
+  Cover forwarded-claim rejection and shared-budget exhaustion across
+  two accounts using a fresh fixture window. Verify: the D13 generation
+  and test command passes valid evidence and turns red for shared origin,
+  expiry, restart or missing required evidence. Distinguish hard failure
+  from inconclusive, never print addresses, headers or credentials.
+
+## 8. Enforce requirement-to-scenario coverage
+
+- [ ] 8.1 Add `scripts/check-internal-bdd-coverage.mjs` and unit tests;
+  wire into `pnpm test` per D21 and document tag/exclusion conventions
+  in `docs/internal-ops.md`. Verify: covered fixtures pass, a requirement
+  without a release-selected scenario fails, an unknown tag fails, and
+  untagged scenarios, slug collisions, stale or overlapping exclusions
+  and feature-only tags do not satisfy coverage. Verify both spec paths,
+  scenario outlines, and multi-tag counting. Run `pnpm test`, `pnpm lint`,
+  `pnpm format:check`, `pnpm typecheck` and `pnpm arch:check`.
+
+## 9. Wire the existing activation and settlement graph
+
+- [ ] 9.1 Wire inspect, verify, switch, and pre-switch advisory
   qualification in `.github/workflows/release-internal.yml` per D5/D6.
   Keep the existing graph and no `actions: write`. Verify:
   `actionlint .github/workflows/release-internal.yml`; workflow fixtures
   cover skip, force, pending, missing template and failed advisory probe;
   only successful verify authorizes a switch.
-- [ ] 7.2 Wire candidate and restore probes, observe steps, browser
-  acceptance, settle and close in the same workflow. Update recovery
-  instructions in `docs/internal-ops.md`. Verify: actionlint and stubbed
-  status combinations route hard failures, inconclusive results, and
-  missing outputs to restore or first-candidate stop; settlement still
-  runs when a preceding switch may have mutated state.
-- [ ] 7.3 Provide D20's first-contact admission, marker-bound inputs
+- [ ] 9.2 Wire candidate and restore collectors and observers to
+  `internal-evidence/` JSON files and the browser jobs to both release
+  selections of `internal-deployment.feature`. Apply D5's pinned
+  checkout, frozen web dev install, Chromium-only and step-scoped
+  probe credentials. Settlement and close consume scenario verdicts;
+  no SSH-bearing or collector process runs the suite. Update recovery
+  instructions in `docs/internal-ops.md`. Verify: actionlint and
+  workflow fixtures prove permissions separation, missing or failed
+  verdict routes to recovery, and settlement still runs after a
+  possibly mutating switch failure.
+- [ ] 9.3 Provide D20's first-contact admission, marker-bound inputs
   and same-job host holds
   in the existing workflow. Document named checkpoints, resumed jobs,
   timeout effects and cleanup in `docs/internal-ops.md`. Verify:
   scheduled, non-main or mismatched requests and writer preflight
   failures cannot mutate; an unchanged switch fault requires explicit
   force; registry-only mode uses admission but finishes after
-  verification without a checkpoint hold.
+  verification without a checkpoint hold. The first-candidate smoke
+  fault fails the real mandatory disclosure scenario in
+  `internal-deployment.feature`; no synthetic job verdict.
 
-## 8. Record release history and make alerts observable
+## 10. Record release history and make alerts observable
 
-- [ ] 8.1 Wire `record` and add `deploy/internal/cliff.toml`. Verify
+- [ ] 10.1 Wire `record` and add `deploy/internal/cliff.toml`. Verify
   git-cliff checksum and bot identity against pinned tooling; record
   them in `deploy/internal/tool-versions.json`. Document history
   backfill in `docs/internal-ops.md`. Verify: local bare-remote fixture
@@ -211,20 +243,26 @@ selects a workspace. Never log credentials or raw probe addresses.
   vulnerability rows, scanner/database metadata and axe impact/rule IDs
   after temporary artifacts are removed. Pending evidence finalizes
   once on backfill; rollback/restore do not generate forward ranges.
-- [ ] 8.2 Wire release `alert` and `.github/workflows/health-internal.yml`
-  with both cron entries gated off until approval. Health reuses browser
-  and access logic without isolation or axe. Document cadence,
+- [ ] 10.2 Wire release `alert` and `.github/workflows/health-internal.yml`
+  with both cron entries gated off until approval. Generate from the
+  same internal BDD config with D5's scenario job setup. Select only
+  `@health` in `internal-deployment.feature` using whole-tag `--grep`;
+  no isolation or release-only axe. Document cadence,
   deduplication, failure visibility and missed-run ownership in
   `docs/internal-ops.md` and `docs/deployment.md`. Verify:
   `actionlint .github/workflows/release-internal.yml
-  .github/workflows/health-internal.yml`; stubbed incident API confirms
+  .github/workflows/health-internal.yml`; generation, filtered `--list`
+  and a fixture run show that a nonempty set of all and only `@health`
+  scenarios runs
+  (browser, data, TLS, denial and ordinary robots checks). A failing
+  selected scenario fails health. The stubbed incident API confirms
   deduplication and visible red status on posting failure.
-- [ ] 8.3 Finish the local quick-tunnel recipe in `docs/internal-ops.md`
+- [ ] 10.3 Finish the local quick-tunnel recipe in `docs/internal-ops.md`
   and link from `docs/runbook.md`. Verify: isolated local proxy check
   proves auth, robots header and correct baked origin; document the
   short-lived URL and platform-specific trust/budget diagnosis.
   Verify references with `node scripts/check-tracking-refs.mjs`.
-- [ ] 8.4 Prepare D20's reviewed ruleset and disposable-ref checks,
+- [ ] 10.4 Prepare D20's reviewed ruleset and disposable-ref checks,
   rehearsal-only history, and marker-bound no-switch alert invocation.
   Document cleanup in `docs/internal-ops.md`. Verify: writer preflight
   and `record` independently reject bad bindings; invalid override
@@ -232,37 +270,37 @@ selects a workspace. Never log credentials or raw probe addresses.
   Disposable workflow review finds only environment references, with
   no checkout, secret mapping, publication or host action.
 
-## 9. Prepare repository controls for the rehearsals
+## 11. Prepare repository controls for the rehearsals
 
-- [ ] 9.1 Human-gated: Create the two `main`-restricted environments,
+- [ ] 11.1 Human-gated: Create the two `main`-restricted environments,
   the orphan `internal-releases` branch, and the targeted `main` rule
   with maintainer bypass but no workflow bypass. Configure named alert
   recipients and enablement variables with schedules off. Verify:
   policy readback, history branch has no source/workflows, and
   `docs/internal-ops.md` records setup and maintainer push behavior.
-## 10. Provision the rehearsal host, accounts and DNS
+## 12. Provision the rehearsal host, accounts and DNS
 
-- [ ] 10.1 Human-gated: Provision Lightsail Linux amd64, static IP,
+- [ ] 12.1 Human-gated: Provision Lightsail Linux amd64, static IP,
   and cloud/host firewall limited to 22/80/443. Verify: attached static
   address, permitted ingress only, no external TCP 3000/5173, and a
   subnet-overlap check against host routes, provider networks and
   Docker pools. Record bootstrap in `docs/internal-ops.md`.
-- [ ] 10.2 Human-gated: Choose hostname, write matching records in NS1
+- [ ] 12.2 Human-gated: Choose hostname, write matching records in NS1
   and Squarespace Domains DNS. Verify: `dig @<server> <hostname> A`
   returns the static IP from every delegated authority and a public
   resolver before any internal-URL image build or certificate attempt.
-- [ ] 10.3 Human-gated: Install unattended upgrades, exact Docker,
+- [ ] 12.3 Human-gated: Install unattended upgrades, exact Docker,
   Compose and Caddy pins, bounded log rotation and persistent ACME
   storage. Keep Caddy stopped. Verify: installed versions, bounded
   logs and upgrades are configured; no HTTPS app is serving.
-- [ ] 10.4 Human-gated: Provision read-only registry credentials under
+- [ ] 12.4 Human-gated: Provision read-only registry credentials under
   the execution identity and host-only bcrypt for rehearsal probes;
   store probe pairs in `internal-probe`. Install memory/disk timer
   and durable restart/OOM evidence. Verify: pull works without publish,
   the required account fragment is nonempty and reads only to its
   authorized identities; samples/restart evidence survive replacement
   and reboot in a controlled host fixture.
-- [ ] 10.5 Human-gated: Install the root-owned entry point and templates,
+- [ ] 12.5 Human-gated: Install the root-owned entry point and templates,
   set the rehearsal venue flag and document D20's first-contact
   admission, set up constrained SSH and narrow sudoers,
   and set the SSH key and independently verified host-key pin. With
@@ -271,9 +309,9 @@ selects a workspace. Never log credentials or raw probe addresses.
   401 unauthenticated, and host-key mismatch, interactive SSH and
   arbitrary privileged commands are refused.
 
-## 11. Rehearse hosted controls and qualify the target
+## 13. Rehearse hosted controls and qualify the target
 
-- [ ] 11.1 Human-gated: Confirm rehearsal hostname and venue flag.
+- [ ] 13.1 Human-gated: Confirm rehearsal hostname and venue flag.
   With secrets provisioned and reviewed workflows on `main`, dispatch
   D20's policy control, bind its run/attempt in admission, then proceed.
   Attempt a real workflow-token update to `main` and an authorized
@@ -282,7 +320,7 @@ selects a workspace. Never log credentials or raw probe addresses.
   disposable non-main ref against both environments, then delete it.
   Verify both deny and the reviewed ref had no checkout, secret mapping,
   publication or host action. Confirm production policies are intact.
-- [ ] 11.2 Human-gated: Set `INTERNAL_HOST` after DNS verification.
+- [ ] 13.2 Human-gated: Set `INTERNAL_HOST` after DNS verification.
   Confirm rehearsal hostname and flag. Dispatch D20's registry-only
   invocation and bind each run/attempt in admission before proceeding.
   `verify` has no host credentials; no holds follow verification.
@@ -291,20 +329,20 @@ selects a workspace. Never log credentials or raw probe addresses.
   predicate types, source digest format and verification read scope.
   Record `rehearsal only — no switch`; verify no host activation or
   production history change, then clear the bindings.
-- [ ] 11.3 Human-gated: Confirm rehearsal hostname and venue flag.
+- [ ] 13.3 Human-gated: Confirm rehearsal hostname and venue flag.
   Boot a private validation stack directly (no workflow dispatch) to
   measure the API socket peer and test rehearsal accounts. Verify: the peer
   matches the single pin and both accounts authenticate; remove the
   validation stack and confirm no running stack or current manifest
   before starting recovery rehearsals.
-## 12. Verify monitoring and alert delivery
+## 14. Verify monitoring and alert delivery
 
-- [ ] 12.1 Human-gated: Confirm rehearsal hostname and venue flag.
+- [ ] 14.1 Human-gated: Confirm rehearsal hostname and venue flag.
   Install Lightsail email alarms and HetrixTools
   passwordless HTTPS 401 and TLS-expiry monitoring. Verify: monitoring
   test notifications arrive, renewal/expiry checks are enabled, and
   expected HTTPS 401 is healthy with no password supplied.
-- [ ] 12.2 Human-gated: Use D20's normal and invalid-recipient alert
+- [ ] 14.2 Human-gated: Use D20's normal and invalid-recipient alert
   no-switch controls before recovery. Check the rehearsal hostname
   and flag, then dispatch and bind each run in admission before proceeding.
   Verify: rehearsal recipients confirm delivery and missed-run
@@ -313,31 +351,33 @@ selects a workspace. Never log credentials or raw probe addresses.
   and verify production alert variables and probe credentials are
   unchanged.
 
-## 13. Rehearse empty-host failure, then seed last-good
+## 15. Rehearse empty-host failure, then seed last-good
 
-- [ ] 13.1 Human-gated: Check rehearsal hostname, flag and empty host
+- [ ] 15.1 Human-gated: Check rehearsal hostname, flag and empty host
   state. Dispatch `first-candidate-smoke`, bind in admission, and
   proceed. Verify: both attestation
   kinds for both digests verify before either candidate starts; record
-  events in order. Candidate stops, no restore is claimed, and durable
+  events in order. The mandatory disclosure scenario in
+  `internal-deployment.feature` fails; the candidate stops, no restore
+  is claimed, and durable
   rehearsal history and an alert show first-activation failure. Remove
   the binding and verify production history and credentials are intact.
-- [ ] 13.2 Human-gated: Check rehearsal hostname and marker before
+- [ ] 15.2 Human-gated: Check rehearsal hostname and marker before
   resetting state. Dispatch a green seed, bind in admission, and
   proceed. Verify: candidate becomes last-good only after readiness,
   browser/access acceptance and origin-observed isolation; retained
   report and config identify exact digests. Save the sanitized evidence
   and reseed this baseline after wipes as required.
 
-## 14. Rehearse activation and isolation fault families
+## 16. Rehearse activation and isolation fault families
 
-- [ ] 14.1 Human-gated: Check rehearsal hostname, flag and seeded
+- [ ] 16.1 Human-gated: Check rehearsal hostname, flag and seeded
   last-good. Dispatch `provenance` and `sbom` separately, binding each
   run during admission before proceeding. Verify:
   neither starts a new container
   nor changes the serving pair; only the selected predicate check fails.
   Clear bindings and confirm production state is untouched.
-- [ ] 14.2 Human-gated: Check rehearsal hostname and marker; pre-stage
+- [ ] 16.2 Human-gated: Check rehearsal hostname and marker; pre-stage
   and validate the restart procedure and the unchanged restart config —
   not a container ID, which the candidate switch replaces. Dispatch, bind
   in admission, then proceed. At `before-candidate-b`, recheck venue,
@@ -350,7 +390,7 @@ selects a workspace. Never log credentials or raw probe addresses.
   action, not the restart; verify the prior rehearsal config and serving
   state before another phase. Clear markers and confirm production state
   is intact.
-- [ ] 14.3 Human-gated: Check rehearsal hostname and marker before
+- [ ] 16.3 Human-gated: Check rehearsal hostname and marker before
   atomically applying the validated wrong-pin variant. Dispatch, bind
   in admission, and proceed; use a controlled client with two rehearsal
   accounts for the direct budget controls. Verify: wrong pin cannot pass;
@@ -359,9 +399,9 @@ selects a workspace. Never log credentials or raw probe addresses.
   only; equality is deterministic in local fixtures. Remove the
   variant, restore the exact pin, and verify production config intact.
 
-## 15. Rehearse candidate failure and automatic restore
+## 17. Rehearse candidate failure and automatic restore
 
-- [ ] 15.1 Human-gated: Confirm rehearsal hostname and marker. Pre-stage
+- [ ] 17.1 Human-gated: Confirm rehearsal hostname and marker. Pre-stage
   and validate the rotated candidate account fragment and original
   fragment. Dispatch each D20 candidate-failure case, bind in admission,
   then proceed. For the password case apply the rotated file atomically
@@ -373,9 +413,9 @@ selects a workspace. Never log credentials or raw probe addresses.
   out, stop the next action, explicitly reinstate and verify prior
   rehearsal configuration before another phase. Prove production config
   was unchanged.
-## 16. Rehearse restore-negative outcomes
+## 18. Rehearse restore-negative outcomes
 
-- [ ] 16.1 Human-gated: Confirm rehearsal hostname and marker. Pre-stage
+- [ ] 18.1 Human-gated: Confirm rehearsal hostname and marker. Pre-stage
   and validate changed and original restore-B/browser account fragments.
   Dispatch each restore-negative case, bind in admission, and proceed.
   At `before-restore-b`, apply the B fragment atomically with
@@ -387,9 +427,9 @@ selects a workspace. Never log credentials or raw probe addresses.
   and 60-second sampling expiry. After a timeout, explicitly restore
   and verify the prior rehearsal config before another phase. Reinstate
   credentials before reuse and compare production config.
-## 17. Rehearse rollback, cancellation and history backfill
+## 19. Rehearse rollback, cancellation and history backfill
 
-- [ ] 17.1 Human-gated: Confirm rehearsal hostname and marker; pre-stage
+- [ ] 19.1 Human-gated: Confirm rehearsal hostname and marker; pre-stage
   validated version availability and revocation changes. Dispatch,
   bind in admission, then at `before-rollback-switch` confirm versions
   or atomically revoke the rehearsal target with restore-on-failure.
@@ -397,7 +437,7 @@ selects a workspace. Never log credentials or raw probe addresses.
   promotion, or refusal before switch. Timeout/bad binding is a
   refusal with no switch, not window expiry. Restore and verify prior
   rehearsal eligibility before another phase and compare production config.
-- [ ] 17.2 Human-gated: Confirm rehearsal hostname and marker. Dispatch,
+- [ ] 19.2 Human-gated: Confirm rehearsal hostname and marker. Dispatch,
   bind D20's cancellation run during admission, then recheck venue and cancel
   `deploy_switch` at `after-switch-pending` instead of releasing it.
   If neither released nor cancelled, timeout fails the phase without
@@ -407,17 +447,17 @@ selects a workspace. Never log credentials or raw probe addresses.
   host state and backfills one finalized record with the cancelled
   attempt's observed outcome. Remove go-markers and verify production
   state remains intact.
-- [ ] 17.3 Human-gated: Confirm rehearsal hostname and marker before
+- [ ] 19.3 Human-gated: Confirm rehearsal hostname and marker before
   changing policy. Use D20's history outage control and review the
-  deterministic stale-write fixture from 8.1. Dispatch and bind in
+  deterministic stale-write fixture from 10.1. Dispatch and bind in
   admission to the rehearsal-only history location. Verify: denied append leaves
   backfillable host evidence; local retry does not overwrite; finalized
   reports outlast artifacts. Undo denial and confirm no test edited
   or denied writes to production history.
 
-## 18. Activate the real target after rehearsals
+## 20. Activate the real target after rehearsals
 
-- [ ] 18.1 Human-gated: Confirm rehearsal hostname and marker before
+- [ ] 20.1 Human-gated: Confirm rehearsal hostname and marker before
   account edits. Clear the D20 venue flag, run marker and rehearsal activation
   state or switch to the prepared unmarked target. Remove go-markers
   and rehearsal policy controls, revoke rehearsal accounts, install
@@ -425,13 +465,13 @@ selects a workspace. Never log credentials or raw probe addresses.
   without sharing the URL yet. Verify: marker absent, retired accounts
   absent from active config, probe secrets replaced, no plaintext on
   host or in evidence.
-- [ ] 18.2 Human-gated: Dispatch one reviewed D20 fault from `main`
+- [ ] 20.2 Human-gated: Dispatch one reviewed D20 fault from `main`
   against the unmarked target after a baseline snapshot. Verify:
   immediate `rejected fault dispatch` with no admission wait, no host
   or history mutation, same running
   digests (or empty stack) and current record, production variables
   and credentials unchanged. Record only sanitized evidence.
-- [ ] 18.3 Human-gated: Dispatch the first activation on the real
+- [ ] 20.3 Human-gated: Dispatch the first activation on the real
   target after the rehearsals, from `main`, schedules still off.
   Verify: exact verified digests, browser and isolation pass, durable
   host/history records agree, both new probe accounts authenticate,
@@ -441,9 +481,9 @@ selects a workspace. Never log credentials or raw probe addresses.
   no OOM or unexpected restart, and no sustained swap growth. If it
   fails, resize and repeat.
 
-## 19. Run integration gates and approve schedule enablement
+## 21. Run integration gates and approve schedule enablement
 
-- [ ] 19.1 Run combined repository gates and check scenario evidence.
+- [ ] 21.1 Run combined repository gates and check scenario evidence.
   Verify: `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm typecheck`,
   `pnpm arch:check`, `pnpm design:check`, `pnpm audit --prod`,
   `pnpm audit`, `pnpm -C apps/web e2e`, `pnpm -C apps/web e2e:bdd`,
@@ -455,16 +495,20 @@ selects a workspace. Never log credentials or raw probe addresses.
   `actionlint .github/workflows/release-internal.yml
   .github/workflows/health-internal.yml`, and
   `openspec validate --all --strict`. Follow documented boot/teardown
-  order; generated data and model stay byte-identical.
-- [ ] 19.2 Human-gated: Review integrated live, host and history
+  order; generated data and model stay byte-identical. Against the local
+  `internal-evidence/` fixture and isolated origin, run from `apps/web`:
+  `bddgen -c playwright.internal.config.ts && playwright test -c playwright.internal.config.ts`
+  with workspace binaries on PATH. Verify the generated
+  `internal-deployment.feature` scenarios execute.
+- [ ] 21.2 Human-gated: Review integrated live, host and history
   evidence against the capability and approval criteria. Verify:
   maintainer records integration approval after gates, security review,
   real activation, headroom and alert delivery pass.
-- [ ] 19.3 Human-gated: Enable both schedules only after recorded
+- [ ] 21.3 Human-gated: Enable both schedules only after recorded
   integration approval. Verify: guards permit authorized `main`
   scheduled runs, due runs are visible, and missed-run ownership is
   confirmed before evaluator handoff.
-- [ ] 19.4 Human-gated: After integration approval, share the URL and
+- [ ] 21.4 Human-gated: After integration approval, share the URL and
   individual evaluator passwords out of band via the secure handoff.
   Verify: each evaluator confirms access with their own account; no
   shared accounts or credentials in records, chat logs, or CI.
